@@ -83,8 +83,8 @@ const helveticaNeue = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Xquisito",
-  description: "Tu menú digital con un toque de NFC",
+  title: "Xquisito Pick & Go",
+  description: "Ordena, paga y recoge. Tu comida lista cuando llegues",
   icons: {
     icon: [
       {

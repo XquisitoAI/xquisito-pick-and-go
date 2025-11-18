@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Xquisito Pick & Go
 
-## Getting Started
+Una plataforma de pedidos para llevar que permite a los clientes ordenar, pagar y recoger su comida de manera rápida y eficiente.
 
-First, run the development server:
+## Características
 
+- 🍽️ **Menú digital interactivo** - Explora platillos con imágenes, descripciones y precios
+- 📱 **Pedidos móviles** - Ordena desde tu smartphone de forma rápida y sencilla
+- 💳 **Pagos seguros** - Integración con múltiples métodos de pago
+- ⏰ **Tiempo de recogida** - Calcula automáticamente cuándo estará listo tu pedido
+- 📍 **Localización** - Encuentra fácilmente el restaurante para recoger
+- 🔔 **Notificaciones** - Recibe alertas cuando tu pedido esté listo
+
+## Tecnologías
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS 4
+- **Autenticación**: Clerk
+- **Iconos**: Lucide React
+- **Pagos**: React Payment Logos
+
+## Instalación y configuración
+
+1. Clona el repositorio:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/XquisitoAI/xquisito-pick-and-go.git
+cd xquisito-pick-and-go
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Instala las dependencias:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Configura las variables de entorno:
+```bash
+cp .env.example .env.local
+# Edita .env.local con tus credenciales
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Ejecuta el servidor de desarrollo:
+```bash
+npm run dev
+```
 
-## Learn More
+5. Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts disponibles
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `npm run dev` - Ejecuta el servidor de desarrollo con Turbopack
+- `npm run build` - Construye la aplicación para producción con Turbopack
+- `npm start` - Ejecuta la aplicación en producción
+- `npm run lint` - Ejecuta ESLint para revisar el código
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Estructura del proyecto
 
-## Deploy on Vercel
+```
+src/
+├── app/                    # App Router de Next.js
+├── components/            # Componentes reutilizables
+├── context/              # Contextos de React
+├── hooks/                # Custom hooks
+├── services/             # Servicios y API calls
+├── types/                # Definiciones de TypeScript
+└── utils/                # Utilidades y helpers
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Flujo de usuario
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Explorar menú** - El cliente accede al menú digital
+2. **Seleccionar platillos** - Agrega items al carrito
+3. **Revisar orden** - Confirma los productos y cantidades
+4. **Procesar pago** - Completa el pago de forma segura
+5. **Recibir confirmación** - Obtiene tiempo estimado de preparación
+6. **Recoger pedido** - Llega al restaurante a la hora indicada
+
+## Contribuir
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit tus cambios (`git commit -m 'Agrega nueva funcionalidad'`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Abre un Pull Request
+
+## Licencia
+
+Este proyecto es propiedad de Xquisito AI. Todos los derechos reservados.
