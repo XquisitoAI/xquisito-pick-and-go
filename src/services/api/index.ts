@@ -8,6 +8,7 @@ export * from "./table.service";
 export * from "./order.service";
 export * from "./split-bill.service";
 export * from "./user.service";
+export * from "./pick-and-go.service";
 
 // Re-export restaurant service desde su ubicación original
 export { restaurantService } from "../restaurant.service";

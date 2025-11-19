@@ -1,27 +1,26 @@
 "use client";
 
 import { Restaurant } from "../../interfaces/restaurant";
-import { useTable } from "../../context/TableContext";
-import { useTableNavigation } from "../../hooks/useTableNavigation";
+import { usePickAndGoContext } from "../../context/PickAndGoContext";
+import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
 import GlassSurface from "../UI/GlassSurface";
 
 interface MenuHeaderProps {
   restaurant: Restaurant;
-  tableNumber?: string;
 }
 
-export default function MenuHeader({
-  restaurant,
-  tableNumber,
-}: MenuHeaderProps) {
-  const { state } = useTable();
-  const { navigateWithTable } = useTableNavigation();
+export default function MenuHeader({ restaurant }: MenuHeaderProps) {
+  const { state } = usePickAndGoContext();
+  const router = useRouter();
   const pathname = usePathname();
 
   const handleCartClick = () => {
-    navigateWithTable("/cart");
+    // Extraer restaurantId del pathname actual (formato: /[restaurantId]/menu)
+    const pathSegments = pathname.split('/');
+    const restaurantId = pathSegments[1]; // Segundo segmento es el restaurantId
+    router.push(`/${restaurantId}/cart`);
   };
 
   return (
@@ -45,12 +44,12 @@ export default function MenuHeader({
                 </div>
               </GlassSurface>
             </div>
-            {state.currentUserTotalItems > 0 && (
+            {state.cartItemCount > 0 && (
               <div
                 id="cart-badge"
                 className="absolute -top-1 -right-1 bg-[#eab3f4] text-white rounded-full size-4 flex items-center justify-center text-xs font-normal"
               >
-                {state.currentUserTotalItems}
+                {state.cartItemCount}
               </div>
             )}
           </div>

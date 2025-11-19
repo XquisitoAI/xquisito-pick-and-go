@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useTable, CartItem } from "../../context/TableContext";
+import { CartItem } from "../../utils/cartHelpers";
+import { usePickAndGoContext } from "../../context/PickAndGoContext";
 import { useRestaurant } from "../../context/RestaurantContext";
-import { useTableNavigation } from "@/hooks/useTableNavigation";
 import Loader from "@/components/UI/Loader";
 import { useUser } from "@clerk/nextjs";
 
@@ -18,8 +18,7 @@ const OrderAnimation = ({
   orderedItems,
   onContinue,
 }: OrderAnimationProps) => {
-  const { navigateWithTable } = useTableNavigation();
-  const { state } = useTable();
+  const { state } = usePickAndGoContext();
   const { restaurant, loading } = useRestaurant();
   const { user } = useUser();
   const [animationState, setAnimationState] = useState<
@@ -27,9 +26,9 @@ const OrderAnimation = ({
   >("circle");
   const [logoColorful, setLogoColorful] = useState(false);
 
-  const displayName = userName || state.currentUserName || "Usuario";
+  const displayName = userName || state.customerInfo?.name || "Usuario";
   const displayItems = orderedItems || [];
-  const displayRestaurant = restaurant?.name || "Restaurante";
+  const displayRestaurant = restaurant?.name || "Xquisito Pick & Go";
 
   const userImage = user?.imageUrl;
   const hasUserImage = !!userImage;
@@ -67,9 +66,8 @@ const OrderAnimation = ({
   const handleContinue = () => {
     if (onContinue) {
       onContinue();
-    } else {
-      navigateWithTable("/order");
     }
+    // For Pick & Go, just call onContinue - no navigation needed
   };
 
   // Mostrar loader mientras carga
@@ -181,7 +179,7 @@ const OrderAnimation = ({
                               />
                             ) : (
                               <img
-                                src="/logo-short-green.webp"
+                                src={restaurant?.logo_url || "/logo-short-green.webp"}
                                 alt="Logo Xquisito"
                                 className="size-8 object-contain"
                               />

@@ -1,9 +1,9 @@
 "use client";
 
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { useTable } from "@/context/TableContext";
-import { useTableNavigation } from "@/hooks/useTableNavigation";
+import { usePickAndGoContext } from "@/context/PickAndGoContext";
+import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { ChevronDown, X } from "lucide-react";
 import MenuHeaderDish from "@/components/headers/MenuHeaderDish";
@@ -19,12 +19,11 @@ import { useUser } from "@clerk/nextjs";
 
 export default function DishDetailPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const dishId = parseInt(params.id as string);
   const restaurantId = params.restaurantId as string;
-  const { state, dispatch } = useTable();
-  const { tableNumber, goBack, navigateWithTable } = useTableNavigation();
+  const { state, addToCart, updateCartQuantity, removeFromCart } = usePickAndGoContext();
+  const { goBack, navigateToMenu } = useNavigation();
   const { restaurant, menu, loading, isOpen } = useRestaurant();
   const [localQuantity, setLocalQuantity] = useState(0);
   const [isPulsing, setIsPulsing] = useState(false);
@@ -172,19 +171,7 @@ export default function DishDetailPage() {
     }
   };
 
-  useEffect(() => {
-    if (!tableNumber) {
-      router.push("/");
-      return;
-    }
-
-    if (isNaN(parseInt(tableNumber))) {
-      router.push("/");
-      return;
-    }
-
-    dispatch({ type: "SET_TABLE_NUMBER", payload: tableNumber });
-  }, [tableNumber, dispatch, router]);
+  // Pick & Go no necesita validación de mesa
 
   // Cargar estadísticas de reviews al montar
   useEffect(() => {
@@ -381,14 +368,15 @@ export default function DishDetailPage() {
     setLocalQuantity((prev) => prev + 1);
     setIsPulsing(true);
 
-    dispatch({
-      type: "ADD_ITEM_TO_CURRENT_USER",
-      payload: {
-        ...dishData.dish,
-        price: basePrice,
-        customFields: customFieldsData,
-        extraPrice,
-      },
+    // Usar el addToCart del PickAndGoContext con custom fields
+    addToCart({
+      name: dishData.dish.name,
+      price: basePrice,
+      quantity: 1,
+      image: dishData.dish.images[0],
+      description: dishData.dish.description,
+      customFields: customFieldsData,
+      extraPrice,
     });
   };
 
@@ -438,18 +426,19 @@ export default function DishDetailPage() {
     setLocalQuantity((prev) => prev + 1);
     setIsPulsing(true);
 
-    dispatch({
-      type: "ADD_ITEM_TO_CURRENT_USER",
-      payload: {
-        ...dishData.dish,
-        price: basePrice,
-        customFields: customFieldsData,
-        extraPrice,
-      },
+    // Usar el addToCart del PickAndGoContext con custom fields
+    addToCart({
+      name: dishData.dish.name,
+      price: basePrice,
+      quantity: 1,
+      image: dishData.dish.images[0],
+      description: dishData.dish.description,
+      customFields: customFieldsData,
+      extraPrice,
     });
 
     setTimeout(() => {
-      navigateWithTable("/menu");
+      navigateToMenu();
     }, 200);
   };
 
@@ -459,25 +448,19 @@ export default function DishDetailPage() {
 
     setLocalQuantity((prev) => Math.max(0, prev - 1));
 
-    const cartItem = state.currentUserItems.find(
-      (cartItem) => cartItem.id === dishData.dish.id
+    const cartItem = state.cartItems.find(
+      (cartItem) => cartItem.id === dishData.dish.id.toString()
     );
     if (cartItem && cartItem.quantity > 1) {
-      dispatch({
-        type: "UPDATE_QUANTITY_CURRENT_USER",
-        payload: { id: dishData.dish.id, quantity: cartItem.quantity - 1 },
-      });
+      updateCartQuantity(cartItem.id, cartItem.quantity - 1, cartItem.customFields);
     } else if (cartItem && cartItem.quantity === 1) {
-      dispatch({
-        type: "REMOVE_ITEM_FROM_CURRENT_USER",
-        payload: dishData.dish.id,
-      });
+      removeFromCart(cartItem.id, cartItem.customFields);
     }
   };
 
   const currentQuantity = dishData
-    ? state.currentUserItems.find(
-        (cartItem) => cartItem.id === dishData.dish.id
+    ? state.cartItems.find(
+        (cartItem) => cartItem.id === dishData.dish.id.toString()
       )?.quantity || 0
     : 0;
 
@@ -494,18 +477,7 @@ export default function DishDetailPage() {
     return <Loader />;
   }
 
-  if (!tableNumber || isNaN(parseInt(tableNumber))) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-medium text-gray-800 mb-4">
-            Mesa Inválida
-          </h1>
-          <p className="text-gray-600">Por favor escanee el código QR</p>
-        </div>
-      </div>
-    );
-  }
+  // Pick & Go no requiere validación de mesa
 
   if (!dishData) {
     return (

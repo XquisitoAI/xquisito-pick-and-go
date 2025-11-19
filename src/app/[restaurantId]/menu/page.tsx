@@ -3,20 +3,15 @@
 import MenuView from "@/components/menu/MenuView";
 import Loader from "@/components/UI/Loader";
 import { useRestaurant } from "@/context/RestaurantContext";
-import { useTable } from "@/context/TableContext";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import React, { useEffect } from "react";
 
 const MenuPage = () => {
   const params = useParams();
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const { dispatch } = useTable();
   const { setRestaurantId, restaurant, loading, error } = useRestaurant();
 
   const restaurantId = params?.restaurantId as string;
-  const tableNumber = searchParams?.get("table");
-
   useEffect(() => {
     // Validar restaurantId
     if (!restaurantId || isNaN(parseInt(restaurantId))) {
@@ -25,24 +20,13 @@ const MenuPage = () => {
       return;
     }
 
-    // Validar tableNumber
-    if (!tableNumber || isNaN(parseInt(tableNumber))) {
-      console.error("❌ Invalid table number");
-      router.push("/");
-      return;
-    }
-
     // Establecer el restaurant ID en el contexto
     setRestaurantId(parseInt(restaurantId));
 
-    // Establecer el número de mesa en el contexto
-    dispatch({ type: "SET_TABLE_NUMBER", payload: tableNumber });
-
-    console.log("🍽️ Restaurant Menu Page:", {
+    console.log("🥡 Pick & Go Menu Page:", {
       restaurantId,
-      tableNumber,
     });
-  }, [restaurantId, tableNumber, dispatch, setRestaurantId, router]);
+  }, [restaurantId, setRestaurantId, router]);
 
   // Mostrar loader mientras carga
   if (loading) {
@@ -69,23 +53,23 @@ const MenuPage = () => {
     );
   }
 
-  // Mostrar error si no hay datos
-  if (!restaurant || !restaurantId || !tableNumber) {
+  // Mostrar error si no hay datos del restaurante
+  if (!restaurant || !restaurantId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-2">
-            Información Inválida
+            Restaurante no encontrado
           </h1>
           <p className="text-white">
-            Por favor escanee el código QR de su mesa
+            Por favor verifica el enlace e intenta nuevamente
           </p>
         </div>
       </div>
     );
   }
 
-  return <MenuView tableNumber={tableNumber} />;
+  return <MenuView />;
 };
 
 export default MenuPage;

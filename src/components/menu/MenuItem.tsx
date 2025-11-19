@@ -4,9 +4,9 @@ import {
   MenuItem as MenuItemDB,
   MenuItemData,
 } from "../../interfaces/menuItemData";
-import { useTable } from "../../context/TableContext";
-import { useTableNavigation } from "../../hooks/useTableNavigation";
+import { usePickAndGoContext } from "../../context/PickAndGoContext";
 import { useFlyToCart } from "../../hooks/useFlyToCart";
+import { useNavigation } from "../../hooks/useNavigation";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { Plus, Minus } from "lucide-react";
 import { useRef, useState, useEffect, useMemo } from "react";
@@ -36,8 +36,8 @@ export default function MenuItem({ item }: MenuItemProps) {
       features: [], // Los custom_fields podrían mapearse aquí si es necesario
     };
   }, [item]);
-  const { state, dispatch } = useTable();
-  const { navigateWithTable } = useTableNavigation();
+  const { state, addToCart, removeFromCart, updateCartQuantity } = usePickAndGoContext();
+  const { navigateToDish, navigateToCart } = useNavigation();
   const { flyToCart } = useFlyToCart();
   const { isOpen, restaurant } = useRestaurant();
   const plusButtonRef = useRef<HTMLDivElement>(null);
@@ -65,7 +65,7 @@ export default function MenuItem({ item }: MenuItemProps) {
   }, [item]);
 
   const handleImageClick = () => {
-    navigateWithTable(`/dish/${adaptedItem.id}`);
+    navigateToDish(adaptedItem.id);
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -79,7 +79,7 @@ export default function MenuItem({ item }: MenuItemProps) {
 
     // Si tiene custom fields, navegar a la página de detalle
     if (hasCustomFields) {
-      navigateWithTable(`/dish/${adaptedItem.id}`);
+      navigateToDish(adaptedItem.id);
       return;
     }
 
@@ -101,13 +101,22 @@ export default function MenuItem({ item }: MenuItemProps) {
 
     if (plusButtonRef.current) {
       flyToCart(plusButtonRef.current, () => {
-        dispatch({
-          type: "ADD_ITEM_TO_CURRENT_USER",
-          payload: itemWithDiscount,
+        addToCart({
+          name: itemWithDiscount.name,
+          price: itemWithDiscount.price,
+          quantity: 1,
+          image: itemWithDiscount.images[0],
+          description: itemWithDiscount.description
         });
       });
     } else {
-      dispatch({ type: "ADD_ITEM_TO_CURRENT_USER", payload: itemWithDiscount });
+      addToCart({
+        name: itemWithDiscount.name,
+        price: itemWithDiscount.price,
+        quantity: 1,
+        image: itemWithDiscount.images[0],
+        description: itemWithDiscount.description
+      });
     }
   };
 
@@ -122,41 +131,35 @@ export default function MenuItem({ item }: MenuItemProps) {
   const handleRemoveFromCart = (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // Si hay múltiples variaciones, navegar al carrito
-    const itemsWithSameId = state.currentUserItems.filter(
-      (cartItem) => cartItem.id === adaptedItem.id
+    // Buscar item en el carrito Pick & Go
+    const cartItem = state.cartItems.find(
+      (item) => item.name === adaptedItem.name
     );
-    if (itemsWithSameId.length > 1) {
-      navigateWithTable("/cart");
+
+    if (!cartItem) return;
+
+    // Si hay múltiples variaciones, navegar al carrito
+    const itemsWithSameName = state.cartItems.filter(
+      (item) => item.name === adaptedItem.name
+    );
+    if (itemsWithSameName.length > 1) {
+      navigateToCart();
       return;
     }
 
     // Update local quantity
     setLocalQuantity((prev) => Math.max(0, prev - 1));
 
-    const cartItem = state.currentUserItems.find(
-      (cartItem) => cartItem.id === adaptedItem.id
-    );
-    if (cartItem && cartItem.quantity > 1) {
-      dispatch({
-        type: "UPDATE_QUANTITY_CURRENT_USER",
-        payload: {
-          id: adaptedItem.id,
-          quantity: cartItem.quantity - 1,
-          customFields: cartItem.customFields,
-        },
-      });
-    } else if (cartItem && cartItem.quantity === 1) {
-      dispatch({
-        type: "REMOVE_ITEM_FROM_CURRENT_USER",
-        payload: adaptedItem.id,
-      });
+    if (cartItem.quantity > 1) {
+      updateCartQuantity(cartItem.id, cartItem.quantity - 1);
+    } else {
+      removeFromCart(cartItem.id);
     }
   };
 
-  // Sumar todas las cantidades de items con el mismo id (considerando diferentes custom fields)
-  const currentQuantity = state.currentUserItems
-    .filter((cartItem) => cartItem.id === adaptedItem.id)
+  // Sumar todas las cantidades de items con el mismo nombre (para Pick & Go)
+  const currentQuantity = state.cartItems
+    .filter((cartItem) => cartItem.name === adaptedItem.name)
     .reduce((sum, item) => sum + item.quantity, 0);
 
   // Sync local quantity with state

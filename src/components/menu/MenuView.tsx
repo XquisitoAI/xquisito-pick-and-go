@@ -6,23 +6,19 @@ import { Search, ShoppingCart, Settings } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useUserData } from "../../context/userDataContext";
-import { useTableNavigation } from "../../hooks/useTableNavigation";
-import { useTable } from "../../context/TableContext";
+import { usePickAndGoContext } from "../../context/PickAndGoContext";
 import { useRestaurant } from "../../context/RestaurantContext";
+import { useRouter } from "next/navigation";
 import Loader from "../UI/Loader";
 
-interface MenuViewProps {
-  tableNumber?: string;
-}
-
-export default function MenuView({ tableNumber }: MenuViewProps) {
+export default function MenuView() {
   const [filter, setFilter] = useState("Todo");
   const [searchQuery, setSearchQuery] = useState("");
   const { user, isLoaded } = useUser();
   const { signUpData } = useUserData();
-  const { navigateWithTable } = useTableNavigation();
-  const { state } = useTable();
+  const { state } = usePickAndGoContext();
   const { restaurant, menu, loading, error } = useRestaurant();
+  const router = useRouter();
 
   // Obtener categorías únicas del menú de la BD
   const categorias = useMemo(() => {
@@ -45,11 +41,8 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
       : "Bienvenido"
     : "Bienvenido";
 
-  // Total de items en el carrito
-  const totalItems = state.currentUserItems.reduce(
-    (sum, item) => sum + item.quantity,
-    0
-  );
+  // Total de items en el carrito Pick & Go
+  const totalItems = state.cartItemCount;
 
   // Filtrar menú según la categoría seleccionada y búsqueda
   const filteredMenu = useMemo(() => {
@@ -119,7 +112,7 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
         className="absolute top-0 left-0 w-full h-96 object-cover z-0"
       />
 
-      <MenuHeader restaurant={restaurant} tableNumber={tableNumber} />
+      <MenuHeader restaurant={restaurant} />
 
       <main className="mt-72 relative z-10">
         <div className="bg-white rounded-t-4xl flex flex-col items-center px-6">
@@ -128,10 +121,10 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
             <div
               onClick={() => {
                 if (user && isLoaded) {
-                  navigateWithTable("/dashboard");
+                  router.push("/dashboard");
                 } else {
                   sessionStorage.setItem("signInFromMenu", "true");
-                  navigateWithTable("/sign-in");
+                  router.push("/sign-in");
                 }
               }}
               className="bg-white rounded-full p-1.5 border border-gray-400 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
@@ -140,7 +133,7 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
             </div>
             {/* Assistent Icon */}
             <div
-              onClick={() => navigateWithTable("/pepper")}
+              onClick={() => router.push("/pepper")}
               className="bg-white rounded-full text-black border border-gray-400 size-10 cursor-pointer shadow-sm"
             >
               <video
@@ -225,7 +218,7 @@ export default function MenuView({ tableNumber }: MenuViewProps) {
       {totalItems > 0 && (
         <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center">
           <div
-            onClick={() => navigateWithTable("/cart")}
+            onClick={() => router.push("/cart")}
             className="bg-black text-white rounded-full px-6 py-3 shadow-lg flex items-center gap-3 cursor-pointer hover:bg-stone-950 transition-all hover:scale-105 animate-bounce-in"
           >
             <ShoppingCart className="size-5" />
