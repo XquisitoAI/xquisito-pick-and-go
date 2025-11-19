@@ -4,6 +4,7 @@ import React, { createContext, useContext, useReducer, useEffect, ReactNode } fr
 import { useUser } from "@clerk/nextjs";
 import { PickAndGoOrder, PickAndGoItem } from "@/services/api";
 import { usePickAndGo } from "@/hooks/usePickAndGo";
+import { useRestaurant } from "@/context/RestaurantContext";
 
 // Import enhanced cart utilities from TableContext
 import {
@@ -20,6 +21,10 @@ import {
   validateCartItem,
   validateCustomFields
 } from "@/utils/cartHelpers";
+
+// Import robust API services from TableContext
+import { apiService } from "../utils/api";
+import { orderService } from "@/services/api";
 
 // ===============================================
 // ENHANCED TYPES AND INTERFACES
@@ -245,6 +250,9 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
   const { user, isLoaded } = useUser();
   const pickAndGoHook = usePickAndGo();
 
+  // Get restaurant context - needed for robust order creation
+  const { restaurantId } = useRestaurant();
+
   // Initialize customer info when user authentication changes
   useEffect(() => {
     if (isLoaded) {
@@ -347,105 +355,140 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
   // ENHANCED ORDER MANAGEMENT
   // ===============================================
 
+  // ===============================================
+  // SIMPLIFIED CREATE ORDER (now just for cart → checkout transition)
+  // ===============================================
+
   const createOrder = async (): Promise<PickAndGoOrder | null> => {
-    // Enhanced validation - support both authenticated and guest users
+    // This function now just prepares the transition from cart to checkout
+    // The actual dish order creation happens in confirmOrder() using TableContext logic
+
     if (state.cartItems.length === 0) {
       console.error('❌ Cannot create order: empty cart');
       dispatch({ type: "SET_ERROR", payload: "Cart is empty" });
       return null;
     }
 
+    // Initialize customer info if not set
     if (!state.customerInfo?.name) {
-      console.error('❌ Cannot create order: missing customer info');
-      dispatch({ type: "SET_ERROR", payload: "Customer information required" });
-      return null;
+      const authInfo = getUserAuthInfo(isLoaded, user);
+      setCustomerInfo({
+        name: authInfo.displayName,
+        email: authInfo.email || undefined,
+        isAuthenticated: authInfo.isAuthenticated,
+        userId: authInfo.userId || undefined,
+        guestId: authInfo.guestId || undefined
+      });
     }
 
     try {
-      // Enhanced order data with authentication support
-      const orderData = {
-        clerk_user_id: state.customerInfo.userId || null,
-        customer_name: state.customerInfo.name,
-        customer_phone: state.customerInfo.phone,
-        customer_email: state.customerInfo.email,
+      // Create a mock order object for UI transition
+      const mockOrder: PickAndGoOrder = {
+        id: `mock_${Date.now()}`,
+        clerk_user_id: state.customerInfo?.userId || null,
+        customer_name: state.customerInfo?.name || 'Customer',
+        customer_phone: state.customerInfo?.phone,
+        customer_email: state.customerInfo?.email,
         total_amount: state.cartTotal,
+        payment_status: 'pending',
+        order_status: 'active',
         session_data: {
           ...state.sessionData,
           cartItemCount: state.cartItemCount,
-          pickupPreference: 'asap',
-          guestId: state.customerInfo.guestId,
-          isAuthenticated: state.customerInfo.isAuthenticated
+          pickupPreference: 'asap'
         },
         prep_metadata: {
           estimatedItems: state.cartItems.length,
-          cartTotal: state.cartTotal,
-          cartItems: state.cartItems.map(item => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            customFields: item.customFields,
-            extraPrice: item.extraPrice
-          }))
-        }
+          cartTotal: state.cartTotal
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      // Create the order
-      const order = await pickAndGoHook.createOrder(orderData);
+      dispatch({ type: "SET_CURRENT_ORDER", payload: mockOrder });
+      setCurrentStep('checkout');
+      console.log('✅ Order prepared for checkout:', mockOrder.id);
 
-      if (order) {
-        console.log('✅ Order created successfully:', order.id);
-        setCurrentStep('confirmation');
-        return order;
-      } else {
-        dispatch({ type: "SET_ERROR", payload: "Failed to create order" });
-      }
-
-      return null;
+      return mockOrder;
     } catch (error) {
-      console.error('💥 Error creating order:', error);
+      console.error('💥 Error preparing order:', error);
       dispatch({ type: "SET_ERROR", payload: error instanceof Error ? error.message : 'Unknown error' });
       return null;
     }
   };
 
+  // ===============================================
+  // ROBUST ORDER CONFIRMATION (adapted from TableContext)
+  // ===============================================
+
   const confirmOrder = async () => {
-    if (!pickAndGoHook.currentOrder) {
-      console.error('❌ No current order to confirm');
-      dispatch({ type: "SET_ERROR", payload: "No order to confirm" });
+    // Enhanced validation - similar to TableContext submitOrder
+    if (state.cartItems.length === 0) {
+      console.error('❌ Cannot confirm order: empty cart');
+      dispatch({ type: "SET_ERROR", payload: "Cart is empty" });
       return;
     }
 
-    try {
-      dispatch({ type: "SET_LOADING", payload: true });
+    if (!state.customerInfo?.name) {
+      console.error('❌ Cannot confirm order: missing customer info');
+      dispatch({ type: "SET_ERROR", payload: "Customer information required" });
+      return;
+    }
 
-      // Add all cart items to the order with enhanced custom fields support
-      for (const cartItem of state.cartItems) {
-        await pickAndGoHook.addItemToOrder({
-          item: cartItem.name,
-          quantity: cartItem.quantity,
-          price: cartItem.price,
-          custom_fields: {
-            description: cartItem.description,
-            extras: cartItem.extras || [],
-            customFields: cartItem.customFields || []
-          },
-          extra_price: cartItem.extraPrice || 0,
-          images: cartItem.images || (cartItem.image ? [cartItem.image] : [])
-        });
+    dispatch({ type: "SET_LOADING", payload: true });
+
+    try {
+      // Use robust authentication logic from TableContext
+      const authInfo = getUserAuthInfo(isLoaded, user);
+
+      // Save guest info if not authenticated (TableContext pattern)
+      if (!authInfo.isAuthenticated && typeof window !== "undefined") {
+        localStorage.setItem("xquisito-guest-name", state.customerInfo.name);
+        if (!localStorage.getItem("xquisito-guest-id")) {
+          const guestId = generateGuestId();
+          localStorage.setItem("xquisito-guest-id", guestId);
+        }
       }
 
-      // Update order status
-      await pickAndGoHook.updateOrderStatus('confirmed');
+      // Create individual dish orders for each cart item (TableContext pattern)
+      console.log('🍽️ Creating dish orders for', state.cartItems.length, 'items');
 
-      // Clear cart and advance to tracking
+      for (const item of state.cartItems) {
+        const response = await apiService.createDishOrder(
+          restaurantId?.toString() || "1", // restaurantId from context
+          "PICKUP", // Special tableNumber for Pick & Go orders
+          authInfo.userId, // userId from Clerk if authenticated, null if guest
+          authInfo.displayName, // Real name or guest name
+          item.name, // item name
+          item.quantity, // quantity from cart
+          item.price, // price (already includes discounts)
+          authInfo.guestId, // guestId only if guest user
+          item.images || (item.image ? [item.image] : []), // images array
+          item.customFields, // custom fields selected
+          item.extraPrice || 0 // extra price from custom fields
+        );
+
+        if (!response.success) {
+          throw new Error(
+            response.error?.message || `Failed to create dish order for ${item.name}`
+          );
+        }
+
+        console.log('✅ Dish order created:', item.name, 'x', item.quantity);
+      }
+
+      // Clear cart and update state
       clearCart();
-      setCurrentStep('tracking');
+      setCurrentStep('confirmation');
       dispatch({ type: "SET_LOADING", payload: false });
 
-      console.log('✅ Order confirmed successfully');
+      console.log('🎉 All dish orders created successfully for Pick & Go!');
     } catch (error) {
-      console.error('💥 Error confirming order:', error);
-      dispatch({ type: "SET_ERROR", payload: error instanceof Error ? error.message : 'Failed to confirm order' });
+      console.error('💥 Error confirming Pick & Go order:', error);
+      dispatch({
+        type: "SET_ERROR",
+        payload: error instanceof Error ? error.message : 'Failed to confirm order'
+      });
       dispatch({ type: "SET_LOADING", payload: false });
     }
   };

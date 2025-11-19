@@ -226,10 +226,10 @@ export const generateGuestId = (): string => {
 
 /**
  * Validate cart item before adding
+ * Note: id is optional since it gets generated in addToCart
  */
 export const validateCartItem = (item: Partial<CartItem>): boolean => {
   return !!(
-    item.id &&
     item.name &&
     typeof item.price === 'number' &&
     item.price >= 0 &&

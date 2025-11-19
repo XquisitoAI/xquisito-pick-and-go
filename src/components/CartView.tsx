@@ -10,7 +10,7 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
 export default function CartView() {
-  const { state, updateCartQuantity, removeFromCart, createOrder, setCustomerInfo } = usePickAndGoContext();
+  const { state, updateCartQuantity, removeFromCart, createOrder, confirmOrder, setCustomerInfo } = usePickAndGoContext();
   const router = useRouter();
   const { isLoaded, isSignedIn, user } = useUser();
   const [showOrderAnimation, setShowOrderAnimation] = useState(false);
@@ -39,7 +39,10 @@ export default function CartView() {
           userId: user.id
         });
 
-        await createOrder();
+        // Use robust confirmOrder that creates individual dish orders
+        await confirmOrder();
+
+        console.log('🎉 Pick & Go order completed successfully!');
       } catch (error) {
         console.error("Error submitting order:", error);
         // Si hay error, ocultar la animación
