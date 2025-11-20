@@ -88,7 +88,7 @@ export default function SignUpPage() {
       <div className="relative z-10 w-full max-w-md text-center flex flex-col items-center mb-12">
         <div className="mb-6">
           <img
-            src="/logo-short-green.webp"
+            src="/logos/logo-short-green.webp"
             alt="Xquisito Logo"
             className="size-18 justify-self-center"
           />

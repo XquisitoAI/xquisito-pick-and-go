@@ -27,7 +27,7 @@ export default function MenuHeaderBack() {
 
         {/* Xquisito Logo */}
         <div className="absolute left-1/2 transform -translate-x-1/2 size-10">
-          <img src="/logo-short-green.webp" alt="Xquisito Logo" />
+          <img src="/logos/logo-short-green.webp" alt="Xquisito Logo" />
         </div>
 
         {/* User avatar (simplified for Pick & Go) */}

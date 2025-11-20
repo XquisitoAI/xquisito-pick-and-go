@@ -97,7 +97,7 @@ export default function CartView() {
                                   />
                                 ) : (
                                   <img
-                                    src={"/logo-short-green.webp"}
+                                    src={"/logos/logo-short-green.webp"}
                                     alt="Logo Xquisito"
                                     className="size-18 object-contain"
                                   />

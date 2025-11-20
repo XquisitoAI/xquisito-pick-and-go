@@ -98,7 +98,7 @@ const OrderAnimation = ({
                 {/* Logo container */}
                 <div className="size-24 flex items-center justify-center rounded-full relative z-10">
                   <img
-                    src="/logo-short-green.webp"
+                    src="/logos/logo-short-green.webp"
                     alt="Xquisito Logo"
                     className="size-16 grayscale opacity-50"
                   />
@@ -117,7 +117,7 @@ const OrderAnimation = ({
                   <div className="flex items-center gap-3">
                     <div className="size-12 rounded-full border border-gray-400 bg-gray-100 overflow-hidden flex-shrink-0">
                       <img
-                        src={restaurant?.logo_url || "/logo-short-green.webp"}
+                        src={restaurant?.logo_url || "/logos/logo-short-green.webp"}
                         alt={displayRestaurant}
                         className="object-cover w-full h-full"
                       />
@@ -177,7 +177,7 @@ const OrderAnimation = ({
                               />
                             ) : (
                               <img
-                                src={restaurant?.logo_url || "/logo-short-green.webp"}
+                                src={restaurant?.logo_url || "/logos/logo-short-green.webp"}
                                 alt="Logo Xquisito"
                                 className="size-8 object-contain"
                               />
