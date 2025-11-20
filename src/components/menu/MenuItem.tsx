@@ -4,7 +4,7 @@ import {
   MenuItem as MenuItemDB,
   MenuItemData,
 } from "../../interfaces/menuItemData";
-import { usePickAndGoContext } from "../../context/PickAndGoContext";
+import { useCart } from "../../context/CartContext";
 import { useFlyToCart } from "../../hooks/useFlyToCart";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useRestaurant } from "../../context/RestaurantContext";
@@ -36,7 +36,7 @@ export default function MenuItem({ item }: MenuItemProps) {
       features: [], // Los custom_fields podrían mapearse aquí si es necesario
     };
   }, [item]);
-  const { state, addToCart, removeFromCart, updateCartQuantity } = usePickAndGoContext();
+  const { state, addItem, removeItem, updateQuantity } = useCart();
   const { navigateToDish, navigateToCart } = useNavigation();
   const { flyToCart } = useFlyToCart();
   const { isOpen, restaurant } = useRestaurant();
@@ -101,22 +101,10 @@ export default function MenuItem({ item }: MenuItemProps) {
 
     if (plusButtonRef.current) {
       flyToCart(plusButtonRef.current, () => {
-        addToCart({
-          name: itemWithDiscount.name,
-          price: itemWithDiscount.price,
-          quantity: 1,
-          image: itemWithDiscount.images[0],
-          description: itemWithDiscount.description
-        });
+        addItem(itemWithDiscount);
       });
     } else {
-      addToCart({
-        name: itemWithDiscount.name,
-        price: itemWithDiscount.price,
-        quantity: 1,
-        image: itemWithDiscount.images[0],
-        description: itemWithDiscount.description
-      });
+      addItem(itemWithDiscount);
     }
   };
 
@@ -131,15 +119,15 @@ export default function MenuItem({ item }: MenuItemProps) {
   const handleRemoveFromCart = (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // Buscar item en el carrito Pick & Go
-    const cartItem = state.cartItems.find(
+    // Buscar item en el carrito
+    const cartItem = state.items.find(
       (item) => item.name === adaptedItem.name
     );
 
     if (!cartItem) return;
 
     // Si hay múltiples variaciones, navegar al carrito
-    const itemsWithSameName = state.cartItems.filter(
+    const itemsWithSameName = state.items.filter(
       (item) => item.name === adaptedItem.name
     );
     if (itemsWithSameName.length > 1) {
@@ -151,14 +139,14 @@ export default function MenuItem({ item }: MenuItemProps) {
     setLocalQuantity((prev) => Math.max(0, prev - 1));
 
     if (cartItem.quantity > 1) {
-      updateCartQuantity(cartItem.id, cartItem.quantity - 1);
+      updateQuantity(cartItem.id, cartItem.quantity - 1);
     } else {
-      removeFromCart(cartItem.id);
+      removeItem(cartItem.id);
     }
   };
 
-  // Sumar todas las cantidades de items con el mismo nombre (para Pick & Go)
-  const currentQuantity = state.cartItems
+  // Sumar todas las cantidades de items con el mismo nombre
+  const currentQuantity = state.items
     .filter((cartItem) => cartItem.name === adaptedItem.name)
     .reduce((sum, item) => sum + item.quantity, 0);
 

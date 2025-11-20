@@ -3,8 +3,11 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { RestaurantProvider } from "@/context/RestaurantContext";
+import { CartProvider } from "@/context/CartContext";
 import { PickAndGoProvider } from "@/context/PickAndGoContext";
 import { UserDataProvider } from "@/context/userDataContext";
+import { GuestProvider } from "@/context/GuestContext";
+import { PaymentProvider } from "@/context/PaymentContext";
 
 const helveticaNeue = localFont({
   src: [
@@ -112,12 +115,19 @@ export default function RootLayout({
           style={{ fontFamily: "var(--font-helvetica-neue)" }}
         >
           <RestaurantProvider>
-            <PickAndGoProvider>
-              <UserDataProvider>{children}</UserDataProvider>
-            </PickAndGoProvider>
+            <CartProvider>
+              <PickAndGoProvider>
+                <GuestProvider>
+                  <PaymentProvider>
+                    <UserDataProvider>{children}</UserDataProvider>
+                  </PaymentProvider>
+                </GuestProvider>
+              </PickAndGoProvider>
+            </CartProvider>
           </RestaurantProvider>
         </body>
       </html>
     </ClerkProvider>
   );
+
 }

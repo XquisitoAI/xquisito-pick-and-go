@@ -6,9 +6,10 @@ import { Search, ShoppingCart, Settings } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useUserData } from "../../context/userDataContext";
-import { usePickAndGoContext } from "../../context/PickAndGoContext";
+import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { useRouter } from "next/navigation";
+import { useNavigation } from "../../hooks/useNavigation";
 import Loader from "../UI/Loader";
 
 export default function MenuView() {
@@ -16,9 +17,10 @@ export default function MenuView() {
   const [searchQuery, setSearchQuery] = useState("");
   const { user, isLoaded } = useUser();
   const { signUpData } = useUserData();
-  const { state } = usePickAndGoContext();
+  const { state } = useCart();
   const { restaurant, menu, loading, error } = useRestaurant();
   const router = useRouter();
+  const { navigateWithRestaurantId } = useNavigation();
 
   // Obtener categorías únicas del menú de la BD
   const categorias = useMemo(() => {
@@ -41,8 +43,8 @@ export default function MenuView() {
       : "Bienvenido"
     : "Bienvenido";
 
-  // Total de items en el carrito Pick & Go
-  const totalItems = state.cartItemCount;
+  // Total de items en el carrito
+  const totalItems = state.totalItems;
 
   // Filtrar menú según la categoría seleccionada y búsqueda
   const filteredMenu = useMemo(() => {
@@ -218,7 +220,7 @@ export default function MenuView() {
       {totalItems > 0 && (
         <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center">
           <div
-            onClick={() => router.push("/cart")}
+            onClick={() => navigateWithRestaurantId("/cart")}
             className="bg-black text-white rounded-full px-6 py-3 shadow-lg flex items-center gap-3 cursor-pointer hover:bg-stone-950 transition-all hover:scale-105 animate-bounce-in"
           >
             <ShoppingCart className="size-5" />

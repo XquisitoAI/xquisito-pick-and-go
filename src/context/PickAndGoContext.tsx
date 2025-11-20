@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useCallback, ReactNode } from "react";
 import { useUser } from "@clerk/nextjs";
 import { PickAndGoOrder, PickAndGoItem } from "@/services/api";
 import { usePickAndGo } from "@/hooks/usePickAndGo";
@@ -253,12 +253,41 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
   // Get restaurant context - needed for robust order creation
   const { restaurantId } = useRestaurant();
 
+  // ===============================================
+  // UTILITY FUNCTIONS (defined early)
+  // ===============================================
+
+  const setCustomerInfo = useCallback((info: PickAndGoState['customerInfo']) => {
+    dispatch({ type: "SET_CUSTOMER_INFO", payload: info });
+  }, []);
+
+  // ===============================================
+  // AUTHENTICATION & CUSTOMER MANAGEMENT
+  // ===============================================
+
+  const initializeCustomerFromAuth = useCallback(() => {
+    const authInfo = getUserAuthInfo(isLoaded, user);
+
+    setCustomerInfo({
+      name: authInfo.displayName,
+      email: authInfo.email || undefined,
+      isAuthenticated: authInfo.isAuthenticated,
+      userId: authInfo.userId || undefined,
+      guestId: authInfo.guestId || undefined
+    });
+
+    console.log('👤 Customer initialized:', {
+      authenticated: authInfo.isAuthenticated,
+      name: authInfo.displayName
+    });
+  }, [isLoaded, user, setCustomerInfo]);
+
   // Initialize customer info when user authentication changes
   useEffect(() => {
     if (isLoaded) {
       initializeCustomerFromAuth();
     }
-  }, [isLoaded, user]);
+  }, [isLoaded, initializeCustomerFromAuth]);
 
   // Sync loading and error state from hook
   useEffect(() => {
@@ -318,25 +347,8 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
   };
 
   // ===============================================
-  // AUTHENTICATION & CUSTOMER MANAGEMENT
+  // GUEST MANAGEMENT (continued)
   // ===============================================
-
-  const initializeCustomerFromAuth = () => {
-    const authInfo = getUserAuthInfo(isLoaded, user);
-
-    setCustomerInfo({
-      name: authInfo.displayName,
-      email: authInfo.email || undefined,
-      isAuthenticated: authInfo.isAuthenticated,
-      userId: authInfo.userId || undefined,
-      guestId: authInfo.guestId || undefined
-    });
-
-    console.log('👤 Customer initialized:', {
-      authenticated: authInfo.isAuthenticated,
-      name: authInfo.displayName
-    });
-  };
 
   const saveGuestInfoLocal = (name: string) => {
     const guestId = generateGuestId();
@@ -507,10 +519,6 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
   // UTILITY FUNCTIONS
   // ===============================================
 
-  const setCustomerInfo = (info: PickAndGoState['customerInfo']) => {
-    dispatch({ type: "SET_CUSTOMER_INFO", payload: info });
-  };
-
   const setCurrentStep = (step: PickAndGoState['currentStep']) => {
     dispatch({ type: "SET_CURRENT_STEP", payload: step });
   };
@@ -519,9 +527,9 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
     dispatch({ type: "UPDATE_SESSION_DATA", payload: data });
   };
 
-  const setRestaurantId = (restaurantId: string) => {
+  const setRestaurantId = useCallback((restaurantId: string) => {
     dispatch({ type: "SET_RESTAURANT_ID", payload: restaurantId });
-  };
+  }, []);
 
   const clearError = () => {
     dispatch({ type: "SET_ERROR", payload: null });

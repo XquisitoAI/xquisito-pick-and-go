@@ -1,7 +1,7 @@
 "use client";
 
 import { Restaurant } from "../../interfaces/restaurant";
-import { usePickAndGoContext } from "../../context/PickAndGoContext";
+import { useCart } from "../../context/CartContext";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
@@ -12,7 +12,7 @@ interface MenuHeaderProps {
 }
 
 export default function MenuHeader({ restaurant }: MenuHeaderProps) {
-  const { state } = usePickAndGoContext();
+  const { state } = useCart();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -44,12 +44,12 @@ export default function MenuHeader({ restaurant }: MenuHeaderProps) {
                 </div>
               </GlassSurface>
             </div>
-            {state.cartItemCount > 0 && (
+            {state.totalItems > 0 && (
               <div
                 id="cart-badge"
                 className="absolute -top-1 -right-1 bg-[#eab3f4] text-white rounded-full size-4 flex items-center justify-center text-xs font-normal"
               >
-                {state.cartItemCount}
+                {state.totalItems}
               </div>
             )}
           </div>

@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { CartItem } from "../../utils/cartHelpers";
-import { usePickAndGoContext } from "../../context/PickAndGoContext";
+import { CartItem } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
 import Loader from "@/components/UI/Loader";
 import { useUser } from "@clerk/nextjs";
@@ -18,7 +17,6 @@ const OrderAnimation = ({
   orderedItems,
   onContinue,
 }: OrderAnimationProps) => {
-  const { state } = usePickAndGoContext();
   const { restaurant, loading } = useRestaurant();
   const { user } = useUser();
   const [animationState, setAnimationState] = useState<
@@ -26,7 +24,7 @@ const OrderAnimation = ({
   >("circle");
   const [logoColorful, setLogoColorful] = useState(false);
 
-  const displayName = userName || state.customerInfo?.name || "Usuario";
+  const displayName = userName || "Usuario";
   const displayItems = orderedItems || [];
   const displayRestaurant = restaurant?.name || "Xquisito Pick & Go";
 

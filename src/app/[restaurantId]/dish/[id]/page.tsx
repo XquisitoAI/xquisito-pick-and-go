@@ -1,7 +1,8 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
+import { useCart } from "@/context/CartContext";
 import { usePickAndGoContext } from "@/context/PickAndGoContext";
 import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
@@ -19,11 +20,13 @@ import { useUser } from "@clerk/nextjs";
 
 export default function DishDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const dishId = parseInt(params.id as string);
   const restaurantId = params.restaurantId as string;
-  const { state, addToCart, updateCartQuantity, removeFromCart } = usePickAndGoContext();
-  const { goBack, navigateToMenu } = useNavigation();
+  const { state: cartState, addItem, updateQuantity } = useCart();
+  const { setRestaurantId: setPickAndGoRestaurantId } = usePickAndGoContext();
+  const { goBack, navigateWithRestaurantId } = useNavigation();
   const { restaurant, menu, loading, isOpen } = useRestaurant();
   const [localQuantity, setLocalQuantity] = useState(0);
   const [isPulsing, setIsPulsing] = useState(false);
@@ -171,7 +174,15 @@ export default function DishDetailPage() {
     }
   };
 
-  // Pick & Go no necesita validación de mesa
+  useEffect(() => {
+    if (!restaurantId || isNaN(parseInt(restaurantId))) {
+      router.push("/");
+      return;
+    }
+
+    setPickAndGoRestaurantId(restaurantId);
+    console.log("🥡 Pick & Go Dish Page:", { restaurantId, dishId });
+  }, [restaurantId, dishId, setPickAndGoRestaurantId, router]);
 
   // Cargar estadísticas de reviews al montar
   useEffect(() => {
@@ -321,7 +332,7 @@ export default function DishDetailPage() {
     return basePrice + extraPrice;
   };
 
-  const handleAddToCart = (e?: React.MouseEvent) => {
+  const handleAddToCart = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!dishData) return;
 
@@ -368,19 +379,15 @@ export default function DishDetailPage() {
     setLocalQuantity((prev) => prev + 1);
     setIsPulsing(true);
 
-    // Usar el addToCart del PickAndGoContext con custom fields
-    addToCart({
-      name: dishData.dish.name,
+    await addItem({
+      ...dishData.dish,
       price: basePrice,
-      quantity: 1,
-      image: dishData.dish.images[0],
-      description: dishData.dish.description,
       customFields: customFieldsData,
       extraPrice,
     });
   };
 
-  const handleAddToCartAndReturn = () => {
+  const handleAddToCartAndReturn = async () => {
     if (!dishData) return;
 
     // Verificar si el restaurante está abierto
@@ -426,41 +433,35 @@ export default function DishDetailPage() {
     setLocalQuantity((prev) => prev + 1);
     setIsPulsing(true);
 
-    // Usar el addToCart del PickAndGoContext con custom fields
-    addToCart({
-      name: dishData.dish.name,
+    await addItem({
+      ...dishData.dish,
       price: basePrice,
-      quantity: 1,
-      image: dishData.dish.images[0],
-      description: dishData.dish.description,
       customFields: customFieldsData,
       extraPrice,
     });
 
     setTimeout(() => {
-      navigateToMenu();
+      navigateWithRestaurantId("/menu");
     }, 200);
   };
 
-  const handleRemoveFromCart = (e: React.MouseEvent) => {
+  const handleRemoveFromCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!dishData) return;
 
     setLocalQuantity((prev) => Math.max(0, prev - 1));
 
-    const cartItem = state.cartItems.find(
-      (cartItem) => cartItem.id === dishData.dish.id.toString()
+    const cartItem = cartState.items.find(
+      (cartItem) => cartItem.id === dishData.dish.id
     );
-    if (cartItem && cartItem.quantity > 1) {
-      updateCartQuantity(cartItem.id, cartItem.quantity - 1, cartItem.customFields);
-    } else if (cartItem && cartItem.quantity === 1) {
-      removeFromCart(cartItem.id, cartItem.customFields);
+    if (cartItem) {
+      await updateQuantity(dishData.dish.id, cartItem.quantity - 1);
     }
   };
 
   const currentQuantity = dishData
-    ? state.cartItems.find(
-        (cartItem) => cartItem.id === dishData.dish.id.toString()
+    ? cartState.items.find(
+        (cartItem) => cartItem.id === dishData.dish.id
       )?.quantity || 0
     : 0;
 
@@ -477,7 +478,18 @@ export default function DishDetailPage() {
     return <Loader />;
   }
 
-  // Pick & Go no requiere validación de mesa
+  if (!restaurantId || isNaN(parseInt(restaurantId))) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-medium text-gray-800 mb-4">
+            Restaurante Inválido
+          </h1>
+          <p className="text-gray-600">ID de restaurante no válido</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!dishData) {
     return (
@@ -530,7 +542,7 @@ export default function DishDetailPage() {
           ) : (
             <div className="absolute top-0 left-0 w-full h-full bg-gray-300 flex items-center justify-center">
               <img
-                src="/logo-short-green.webp"
+                src="/logos/logo-short-green.webp"
                 alt="Logo"
                 className="w-32 h-32 object-contain"
               />
@@ -560,7 +572,7 @@ export default function DishDetailPage() {
       <MenuHeaderDish />
 
       <main className="mt-72 relative z-10">
-        <div className="bg-white rounded-t-4xl flex flex-col px-6">
+        <div className="bg-white rounded-t-4xl flex flex-col px-6 pb-[100px]">
           <div className="mt-8">
             <div className="flex justify-between items-center text-black mb-6">
               {isLoadingReviews ? (
@@ -762,10 +774,10 @@ export default function DishDetailPage() {
               ></textarea>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="fixed bottom-0 left-0 right-0 mx-4 px-6 p-6 z-10">
               <button
                 onClick={handleAddToCartAndReturn}
-                className="bg-black hover:bg-stone-950 w-full text-white py-3 rounded-full cursor-pointer transition-colors mb-6 flex items-center justify-center gap-2"
+                className="bg-gradient-to-r from-[#34808C] to-[#173E44] w-full text-white py-3 rounded-full cursor-pointer transition-colors flex items-center justify-center gap-2"
               >
                 <span>
                   Agregar al carrito • ${calculateTotalPrice().toFixed(2)} MXN
@@ -807,7 +819,7 @@ export default function DishDetailPage() {
                 ) : (
                   <div className="size-20 bg-gray-300 rounded-lg flex items-center justify-center">
                     <img
-                      src="/logo-short-green.webp"
+                      src="/logos/logo-short-green.webp"
                       alt="Logo"
                       className="size-16 object-contain"
                     />

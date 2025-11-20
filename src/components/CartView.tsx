@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
-import { usePickAndGoContext } from "../context/PickAndGoContext";
-import { CartItem } from "../utils/cartHelpers";
+import { useCart, CartItem } from "../context/CartContext";
 import MenuHeaderBack from "./headers/MenuHeaderBack";
 import OrderAnimation from "./UI/OrderAnimation";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
 export default function CartView() {
-  const { state, updateCartQuantity, removeFromCart, createOrder, confirmOrder, setCustomerInfo } = usePickAndGoContext();
+  const { state, updateQuantity, removeItem, submitCart, setUserName } = useCart();
   const router = useRouter();
   const { isLoaded, isSignedIn, user } = useUser();
   const [showOrderAnimation, setShowOrderAnimation] = useState(false);
@@ -23,24 +22,19 @@ export default function CartView() {
       setIsSubmitting(true);
       try {
         // Guardar items antes de que se limpie el carrito
-        setOrderedItems([...state.cartItems]);
+        setOrderedItems([...state.items]);
         // Mostrar animación de orden INMEDIATAMENTE
         setShowOrderAnimation(true);
+
         // Enviar la orden a la API en segundo plano usando el nombre completo de Clerk
         const userName =
           user.fullName || user.firstName || user.username || "Usuario";
 
-        // Preparar datos del pedido usando la nueva interfaz
-        setCustomerInfo({
-          name: userName,
-          email: user.primaryEmailAddress?.emailAddress || "",
-          phone: user.primaryPhoneNumber?.phoneNumber || "",
-          isAuthenticated: true,
-          userId: user.id
-        });
+        // Establecer el nombre de usuario
+        setUserName(userName);
 
-        // Use robust confirmOrder that creates individual dish orders
-        await confirmOrder();
+        // Enviar carrito como pedido Pick & Go
+        await submitCart();
 
         console.log('🎉 Pick & Go order completed successfully!');
       } catch (error) {
@@ -67,7 +61,7 @@ export default function CartView() {
 
       <div className="px-4 w-full flex-1 flex flex-col">
         <div className="left-4 right-4 bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
-          {state.cartItems.length === 0 ? (
+          {state.items.length === 0 ? (
             <div className="py-6 px-8 flex flex-col justify-center">
               <h1 className="text-[#e0e0e0] text-xl font-medium">
                 🥡 Pick & Go
@@ -99,7 +93,7 @@ export default function CartView() {
                 </h2>
               </div>
 
-              {state.cartItems.length === 0 ? (
+              {state.items.length === 0 ? (
                 <div className="flex-1 flex items-center justify-center py-8 text-center">
                   <div>
                     <div className="text-gray-400 text-6xl mb-4">🛒</div>
@@ -113,15 +107,15 @@ export default function CartView() {
                     <span>Precio</span>
                   </div>
                   <div className="divide-y divide-[#8e8e8e]/50">
-                    {state.cartItems.map((item, index) => (
+                    {state.items.map((item, index) => (
                       <div key={`${item.id}-${index}`} className="py-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="flex-shrink-0">
                               <div className="size-16 bg-gray-300 rounded-sm flex items-center justify-center hover:scale-105 transition-transform duration-200">
-                                {item.image ? (
+                                {item.images && item.images.length > 0 ? (
                                   <img
-                                    src={item.image}
+                                    src={item.images[0]}
                                     alt="Dish preview"
                                     className="w-full h-full object-cover rounded-sm"
                                   />
@@ -161,7 +155,7 @@ export default function CartView() {
                             <div className="flex items-center gap-2">
                               <Minus
                                 onClick={() =>
-                                  updateCartQuantity(item.id, item.quantity - 1)
+                                  updateQuantity(item.id, item.quantity - 1)
                                 }
                                 className="size-4 flex items-center justify-center text-black cursor-pointer"
                               />
@@ -170,7 +164,7 @@ export default function CartView() {
                               </p>
                               <Plus
                                 onClick={() =>
-                                  updateCartQuantity(item.id, item.quantity + 1)
+                                  updateQuantity(item.id, item.quantity + 1)
                                 }
                                 className="size-4 flex items-center justify-center text-black cursor-pointer"
                               />
@@ -194,11 +188,11 @@ export default function CartView() {
             </div>
 
             {/* Fixed bottom section */}
-            {state.cartItems.length > 0 && (
+            {state.items.length > 0 && (
               <div className="bg-white border-t border-[#8e8e8e]/50">
                 <div className="w-full flex justify-between text-black text-base font-medium mb-6 pt-6">
                   <span>Total</span>
-                  <p>${state.cartTotal.toFixed(2)} MXN</p>
+                  <p>${state.totalPrice.toFixed(2)} MXN</p>
                 </div>
 
                 <div className="text-black">
