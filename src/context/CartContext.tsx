@@ -240,7 +240,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await cartApi.updateQuantity(
+      const response = await cartApi.updateCartItemQuantity(
         item.cartItemId,
         quantity
       );

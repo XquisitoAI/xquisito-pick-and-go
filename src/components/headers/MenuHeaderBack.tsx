@@ -31,7 +31,7 @@ export default function MenuHeaderBack() {
         </div>
 
         {/* User avatar (simplified for Pick & Go) */}
-        {isLoaded && user && (
+        {/* {isLoaded && user && (
           <div className="flex items-center space-x-2">
             <div className="size-10 rounded-full overflow-hidden border border-gray-300 shadow-sm">
               {user.imageUrl ? (
@@ -47,7 +47,7 @@ export default function MenuHeaderBack() {
               )}
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </header>
   );
