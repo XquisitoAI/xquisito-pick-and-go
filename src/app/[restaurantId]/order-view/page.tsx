@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useTable } from "@/context/TableContext";
-import { useTableNavigation } from "@/hooks/useTableNavigation";
+import { usePickAndGoContext } from "@/context/PickAndGoContext";
+import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 import { Loader2, RefreshCw } from "lucide-react";
-import { apiService, TapOrder } from "@/utils/api2";
+import { apiService, PickOrder } from "@/utils/api2";
 
 export default function OrderViewPage() {
   const params = useParams();
@@ -17,7 +17,7 @@ export default function OrderViewPage() {
   const success = searchParams.get("success") === "true";
   const orderId = searchParams.get("orderId");
 
-  const [order, setOrder] = useState<TapOrder | null>(null);
+  const [order, setOrder] = useState<PickOrder | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +28,8 @@ export default function OrderViewPage() {
     }
   }, [restaurantId, setRestaurantId]);
 
-  const { state } = useTable();
-  const { navigateWithTable } = useTableNavigation();
+  const { state } = usePickAndGoContext();
+  const { navigateWithRestaurantId } = useNavigation();
 
   // Función para cargar la orden
   const fetchOrder = async (isRefresh = false) => {
@@ -74,7 +74,7 @@ export default function OrderViewPage() {
   };
 
   const handleContinue = () => {
-    navigateWithTable("/menu");
+    navigateWithRestaurantId("/menu");
   };
 
   const getStatusColor = (status: string) => {
@@ -153,7 +153,7 @@ export default function OrderViewPage() {
                 <>
                   {/* Items de la orden */}
                   <div className="divide-y divide-gray-200">
-                    {order?.dishes?.map((dish, index) => (
+                    {order?.items?.map((dish, index) => (
                       <div
                         key={dish.id || index}
                         className="py-3 flex items-start gap-3"
@@ -216,35 +216,13 @@ export default function OrderViewPage() {
                             Cant: {dish.quantity}
                           </p>
                           <p className="text-base text-black">
-                            ${dish.total_price.toFixed(2)}
+                            ${((dish.price + (dish.extra_price || 0)) * dish.quantity).toFixed(2)}
                           </p>
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  {/* Resumen de totales */}
-                  {/*
-                  <div className="border-t border-gray-300 pt-4 mt-4 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Total platillos</span>
-                      <span className="text-black font-medium">
-                        {order?.summary?.total_dishes}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Total items</span>
-                      <span className="text-black font-medium">
-                        {order?.summary?.total_items}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-lg font-semibold pt-2 border-t border-gray-300">
-                      <span className="text-black">Total</span>
-                      <span className="text-black">
-                        ${order?.tap_order?.total_amount.toFixed(2)} MXN
-                      </span>
-                    </div>
-                  </div>*/}
                 </>
               ) : (
                 <div className="text-center py-8">

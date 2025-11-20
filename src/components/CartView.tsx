@@ -3,57 +3,33 @@
 import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { useCart, CartItem } from "../context/CartContext";
+import { useNavigation } from "../hooks/useNavigation";
 import MenuHeaderBack from "./headers/MenuHeaderBack";
-import OrderAnimation from "./UI/OrderAnimation";
 import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
 
 export default function CartView() {
-  const { state, updateQuantity, removeItem, submitCart, setUserName } = useCart();
-  const router = useRouter();
+  const { state, updateQuantity, removeItem } = useCart();
+  const { navigateWithRestaurantId } = useNavigation();
   const { isLoaded, isSignedIn, user } = useUser();
-  const [showOrderAnimation, setShowOrderAnimation] = useState(false);
-  const [orderedItems, setOrderedItems] = useState<CartItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOrder = async () => {
-    // Si el usuario está loggeado, hacer la orden directamente con animación
+    // Si el usuario está loggeado, ir directamente a card-selection
     if (isLoaded && isSignedIn && user) {
       setIsSubmitting(true);
       try {
-        // Guardar items antes de que se limpie el carrito
-        setOrderedItems([...state.items]);
-        // Mostrar animación de orden INMEDIATAMENTE
-        setShowOrderAnimation(true);
-
-        // Enviar la orden a la API en segundo plano usando el nombre completo de Clerk
-        const userName =
-          user.fullName || user.firstName || user.username || "Usuario";
-
-        // Establecer el nombre de usuario
-        setUserName(userName);
-
-        // Enviar carrito como pedido Pick & Go
-        await submitCart();
-
-        console.log('🎉 Pick & Go order completed successfully!');
+        navigateWithRestaurantId("/card-selection");
       } catch (error) {
-        console.error("Error submitting order:", error);
-        // Si hay error, ocultar la animación
-        setShowOrderAnimation(false);
+        console.error("Error navigating to payment:", error);
       } finally {
         setIsSubmitting(false);
       }
     } else {
-      // Si NO está loggeado, navegar a sign-in
-      sessionStorage.setItem("signInFromCart", "true");
-      router.push("/sign-in");
+      // Si NO está loggeado, navegar a sign-in primero
+      navigateWithRestaurantId("/sign-in");
     }
   };
 
-  const handleContinueFromAnimation = () => {
-    router.push("/order");
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
@@ -221,16 +197,6 @@ export default function CartView() {
         </div>
       </div>
 
-      {/* OrderAnimation overlay - solo para usuarios loggeados */}
-      {showOrderAnimation && (
-        <OrderAnimation
-          userName={
-            user?.fullName || user?.firstName || user?.username || "Usuario"
-          }
-          orderedItems={orderedItems}
-          onContinue={handleContinueFromAnimation}
-        />
-      )}
     </div>
   );
 }

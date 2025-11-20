@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
-import { useTableNavigation } from "@/hooks/useTableNavigation";
+import { useNavigation } from "@/hooks/useNavigation";
 import { usePayment } from "@/context/PaymentContext";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { useEffect, useState } from "react";
@@ -27,7 +27,7 @@ export default function CardSelectionPage() {
   }, [restaurantId, setRestaurantId]);
 
   const { state: cartState, clearCart } = useCart();
-  const { navigateWithTable, tableNumber } = useTableNavigation();
+  const { navigateWithRestaurantId } = useNavigation();
   const { hasPaymentMethods, paymentMethods, deletePaymentMethod } =
     usePayment();
   const { user } = useUser();
@@ -121,10 +121,7 @@ export default function CardSelectionPage() {
   }, [hasPaymentMethods, paymentMethods, selectedPaymentMethodId, cartState.isLoading]);
 
   const handlePayment = async (): Promise<void> => {
-    if (!tableNumber) {
-      alert("No se encontró el número de mesa. Por favor escanea el código QR nuevamente.");
-      return;
-    }
+    // Pick & Go no requiere número de mesa
 
     if (hasPaymentMethods && !selectedPaymentMethodId) {
       alert("Por favor selecciona una tarjeta de pago");
@@ -133,7 +130,7 @@ export default function CardSelectionPage() {
 
     if (!hasPaymentMethods) {
       // Redirigir a agregar tarjeta
-      navigateWithTable(
+      navigateWithRestaurantId(
         `/add-card?amount=${totalAmount}&baseAmount=${baseAmount}`
       );
       return;
@@ -164,9 +161,9 @@ export default function CardSelectionPage() {
         paymentMethodId: selectedPaymentMethodId!,
         amount: totalAmount,
         currency: "MXN",
-        description: `Pago Mesa ${tableNumber} - ${user?.fullName || "Invitado"}`,
+        description: `Pick & Go Order - ${user?.fullName || "Invitado"}`,
         orderId: `order-${Date.now()}`,
-        tableNumber: tableNumber,
+        tableNumber: "PICKUP", // Pick & Go usa un valor especial
         restaurantId,
       };
 
@@ -209,9 +206,7 @@ export default function CardSelectionPage() {
         "Invitado";
       const customerEmail = user?.emailAddresses?.[0]?.emailAddress || null;
 
-      let firstTapOrderId: string | null = null;
-
-      console.log("📦 Creating dish orders for all items...");
+      console.log("📦 Creating optimized Pick & Go order flow...");
 
       // Obtener clerk_user_id (puede ser el ID de Clerk o el guest_id)
       const clerkUserId = user?.id
@@ -227,7 +222,40 @@ export default function CardSelectionPage() {
 
       console.log("📦 Cart items to process:", cartState.items);
 
-      // Crear un dish order por cada item del carrito
+      // PASO 3.1: Crear la orden Pick & Go PRIMERO
+      console.log("🚀 Creating Pick & Go order first...");
+
+      const pickAndGoOrderData = {
+        clerk_user_id: clerkUserId,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+        session_data: {
+          source: 'card-selection',
+          payment_method_id: selectedPaymentMethodId,
+          total_amount: totalAmount,
+          base_amount: baseAmount,
+          tip_amount: tipAmount
+        },
+        prep_metadata: {
+          estimated_minutes: 15, // Default, se puede calcular basado en items
+          items_count: cartState.items.length
+        }
+      };
+
+      const pickAndGoOrderResult = await apiService.createPickAndGoOrder(pickAndGoOrderData);
+
+      if (!pickAndGoOrderResult.success) {
+        console.error("❌ Failed to create Pick & Go order:", pickAndGoOrderResult);
+        throw new Error(
+          pickAndGoOrderResult.error?.message || "Error al crear la orden Pick & Go"
+        );
+      }
+
+      const pickAndGoOrderId = pickAndGoOrderResult.data.data.id;
+      console.log("✅ Pick & Go order created successfully:", pickAndGoOrderId);
+
+      // PASO 3.2: Crear dish orders vinculados a la orden Pick & Go
       for (const item of cartState.items) {
         // Preparar images - filtrar solo strings válidos
         const images = item.images && Array.isArray(item.images) && item.images.length > 0
@@ -250,13 +278,14 @@ export default function CardSelectionPage() {
           images: images,  // Array de strings
           custom_fields: customFields,  // JSONB o null
           extra_price: item.extraPrice || 0,
+          pick_and_go_order_id: pickAndGoOrderId,  // 🔑 VINCULACIÓN CON PICK & GO ORDER
         };
 
         console.log("Creating dish order:", dishOrderData);
 
         const dishOrderResult = await apiService.createDishOrder(
           restaurantId,
-          tableNumber,
+          "PICKUP", // Pick & Go usa PICKUP en lugar de número de mesa
           dishOrderData
         );
 
@@ -270,83 +299,75 @@ export default function CardSelectionPage() {
         console.log("✅ Dish order created - Full response:", dishOrderResult);
         console.log("✅ Dish order data:", dishOrderResult.data);
 
-        // Guardar el tap_order_id del primer dish order
-        // El backend envuelve la respuesta: { success, data: { success, data: { tap_order_id } } }
-        if (!firstTapOrderId) {
-          firstTapOrderId =
-            dishOrderResult.data?.data?.tap_order_id ||
-            dishOrderResult.data?.tap_order_id ||
-            dishOrderResult.data?.data?.id ||
-            dishOrderResult.data?.id ||
-            null;
-          console.log("📝 First tap_order_id captured:", firstTapOrderId);
-        }
+        // Solo log del éxito de crear dish order (ya no necesitamos capturar IDs)
+        console.log("✅ Dish order created and linked to Pick & Go order:", pickAndGoOrderId);
       }
 
-      // Paso 4: Actualizar el payment status y order status
-      if (firstTapOrderId) {
-        // Actualizar payment status a 'paid'
-        const paymentStatusResult = await apiService.updatePaymentStatus(
-          firstTapOrderId,
-          "paid"
+      // Paso 4: Actualizar el payment status y order status de la orden Pick & Go
+      console.log("📝 Updating Pick & Go order status...");
+
+      // Actualizar payment status a 'paid'
+      const paymentStatusResult = await apiService.updatePaymentStatus(
+        pickAndGoOrderId,
+        "paid"
+      );
+
+      if (!paymentStatusResult.success) {
+        console.warn(
+          "⚠️ Failed to update Pick & Go payment status:",
+          paymentStatusResult.error
         );
+      } else {
+        console.log("✅ Pick & Go payment status updated to 'paid'");
+      }
 
-        if (!paymentStatusResult.success) {
-          console.warn(
-            "⚠️ Failed to update payment status:",
-            paymentStatusResult.error
-          );
-        } else {
-          console.log("✅ Payment status updated to 'paid'");
-        }
+      // Actualizar order status a 'confirmed' (no 'completed' aún, está en preparación)
+      const orderStatusResult = await apiService.updateOrderStatus(
+        pickAndGoOrderId,
+        "confirmed"
+      );
 
-        // Actualizar order status a 'completed'
-        const orderStatusResult = await apiService.updateOrderStatus(
-          firstTapOrderId,
-          "completed"
+      if (!orderStatusResult.success) {
+        console.warn(
+          "⚠️ Failed to update Pick & Go order status:",
+          orderStatusResult.error
         );
+      } else {
+        console.log("✅ Pick & Go order status updated to 'confirmed'");
+      }
 
-        if (!orderStatusResult.success) {
-          console.warn(
-            "⚠️ Failed to update order status:",
-            orderStatusResult.error
-          );
-        } else {
-          console.log("✅ Order status updated to 'completed'");
-        }
+      // Paso 5: Registrar transacción para trazabilidad
+      if (selectedPaymentMethodId) {
+        try {
+          const xquisitoRateApplied = subtotalForCommission > 0
+            ? (xquisitoCommissionTotal / subtotalForCommission) * 100
+            : 0;
 
-        // Paso 5: Registrar transacción para trazabilidad
-        if (selectedPaymentMethodId) {
-          try {
-            const xquisitoRateApplied = subtotalForCommission > 0
-              ? (xquisitoCommissionTotal / subtotalForCommission) * 100
-              : 0;
-
-            await apiService.recordPaymentTransaction({
-              payment_method_id: selectedPaymentMethodId,
-              restaurant_id: parseInt(restaurantId),
-              id_table_order: null,
-              id_tap_orders_and_pay: firstTapOrderId,
-              base_amount: baseAmount,
-              tip_amount: tipAmount,
-              iva_tip: ivaTip,
-              xquisito_commission_total: xquisitoCommissionTotal,
-              xquisito_commission_client: xquisitoCommissionClient,
-              xquisito_commission_restaurant: xquisitoCommissionRestaurant,
-              iva_xquisito_client: ivaXquisitoClient,
-              iva_xquisito_restaurant: ivaXquisitoRestaurant,
-              xquisito_client_charge: xquisitoClientCharge,
-              xquisito_restaurant_charge: xquisitoRestaurantCharge,
-              xquisito_rate_applied: xquisitoRateApplied,
-              total_amount_charged: totalAmount,
-              subtotal_for_commission: subtotalForCommission,
-              currency: "MXN",
-            });
-            console.log("✅ Payment transaction recorded successfully");
-          } catch (transactionError) {
-            console.error("❌ Error recording payment transaction:", transactionError);
-            // Don't throw - continue with payment flow even if transaction recording fails
-          }
+          await apiService.recordPaymentTransaction({
+            payment_method_id: selectedPaymentMethodId,
+            restaurant_id: parseInt(restaurantId),
+            id_table_order: null,
+            id_tap_orders_and_pay: null, // Para Pick & Go no hay tap_orders
+            pick_and_go_order_id: pickAndGoOrderId, // Nueva columna para Pick & Go
+            base_amount: baseAmount,
+            tip_amount: tipAmount,
+            iva_tip: ivaTip,
+            xquisito_commission_total: xquisitoCommissionTotal,
+            xquisito_commission_client: xquisitoCommissionClient,
+            xquisito_commission_restaurant: xquisitoCommissionRestaurant,
+            iva_xquisito_client: ivaXquisitoClient,
+            iva_xquisito_restaurant: ivaXquisitoRestaurant,
+            xquisito_client_charge: xquisitoClientCharge,
+            xquisito_restaurant_charge: xquisitoRestaurantCharge,
+            xquisito_rate_applied: xquisitoRateApplied,
+            total_amount_charged: totalAmount,
+            subtotal_for_commission: subtotalForCommission,
+            currency: "MXN",
+          });
+          console.log("✅ Payment transaction recorded successfully");
+        } catch (transactionError) {
+          console.error("❌ Error recording payment transaction:", transactionError);
+          // Don't throw - continue with payment flow even if transaction recording fails
         }
       }
 
@@ -362,7 +383,7 @@ export default function CardSelectionPage() {
       console.log("🧹 Cart cleared after successful order");
 
       // Guardar orderId y mostrar animación
-      setCompletedOrderId(firstTapOrderId);
+      setCompletedOrderId(pickAndGoOrderId);
       setShowAnimation(true);
     } catch (error) {
       console.error("Payment/Order error:", error);
@@ -375,7 +396,7 @@ export default function CardSelectionPage() {
   };
 
   const handleAddCard = (): void => {
-    navigateWithTable(
+    navigateWithRestaurantId(
       `/add-card?amount=${totalAmount}&baseAmount=${baseAmount}&scan=true`
     );
   };
@@ -647,7 +668,7 @@ export default function CardSelectionPage() {
           userName={completedUserName}
           orderedItems={completedOrderItems}
           onContinue={() => {
-            navigateWithTable(
+            navigateWithRestaurantId(
               `/order-view?orderId=${completedOrderId}&success=true`
             );
           }}

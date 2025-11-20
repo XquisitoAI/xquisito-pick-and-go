@@ -31,29 +31,27 @@ export {
 import { paymentService } from "@/services/api/payment.service";
 import { tableService } from "@/services/api/table.service";
 import { orderService } from "@/services/api/order.service";
-import { splitBillService } from "@/services/api/split-bill.service";
-import { userService } from "@/services/api/user.service";
 import { guestStorageService } from "@/services/storage/guest-storage.service";
 import { BaseApiService } from "@/services/api/base.service";
 
-/**
- * Clase ApiService mantenida para compatibilidad legacy.
- * Internamente redirige a los nuevos servicios modulares.
- *
- * @deprecated Usar servicios modulares desde @/services en lugar de esta clase.
- *
- * Ejemplo de migración:
- * ```
- * // Antes
- * import { apiService } from '../utils/api';
- * await apiService.getTableSummary(restaurantId, tableNumber);
- *
- * // Ahora (recomendado)
- * import { tableService } from '@/services/api';
- * await tableService.getSummary(restaurantId, tableNumber);
- * ```
- */
 class ApiService extends BaseApiService {
+  // Sobrescribir setAuthToken para propagar a todos los servicios
+  setAuthToken(token: string): void {
+    super.setAuthToken(token);
+    // También configurar en los servicios modulares
+    paymentService.setAuthToken(token);
+    tableService.setAuthToken(token);
+    orderService.setAuthToken(token);
+  }
+
+  // Sobrescribir clearAuthToken para propagar a todos los servicios
+  clearAuthToken(): void {
+    super.clearAuthToken();
+    paymentService.clearAuthToken();
+    tableService.clearAuthToken();
+    orderService.clearAuthToken();
+  }
+
   // ===============================================
   // PAYMENT METHODS - Redirige a paymentService
   // ===============================================
@@ -80,6 +78,33 @@ class ApiService extends BaseApiService {
 
   async getPaymentHistory() {
     return paymentService.getPaymentHistory();
+  }
+
+  /**
+   * Registrar transacción de pago para trazabilidad máxima
+   */
+  async recordPaymentTransaction(transactionData: {
+    payment_method_id: string;
+    restaurant_id: number;
+    id_table_order?: string | null;
+    id_tap_orders_and_pay?: string | null;
+    pick_and_go_order_id?: string | null;
+    base_amount: number;
+    tip_amount: number;
+    iva_tip: number;
+    xquisito_commission_total: number;
+    xquisito_commission_client: number;
+    xquisito_commission_restaurant: number;
+    iva_xquisito_client: number;
+    iva_xquisito_restaurant: number;
+    xquisito_client_charge: number;
+    xquisito_restaurant_charge: number;
+    xquisito_rate_applied: number;
+    total_amount_charged: number;
+    subtotal_for_commission: number;
+    currency?: string;
+  }) {
+    return this.post("/payment-transactions", transactionData);
   }
 
   // ===============================================
@@ -110,16 +135,8 @@ class ApiService extends BaseApiService {
   // TABLE API - Redirige a tableService
   // ===============================================
 
-  async getTableSummary(restaurantId: string, tableNumber: string) {
-    return tableService.getSummary(restaurantId, tableNumber);
-  }
-
   async getTableOrders(restaurantId: string, tableNumber: string) {
     return tableService.getOrders(restaurantId, tableNumber);
-  }
-
-  async getActiveUsers(restaurantId: string, tableNumber: string) {
-    return tableService.getActiveUsers(restaurantId, tableNumber);
   }
 
   async getAllTables(restaurantId: string) {
@@ -131,28 +148,75 @@ class ApiService extends BaseApiService {
   }
 
   // ===============================================
-  // ORDER API - Redirige a orderService
+  // ORDER API - Redirige a orderService y tap-orders
   // ===============================================
 
+  /**
+   * Crear dish order - para Pick & Go crea orden primero y luego agrega items
+   */
   async createDishOrder(
     restaurantId: string,
     tableNumber: string,
-    userId: string | null,
-    guestName: string,
-    item: string,
-    quantity: number,
-    price: number,
+    dataOrUserId: any,
+    guestName?: string,
+    item?: string,
+    quantity?: number,
+    price?: number,
     guestId?: string | null,
     images: string[] = [],
     customFields?: any,
     extraPrice?: number
   ) {
+    // Si el tercer parámetro es un objeto, es el nuevo formato de Pick & Go
+    if (typeof dataOrUserId === 'object' && dataOrUserId !== null) {
+      const dishOrderData = dataOrUserId;
+
+
+      // Para Pick & Go, necesitamos crear una orden primero si no existe
+      // o agregar el item a una orden existente
+      if (dishOrderData.pick_and_go_order_id) {
+        // Si ya tenemos un pick_and_go_order_id, agregamos el item directamente
+        return this.addItemToPickAndGoOrder(dishOrderData.pick_and_go_order_id, {
+          item: dishOrderData.item,
+          quantity: dishOrderData.quantity,
+          price: dishOrderData.price,
+          images: dishOrderData.images || [],
+          custom_fields: dishOrderData.custom_fields,
+          extra_price: dishOrderData.extra_price
+        });
+      } else {
+        // Para Pick & Go, verificamos si tenemos pick_and_go_order_id
+        // Si no lo tenemos, es un error de flujo
+        if (!dishOrderData.pick_and_go_order_id) {
+          console.error("❌ Missing pick_and_go_order_id for Pick & Go dish order");
+          return {
+            success: false,
+            error: {
+              type: 'validation_error',
+              message: 'pick_and_go_order_id is required for Pick & Go orders'
+            }
+          };
+        }
+
+        // Crear dish order vinculado a la orden Pick & Go existente
+        return this.addItemToPickAndGoOrder(dishOrderData.pick_and_go_order_id, {
+          item: dishOrderData.item,
+          quantity: dishOrderData.quantity,
+          price: dishOrderData.price,
+          images: dishOrderData.images || [],
+          custom_fields: dishOrderData.custom_fields,
+          extra_price: dishOrderData.extra_price
+        });
+      }
+    }
+
+    // Si no, es el formato legacy con parámetros individuales
     return orderService.createDishOrder(restaurantId, tableNumber, {
-      userId,
-      guestName,
-      item,
-      quantity,
-      price,
+      userId: dataOrUserId,
+      guestName: guestName!,
+      item: item!,
+      quantity: quantity!,
+      price: price!,
       guestId,
       images,
       customFields,
@@ -174,77 +238,98 @@ class ApiService extends BaseApiService {
   }
 
   // ===============================================
-  // PAYMENT API - Redirige a paymentService
+  // TAP ORDERS API - Métodos específicos de tap-order-and-pay
   // ===============================================
 
-  async payDishOrder(dishId: string, paymentMethodId?: string | null) {
-    return paymentService.payDishOrder(dishId, paymentMethodId);
-  }
-
-  async payTableAmount(
-    restaurantId: string,
-    tableNumber: string,
-    amount: number,
-    userId?: string | null,
-    guestName?: string | null,
-    paymentMethodId?: string | null
+  /**
+   * Actualizar el estado de pago de una orden Pick & Go
+   */
+  async updatePaymentStatus(
+    orderId: string,
+    paymentStatus: "pending" | "paid" | "failed"
   ) {
-    return paymentService.payTableAmount(
-      restaurantId,
-      tableNumber,
-      amount,
-      userId,
-      guestName,
-      paymentMethodId
-    );
+    return this.put(`/pick-and-go/orders/${orderId}/payment-status`, {
+      payment_status: paymentStatus,
+    });
   }
 
-  // ===============================================
-  // SPLIT BILL API - Redirige a splitBillService
-  // ===============================================
-
-  async initializeSplitBill(
-    restaurantId: string,
-    tableNumber: string,
-    numberOfPeople: number,
-    userIds?: string[] | null,
-    guestNames?: string[] | null
+  /**
+   * Actualizar el estado de una orden Pick & Go
+   */
+  async updateOrderStatus(
+    orderId: string,
+    orderStatus: "pending" | "confirmed" | "preparing" | "completed" | "abandoned"
   ) {
-    return splitBillService.initialize(
-      restaurantId,
-      tableNumber,
-      numberOfPeople,
-      userIds,
-      guestNames
-    );
+    return this.put(`/pick-and-go/orders/${orderId}/status`, {
+      order_status: orderStatus,
+    });
   }
 
-  async paySplitAmount(
-    restaurantId: string,
-    tableNumber: string,
-    userId?: string | null,
-    guestName?: string | null,
-    paymentMethodId?: string | null
+  // ===============================================
+  // PICK & GO API - Métodos específicos
+  // ===============================================
+
+  /**
+   * Crear nueva orden Pick & Go
+   */
+  async createPickAndGoOrder(orderData: {
+    clerk_user_id: string;
+    customer_name?: string;
+    customer_phone?: string;
+    customer_email?: string;
+    session_data?: any;
+    prep_metadata?: any;
+  }) {
+    return this.post("/pick-and-go/orders", orderData);
+  }
+
+  /**
+   * Obtener orden Pick & Go por ID
+   */
+  async getPickAndGoOrder(orderId: string) {
+    return this.get(`/pick-and-go/orders/${orderId}`);
+  }
+
+  /**
+   * Agregar item a una orden Pick & Go
+   */
+  async addItemToPickAndGoOrder(
+    orderId: string,
+    itemData: {
+      item: string;
+      quantity: number;
+      price: number;
+      images?: string[];
+      custom_fields?: any;
+      extra_price?: number;
+    }
   ) {
-    return splitBillService.paySplit(
-      restaurantId,
-      tableNumber,
-      userId,
-      guestName,
-      paymentMethodId
-    );
+    return this.post(`/pick-and-go/orders/${orderId}/items`, itemData);
   }
 
-  async getSplitPaymentStatus(restaurantId: string, tableNumber: string) {
-    return splitBillService.getStatus(restaurantId, tableNumber);
+  /**
+   * Obtener órdenes del usuario Pick & Go
+   */
+  async getUserPickAndGoOrders(
+    userId: string,
+    params?: {
+      order_status?: string;
+      payment_status?: string;
+      limit?: number;
+    }
+  ) {
+    const queryString = params ? new URLSearchParams(params as any).toString() : '';
+    return this.get(`/pick-and-go/user/${userId}/orders${queryString ? '?' + queryString : ''}`);
   }
 
-  // ===============================================
-  // USER API - Redirige a userService
-  // ===============================================
-
-  async getUsersInfo(userIds: string[]) {
-    return userService.getUsersInfo(userIds);
+  /**
+   * Estimar tiempo de preparación Pick & Go
+   */
+  async estimatePickAndGoPrepTime(data: {
+    items: Array<{ item: string; quantity: number }>;
+    restaurant_id?: number;
+  }) {
+    return this.post("/pick-and-go/estimate-prep-time", data);
   }
 }
 

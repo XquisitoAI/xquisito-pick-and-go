@@ -52,20 +52,19 @@ export interface UpdatePaymentStatusRequest {
   paymentId?: string;
 }
 
-// Tipos para dish individual
+// Tipos para dish individual en Pick & Go
 export interface Dish {
   id: string;
   item: string;
   quantity: number;
   price: number;
   extra_price: number;
-  status: "pending" | "in_progress" | "ready" | "delivered";
-  payment_status: "not_paid" | "paid";
-  total_price: number;
   images: string[];
   custom_fields: any | null;
-  user_order_id: string | null;
-  tap_order_id: string;
+  pick_and_go_order_id: string;
+  status: "pending" | "cooking" | "delivered";
+  payment_status: "not_paid" | "paid";
+  total_price: number;
 }
 
 export interface PickAndGoInfo {
@@ -88,13 +87,24 @@ export interface OrderSummary {
 }
 
 export interface PickOrder {
-  tap_order: PickAndGoInfo;
-  dishes: Dish[];
-  summary: OrderSummary;
+  id: string;
+  clerk_user_id: string;
+  customer_name: string;
+  customer_phone: string | null;
+  customer_email: string | null;
+  total_amount: number;
+  payment_status: "pending" | "paid" | "failed";
+  order_status: "pending" | "confirmed" | "preparing" | "completed" | "abandoned";
+  items: Dish[];  // Items están directamente aquí
+  payments: any[];
+  prep_metadata: any;
+  session_data: any;
+  created_at: string;
+  updated_at: string;
 }
 
 // Respuesta del backend (anidada)
-export interface TapOrderResponse {
+export interface PickAndGoOrderResponse {
   data: PickOrder;
 }
 
@@ -245,7 +255,7 @@ class ApiService {
     payment_method_id: string;
     restaurant_id: number;
     id_table_order?: string | null;
-    id_tap_orders_and_pay?: string | null;
+    pick_and_go_order_id?: string | null;
     base_amount: number;
     tip_amount: number;
     iva_tip: number;
@@ -621,8 +631,8 @@ class ApiService {
   /**
    * Get order by ID
    */
-  async getOrderById(orderId: string): Promise<ApiResponse<TapOrderResponse>> {
-    return this.makeRequest(`/tap-orders/${orderId}`);
+  async getOrderById(orderId: string): Promise<ApiResponse<PickAndGoOrderResponse>> {
+    return this.makeRequest(`/pick-and-go/orders/${orderId}`);
   }
 
   // ===============================================
