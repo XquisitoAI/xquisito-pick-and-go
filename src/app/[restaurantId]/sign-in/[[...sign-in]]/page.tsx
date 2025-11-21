@@ -5,14 +5,14 @@ import * as Clerk from "@clerk/elements/common";
 import * as SignIn from "@clerk/elements/sign-in";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ScanFace, Mail, KeyRound } from "lucide-react";
-import { useTableNavigation } from "@/hooks/useTableNavigation";
+import { useNavigation } from "@/hooks/useNavigation";
 import { useUser, useSignIn } from "@clerk/nextjs";
 import { usePasskeySupport } from "@/hooks/usePasskeySupport";
 
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { navigateWithTable } = useTableNavigation();
+  const { navigateWithRestaurantId } = useNavigation();
   const { isSignedIn, isLoaded } = useUser();
   const [hasRedirected, setHasRedirected] = useState(false);
   const { signIn } = useSignIn();
@@ -40,8 +40,8 @@ function SignInContent() {
   }, [tableNumber, rememberMe]);
 
   const handleSignInSuccess = useCallback(() => {
-    navigateWithTable("/card-selection");
-  }, [navigateWithTable]);
+    navigateWithRestaurantId("/card-selection");
+  }, [navigateWithRestaurantId]);
 
   useEffect(() => {
     if (isLoaded && isSignedIn && !hasRedirected) {
@@ -367,14 +367,17 @@ function SignInContent() {
               </button>
 
               <div className="mb-6">
+
                 <div
                   className="text-white text-sm underline cursor-pointer text-center"
                   onClick={() => {
-                    navigateWithTable("/user");
+                    navigateWithRestaurantId("/user");
+
                   }}
                 >
                   Continuar como invitado
                 </div>
+                
               </div>
 
               {/* Social Login */}
@@ -451,7 +454,7 @@ function SignInContent() {
               <div
                 className="bg-black hover:bg-stone-950 w-full text-white py-3 rounded-full font-normal cursor-pointer transition-colors"
                 onClick={() => {
-                  navigateWithTable("/sign-up");
+                  navigateWithRestaurantId("/sign-up");
                 }}
               >
                 Crear cuenta

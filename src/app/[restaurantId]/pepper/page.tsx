@@ -3,11 +3,11 @@
 import { useRouter, useParams } from "next/navigation";
 import { useEffect } from "react";
 import ChatView from "@/components/ChatView";
-import { useTableNavigation } from "@/hooks/useTableNavigation";
+import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
 
 export default function PepperPage() {
-  const { navigateWithTable, goBack } = useTableNavigation();
+  const { navigateWithRestaurantId, goBack } = useNavigation();
   const { setRestaurantId } = useRestaurant();
   const params = useParams();
   const router = useRouter();

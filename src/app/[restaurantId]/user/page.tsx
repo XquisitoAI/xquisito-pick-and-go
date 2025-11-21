@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useTable } from "@/context/TableContext";
 import { useCart, CartItem } from "@/context/CartContext";
-import { useTableNavigation } from "@/hooks/useTableNavigation";
+import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 import { Loader2 } from "lucide-react";
@@ -24,27 +23,11 @@ export default function UserPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderedItems, setOrderedItems] = useState<CartItem[]>([]);
   const [orderUserName, setOrderUserName] = useState("");
-  const { dispatch } = useTable();
   const { state: cartState, setUserName: setCartUserName } = useCart();
-  const { tableNumber, navigateWithTable } = useTableNavigation();
+  const { navigateWithRestaurantId } = useNavigation();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!tableNumber) {
-      // Redirigir a home si no hay número de mesa
-      router.push("/");
-      return;
-    }
-
-    if (isNaN(parseInt(tableNumber))) {
-      // Redirigir si el número de mesa no es válido
-      router.push("/");
-      return;
-    }
-
-    // Establecer el número de mesa en el contexto
-    dispatch({ type: "SET_TABLE_NUMBER", payload: tableNumber });
-  }, [tableNumber, dispatch, router]);
+  // Pick & Go no requiere número de mesa
 
   // Función para validar que solo se ingresen caracteres de texto válidos para nombres
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,7 +49,7 @@ export default function UserPage() {
         // Guardar el nombre del usuario en el contexto del carrito
         setCartUserName(userName.trim());
         // Navegar a card-selection
-        navigateWithTable("/card-selection");
+        navigateWithRestaurantId("/card-selection");
       } catch (error) {
         console.error("Error submitting order:", error);
         // Si hay error, ocultar la animación
@@ -75,19 +58,6 @@ export default function UserPage() {
       }
     }
   };
-
-  if (!tableNumber || isNaN(parseInt(tableNumber))) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-meduim text-gray-800 mb-4">
-            Mesa Inválida
-          </h1>
-          <p className="text-gray-600">Por favor escanee el código QR</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
@@ -110,6 +80,7 @@ export default function UserPage() {
               </div>
 
               <div className="w-full mb-24">
+
                 <input
                   type="text"
                   placeholder="Nombre"
@@ -117,6 +88,7 @@ export default function UserPage() {
                   onChange={handleNameChange}
                   className="w-full px-4 py-3 border-0 border-b border-black text-black text-2xl text-center font-medium focus:outline-none focus:border-teal-500"
                 />
+                
               </div>
             </div>
           </div>

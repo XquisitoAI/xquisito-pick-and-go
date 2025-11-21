@@ -63,6 +63,7 @@ export default function DashboardView() {
           <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6">
             {/* Tabs */}
             <div className="grid grid-cols-4 gap-2 my-6 w-full">
+
               <button
                 onClick={() => setActiveTab("profile")}
                 className={`px-3 py-0.5 rounded-full cursor-pointer whitespace-nowrap ${
@@ -73,6 +74,7 @@ export default function DashboardView() {
               >
                 Perfil
               </button>
+              
               <button
                 onClick={() => setActiveTab("support")}
                 className={`px-3 py-0.5 rounded-full cursor-pointer whitespace-nowrap ${

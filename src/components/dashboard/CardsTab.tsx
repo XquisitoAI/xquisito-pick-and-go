@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePayment } from "@/context/PaymentContext";
-import { useTableNavigation } from "@/hooks/useTableNavigation";
+import { useNavigation } from "@/hooks/useNavigation";
 import {
   Plus,
   CreditCard,
@@ -17,7 +17,7 @@ import { getCardTypeIcon } from "@/utils/cardIcons";
 
 export default function CardsTab() {
   const router = useRouter();
-  const { navigateWithTable } = useTableNavigation();
+  const { navigateWithRestaurantId } = useNavigation();
   const {
     paymentMethods,
     isLoading,
@@ -30,7 +30,7 @@ export default function CardsTab() {
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
   const handleAddNewCard = () => {
-    navigateWithTable("/add-card");
+    navigateWithRestaurantId("/add-card");
   };
 
   const handleSetDefault = async (paymentMethodId: string) => {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
+import { useNavigation } from "../../hooks/useNavigation";
 import {
   User,
   Mail,
@@ -18,6 +19,7 @@ import {
 export default function ProfileTab() {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
+  const { navigateWithRestaurantId } = useNavigation();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [firstName, setFirstName] = useState("");
@@ -405,7 +407,9 @@ export default function ProfileTab() {
           Cambiar contraseña
         </button>
         <button
-          onClick={() => signOut()}
+          onClick={() => {
+            signOut(() => navigateWithRestaurantId("/menu"));
+          }}
           className="text-red-600 hover:text-red-700 font-medium text-sm flex items-center gap-2 cursor-pointer"
         >
           <LogOut className="size-4" />

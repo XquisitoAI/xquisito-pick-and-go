@@ -5,8 +5,7 @@
 
 import { Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useTable } from "@/context/TableContext";
-import { useTableNavigation } from "@/hooks/useTableNavigation";
+import { useNavigation } from "@/hooks/useNavigation";
 import { useGuest, useIsGuest } from "@/context/GuestContext";
 import { usePayment } from "@/context/PaymentContext";
 import { useRestaurant } from "@/context/RestaurantContext";
@@ -29,8 +28,7 @@ function AddCardContent() {
     }
   }, [restaurantId, setRestaurantId]);
 
-  const { state } = useTable();
-  const { goBack, navigateWithTable } = useTableNavigation();
+  const { goBack, navigateWithRestaurantId } = useNavigation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const isGuest = useIsGuest();
@@ -165,7 +163,7 @@ function AddCardContent() {
         const fromSavedCards = document.referrer.includes("/saved-cards");
 
         if (fromSavedCards) {
-          navigateWithTable("/saved-cards");
+          navigateWithRestaurantId("/saved-cards");
         } else {
           router.back();
         }

@@ -1,20 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import GlassSurface from "@/components/UI/GlassSurface";
-import { useTableNavigation } from "../../hooks/useTableNavigation";
+import { useNavigation } from "../../hooks/useNavigation";
 
 export default function DashboardHeader() {
-  const { navigateWithTable } = useTableNavigation();
-  const router = useRouter();
+  const { navigateWithRestaurantId } = useNavigation();
 
   const handleBack = () => {
-    navigateWithTable("/menu");
+    navigateWithRestaurantId("/menu");
   };
 
   const handleLogoClick = () => {
-    router.push("/");
+    navigateWithRestaurantId("/menu");
   };
 
   return (

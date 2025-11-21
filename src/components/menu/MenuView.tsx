@@ -135,9 +135,10 @@ export default function MenuView() {
             </div>
             {/* Assistent Icon */}
             <div
-              onClick={() => router.push("/pepper")}
+              onClick={() => navigateWithRestaurantId("/pepper")}
               className="bg-white rounded-full text-black border border-gray-400 size-10 cursor-pointer shadow-sm"
             >
+
               <video
                 src="/videos/video-icon-pepper.webm"
                 autoPlay
@@ -145,7 +146,7 @@ export default function MenuView() {
                 muted
                 className="w-full h-full object-cover rounded-full"
               />
-              {/*<img src="/logo-short-green.webp" alt="AI" className="size-6" />*/}
+
             </div>
           </div>
 

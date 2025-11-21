@@ -42,13 +42,13 @@ export default function Home() {
     const restaurantId =
       restaurantParam || storedRestaurant || DEFAULT_RESTAURANT_ID;
 
-    if (isSignedIn && storedTable && isFromMenu) {
-      // User signed in from MenuView settings, redirect to dashboard with table
-      console.log("✅ Redirecting to dashboard with table:", storedTable);
+    if (isSignedIn && isFromMenu) {
+      // User signed in from MenuView settings, redirect to dashboard (Pick & Go - no table)
+      console.log("✅ Redirecting to dashboard from menu sign-in");
       sessionStorage.removeItem("signInFromMenu");
       sessionStorage.removeItem("pendingTableRedirect");
       sessionStorage.removeItem("pendingRestaurantId");
-      router.replace(`/${restaurantId}/dashboard?table=${storedTable}`);
+      router.replace(`/${restaurantId}/dashboard`);
       return;
     }
 
@@ -81,11 +81,11 @@ export default function Home() {
       return;
     }
 
-    // Default redirect to restaurant 3, table 12 for demo
+    // Default redirect to restaurant 3 menu for Pick & Go (no table needed)
     console.log(
-      `✅ Default redirect to /${DEFAULT_RESTAURANT_ID}/menu?table=${DEFAULT_TABLE}`
+      `✅ Default redirect to /${DEFAULT_RESTAURANT_ID}/menu (Pick & Go)`
     );
-    router.replace(`/${DEFAULT_RESTAURANT_ID}/menu?table=${DEFAULT_TABLE}`);
+    router.replace(`/${DEFAULT_RESTAURANT_ID}/menu`);
   }, [router, searchParams, isSignedIn, isLoaded]);
   return <Loader />;
 }

@@ -7,7 +7,7 @@ import { useUser, useSignUp } from "@clerk/nextjs";
 import { useUserData } from "@/context/userDataContext";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { Mail, KeyRound, User } from "lucide-react";
-import { useTableNavigation } from "@/hooks/useTableNavigation";
+import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
 
 export default function SignUpPage() {
@@ -26,7 +26,7 @@ export default function SignUpPage() {
   const { user, isSignedIn, isLoaded: userLoaded } = useUser();
   const { signUp, isLoaded } = useSignUp();
   const { updateSignUpData } = useUserData();
-  const { navigateWithTable } = useTableNavigation();
+  const { navigateWithRestaurantId } = useNavigation();
 
   const tableNumber = searchParams.get("table");
 
@@ -46,8 +46,8 @@ export default function SignUpPage() {
   }, [tableNumber, restaurantId, setRestaurantId]);
 
   const handleSignUpSuccess = useCallback(() => {
-    navigateWithTable("/payment-options");
-  }, [navigateWithTable]);
+    navigateWithRestaurantId("/payment-options");
+  }, [navigateWithRestaurantId]);
 
   // Handle resend verification code
   const handleResendCode = useCallback(async () => {
@@ -222,7 +222,7 @@ export default function SignUpPage() {
               <div
                 className="text-white text-sm my-6 underline cursor-pointer"
                 onClick={() => {
-                  navigateWithTable("/user");
+                  navigateWithRestaurantId("/user");
                 }}
               >
                 Continuar como invitado
@@ -301,7 +301,7 @@ export default function SignUpPage() {
 
               <div
                 className="bg-black hover:bg-stone-950 w-full text-white py-3 rounded-full font-normal cursor-pointer transition-colors"
-                onClick={() => navigateWithTable("/sign-in")}
+                onClick={() => navigateWithRestaurantId("/sign-in")}
               >
                 Iniciar sesión
               </div>
