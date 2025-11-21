@@ -380,7 +380,6 @@ export default function PaymentSuccessPage() {
                 )}
                 <div className="flex flex-col items-center justify-center">
                   <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold">
-                    {restaurant?.name}
                     {restaurant?.name || restaurantData.name}
                   </h2>
                   <p className="text-sm md:text-base lg:text-lg text-white/80">
