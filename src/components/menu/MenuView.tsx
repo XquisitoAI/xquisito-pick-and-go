@@ -123,10 +123,10 @@ export default function MenuView() {
             <div
               onClick={() => {
                 if (user && isLoaded) {
-                  router.push("/dashboard");
+                  navigateWithRestaurantId("/dashboard");
                 } else {
                   sessionStorage.setItem("signInFromMenu", "true");
-                  router.push("/sign-in");
+                  navigateWithRestaurantId("/sign-in");
                 }
               }}
               className="bg-white rounded-full p-1.5 border border-gray-400 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"

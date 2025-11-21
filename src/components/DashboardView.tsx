@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
+import { useNavigation } from "../hooks/useNavigation";
 import Loader from "./UI/Loader";
 import ProfileTab from "./dashboard/ProfileTab";
 import CardsTab from "./dashboard/CardsTab";
@@ -16,7 +16,7 @@ export default function DashboardView() {
   >("profile");
 
   const { user, isLoaded } = useUser();
-  const router = useRouter();
+  const { navigateWithRestaurantId } = useNavigation();
 
   // Loading state
   if (!isLoaded) {
@@ -35,7 +35,7 @@ export default function DashboardView() {
             Inicia sesión para acceder a tu perfil
           </p>
           <button
-            onClick={() => router.push("/sign-in")}
+            onClick={() => navigateWithRestaurantId("/sign-in")}
             className="bg-black hover:bg-stone-950 text-white px-6 py-3 rounded-full cursor-pointer transition-colors"
           >
             Iniciar sesión
