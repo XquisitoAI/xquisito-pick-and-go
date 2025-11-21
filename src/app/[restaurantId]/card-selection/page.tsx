@@ -669,7 +669,7 @@ export default function CardSelectionPage() {
           orderedItems={completedOrderItems}
           onContinue={() => {
             navigateWithRestaurantId(
-              `/order-view?orderId=${completedOrderId}&success=true`
+              `/payment-success?orderId=${completedOrderId}&success=true`
             );
           }}
         />

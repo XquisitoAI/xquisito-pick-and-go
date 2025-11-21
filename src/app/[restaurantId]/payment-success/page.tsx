@@ -1,0 +1,604 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useNavigation } from "../../../hooks/useNavigation";
+import { useGuest, useIsGuest } from "../../../context/GuestContext";
+import { useRestaurant } from "../../../context/RestaurantContext";
+import { getRestaurantData } from "../../../utils/restaurantData";
+import { apiService } from "../../../utils/api";
+import { useUser } from "@clerk/nextjs";
+import { Receipt, X, Calendar, Utensils, CircleAlert } from "lucide-react";
+import { getCardTypeIcon } from "../../../utils/cardIcons";
+
+export default function PaymentSuccessPage() {
+  const params = useParams();
+  const { setRestaurantId } = useRestaurant();
+  const restaurantId = params?.restaurantId as string;
+
+  useEffect(() => {
+    if (restaurantId && !isNaN(parseInt(restaurantId))) {
+      setRestaurantId(parseInt(restaurantId));
+    }
+  }, [restaurantId, setRestaurantId]);
+
+  const { navigateWithRestaurantId } = useNavigation();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const restaurantData = getRestaurantData();
+  const isGuest = useIsGuest();
+  const { guestId, tableNumber } = useGuest();
+  const { isSignedIn } = useUser();
+
+  // Get payment details from URL or localStorage
+  const paymentId =
+    searchParams.get("paymentId") || searchParams.get("orderId");
+  const urlAmount = parseFloat(searchParams.get("amount") || "0");
+
+  // Try to get stored payment details
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [ordersMarkedAsPaid, setOrdersMarkedAsPaid] = useState(false);
+  const [rating, setRating] = useState(0); // Rating de 1 a 5 (solo enteros)
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
+  const [hasRated, setHasRated] = useState(false); // Track if user has already rated
+  const { restaurant } = useRestaurant();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      console.log(
+        "🔍 Payment success page - checking storage for payment data"
+      );
+
+      // Get payment ID from URL to identify this specific payment
+      const urlPaymentId = paymentId || searchParams.get("transactionId");
+
+      // First check sessionStorage with payment ID (persistent on reload)
+      const sessionKey = urlPaymentId
+        ? `xquisito-payment-success-${urlPaymentId}`
+        : "xquisito-payment-success";
+
+      let storedPayment = sessionStorage.getItem(sessionKey);
+      let storageKey = sessionKey;
+      let fromSession = true;
+
+      // If not in sessionStorage, check localStorage (first time)
+      if (!storedPayment) {
+        fromSession = false;
+
+        // Check for completed payment first (most recent flow)
+        storedPayment = localStorage.getItem("xquisito-completed-payment");
+        storageKey = "xquisito-completed-payment";
+
+        // Check for pending payment (EcartPay redirect flow)
+        if (!storedPayment) {
+          storedPayment = localStorage.getItem("xquisito-pending-payment");
+          storageKey = "xquisito-pending-payment";
+        }
+
+        // Check for payment intent (SDK flow)
+        if (!storedPayment) {
+          storedPayment = localStorage.getItem("xquisito-payment-intent");
+          storageKey = "xquisito-payment-intent";
+        }
+      }
+
+      console.log("📦 Found payment data in:", storageKey);
+      console.log("📦 Raw stored data:", storedPayment);
+
+      if (storedPayment) {
+        try {
+          const parsed = JSON.parse(storedPayment);
+          console.log("📦 Parsed payment details:", parsed);
+          setPaymentDetails(parsed);
+
+          // If from localStorage (first time), save to sessionStorage for persistence
+          if (!fromSession) {
+            // Save with unique key based on payment/transaction ID
+            const paymentIdentifier = parsed.paymentId ||
+                                     parsed.transactionId ||
+                                     urlPaymentId ||
+                                     Date.now().toString();
+            const uniqueKey = `xquisito-payment-success-${paymentIdentifier}`;
+
+            sessionStorage.setItem(uniqueKey, storedPayment);
+
+            // Also save the current payment key reference
+            sessionStorage.setItem("xquisito-current-payment-key", uniqueKey);
+
+            // Clean up localStorage
+            localStorage.removeItem("xquisito-pending-payment");
+            localStorage.removeItem("xquisito-payment-intent");
+            localStorage.removeItem("xquisito-completed-payment");
+
+            // Clear all session data after successful payment
+            clearGuestSession();
+          }
+        } catch (e) {
+          console.error("Failed to parse stored payment details:", e);
+        }
+      } else {
+        console.log("📦 No payment data found in storage");
+      }
+    }
+  }, [paymentId, searchParams]);
+
+  const clearGuestSession = async () => {
+    if (typeof window !== "undefined") {
+      // Use apiService method for consistent cleanup
+      apiService.clearGuestSession();
+
+      // Also clear any additional payment-related data
+      localStorage.removeItem("xquisito-pending-payment");
+
+      // For guest users, also cleanup eCartPay data
+      if (isGuest && guestId) {
+        try {
+          await fetch("/api/payments/cleanup-guest", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              guestId: guestId,
+            }),
+          });
+          console.log("🧹 Guest eCartPay data cleanup requested");
+        } catch (error) {
+          console.error("Failed to cleanup guest eCartPay data:", error);
+        }
+      }
+
+      console.log("🧹 Guest session cleared after successful payment");
+    }
+  };
+
+  // Calculate total amount charged to client
+  const amount =
+    paymentDetails?.totalAmountCharged || paymentDetails?.amount || urlAmount;
+
+  // Get dish orders from paymentDetails
+  const dishOrders = paymentDetails?.dishOrders || [];
+
+  const handleBackToMenu = () => {
+    // Clear payment success data from sessionStorage
+    const currentKey = sessionStorage.getItem("xquisito-current-payment-key");
+    if (currentKey) {
+      sessionStorage.removeItem(currentKey);
+      sessionStorage.removeItem("xquisito-current-payment-key");
+    }
+    // Fallback: also remove generic key
+    sessionStorage.removeItem("xquisito-payment-success");
+
+    // Since session is cleared, redirect to home page to select table again
+    router.push("/");
+  };
+
+  const handleGoHome = () => {
+    // Clear payment success data from sessionStorage
+    const currentKey = sessionStorage.getItem("xquisito-current-payment-key");
+    if (currentKey) {
+      sessionStorage.removeItem(currentKey);
+      sessionStorage.removeItem("xquisito-current-payment-key");
+    }
+    // Fallback: also remove generic key
+    sessionStorage.removeItem("xquisito-payment-success");
+
+    // Complete exit - go to menu for Pick & Go
+    navigateWithRestaurantId("/menu");
+  };
+
+  // Handle rating submission
+  const handleRatingClick = async (starRating: number) => {
+    if (hasRated) {
+      console.log("⚠️ User has already rated");
+      return;
+    }
+
+    setRating(starRating);
+
+    if (!restaurantId) {
+      console.error("❌ No restaurant ID available");
+      return;
+    }
+
+    try {
+      console.log("🔍 Submitting restaurant review:", {
+        restaurant_id: parseInt(restaurantId),
+        rating: starRating,
+      });
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/restaurants/restaurant-reviews`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            restaurant_id: parseInt(restaurantId),
+            rating: starRating,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log("✅ Restaurant review submitted successfully");
+        setHasRated(true);
+      } else {
+        console.error("❌ Failed to submit restaurant review:", data.message);
+      }
+    } catch (error) {
+      console.error("❌ Error submitting restaurant review:", error);
+    }
+  };
+
+  return (
+    <div className="h-[100dvh] bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
+      {/* Success Icon */}
+      <div className="flex-1 flex justify-center items-center">
+        <img
+          src="/logos/logo-short-green.webp"
+          alt="Xquisito Logo"
+          className="size-20 md:size-28 lg:size-32 animate-logo-fade-in"
+        />
+      </div>
+
+      <div className="px-4 md:px-6 lg:px-8 w-full animate-slide-up">
+        <div className="flex-1 flex flex-col">
+          <div className="left-4 right-4 bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
+            <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center items-center mb-6 md:mb-8 lg:mb-10 mt-2 md:mt-4 lg:mt-6 gap-2 md:gap-3 lg:gap-4">
+              <h1 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight">
+                ¡Gracias por tu pedido!
+              </h1>
+              <p className="text-white text-base md:text-lg lg:text-xl">
+                Hemos recibido tu pago y tu orden está en proceso.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-t-4xl relative z-10 flex flex-col min-h-96 justify-center px-6 md:px-8 lg:px-10 flex-1 py-8 md:py-10 lg:py-12">
+            {/* Rating Prompt */}
+            <div className="text-center mb-8 md:mb-10 lg:mb-12">
+              <p className="text-xl md:text-2xl lg:text-3xl font-medium text-black mb-2 md:mb-3 lg:mb-4">
+                {hasRated
+                  ? "¡Gracias por tu calificación!"
+                  : "Califica tu experiencia en el restaurante"}
+              </p>
+              <div className="flex justify-center gap-1 md:gap-1.5 lg:gap-2">
+                {[1, 2, 3, 4, 5].map((starIndex) => {
+                  const currentRating = hoveredRating || rating;
+                  const isFilled = currentRating >= starIndex;
+
+                  return (
+                    <div
+                      key={starIndex}
+                      className={`relative ${
+                        hasRated ? "cursor-default" : "cursor-pointer"
+                      }`}
+                      onMouseEnter={() =>
+                        !hasRated && setHoveredRating(starIndex)
+                      }
+                      onMouseLeave={() => !hasRated && setHoveredRating(0)}
+                      onClick={() => !hasRated && handleRatingClick(starIndex)}
+                    >
+                      {/* Estrella */}
+                      <svg
+                        className={`size-8 md:size-10 lg:size-12 transition-all ${
+                          isFilled ? "text-yellow-400" : "text-white"
+                        }`}
+                        fill="currentColor"
+                        stroke={isFilled ? "#facc15" : "black"}
+                        strokeWidth="1"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div
+              className="space-y-3 md:space-y-4 lg:space-y-5"
+              style={{
+                paddingBottom: "max(0rem, env(safe-area-inset-bottom))",
+              }}
+            >
+              <button
+                onClick={handleGoHome}
+                className="w-full text-white py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-gradient-to-r from-[#34808C] to-[#173E44] text-base md:text-lg lg:text-xl"
+              >
+                Ir al menú
+              </button>
+
+              {/* Ticket btn */}
+              <button
+                onClick={() => setIsTicketModalOpen(true)}
+                className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-white hover:bg-stone-100"
+              >
+                <Receipt
+                  className="size-5 md:size-6 lg:size-7"
+                  strokeWidth={1.5}
+                />
+                Ver ticket de compra
+              </button>
+              {/*
+              {!isSignedIn && (
+                <button
+                  onClick={() => {
+                    // Mark that user is coming from payment-success context
+                    sessionStorage.setItem("signupFromPaymentSuccess", "true");
+                    router.push("/sign-up");
+                  }}
+                  className="w-full text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-white hover:bg-stone-100 text-base md:text-lg lg:text-xl"
+                >
+                  Crear una cuenta
+                </button>
+              )}*/}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Ticket Modal */}
+      {isTicketModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-center justify-center"
+          onClick={() => setIsTicketModalOpen(false)}
+        >
+          <div
+            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl overflow-y-auto z-999 max-h-[85vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex justify-end">
+              <button
+                onClick={() => setIsTicketModalOpen(false)}
+                className="p-2 md:p-3 lg:p-4 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors justify-end flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
+              >
+                <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
+              </button>
+            </div>
+
+            {/* Header */}
+            <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-4 md:mb-5 lg:mb-6">
+              <div className="flex flex-col justify-center items-center gap-3 md:gap-4 lg:gap-5">
+                {restaurant?.logo_url ? (
+                  <img
+                    src={restaurant.logo_url}
+                    alt={restaurant.name}
+                    className="size-20 md:size-24 lg:size-28 object-cover rounded-lg md:rounded-xl"
+                  />
+                ) : (
+                  <Receipt className="size-20 md:size-24 lg:size-28 text-white" />
+                )}
+                <div className="flex flex-col items-center justify-center">
+                  <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold">
+                    {restaurant?.name}
+                    {restaurant?.name || restaurantData.name}
+                  </h2>
+                  <p className="text-sm md:text-base lg:text-lg text-white/80">
+                    Pick & Go
+                  </p>
+                  <p className="text-xs md:text-sm text-white/70 mt-1">
+                    {new Date().toLocaleTimeString("es-MX", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 md:px-8 lg:px-10 space-y-4 md:space-y-5 lg:space-y-6">
+              {/* Order Info */}
+              <div className="border-t border-white/20 pt-4 md:pt-5 lg:pt-6">
+                <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white mb-3 md:mb-4 lg:mb-5">
+                  Detalles del pago
+                </h3>
+                <div className="space-y-2 md:space-y-3 lg:space-y-4">
+                  {paymentDetails?.userName && (
+                    <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
+                      <div className="bg-orange-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                        <Utensils className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-orange-600" />
+                      </div>
+                      <span className="text-sm md:text-base lg:text-lg">
+                        {paymentDetails.userName}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
+                    <div className="bg-blue-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                      <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-blue-600" />
+                    </div>
+                    <span className="text-sm md:text-base lg:text-lg">
+                      {new Date().toLocaleDateString("es-MX", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "2-digit",
+                      }).replace(/\//g, "/")}
+                    </span>
+                  </div>
+
+                  {paymentDetails?.cardLast4 && (
+                    <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
+                      <div className="bg-green-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                        <div className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center">
+                          {getCardTypeIcon(
+                            paymentDetails.cardBrand || "unknown",
+                            "small"
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-sm md:text-base lg:text-lg">
+                        *** {paymentDetails.cardLast4.slice(-3)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Order Items */}
+              {dishOrders.length > 0 && (
+                <div className="border-t border-white/20 pt-4 md:pt-5 lg:pt-6">
+                  <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white mb-3 md:mb-4 lg:mb-5">
+                    Items de la orden
+                  </h3>
+                  <div className="space-y-3 md:space-y-4 lg:space-y-5">
+                    {dishOrders.map((dish: any, index: number) => (
+                      <div
+                        key={dish.dish_order_id || index}
+                        className="flex justify-between items-start gap-3 md:gap-4 lg:gap-5"
+                      >
+                        <div className="flex-1">
+                          <p className="text-white font-medium text-base md:text-lg lg:text-xl">
+                            {dish.quantity}x {dish.item}
+                          </p>
+                          {dish.guest_name && (
+                            <p className="text-xs md:text-sm lg:text-base text-white/60 uppercase">
+                              {dish.guest_name}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-white font-medium text-base md:text-lg lg:text-xl">
+                            ${dish.total_price?.toFixed(2) || "0.00"} MXN
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Propina como item */}
+                    {paymentDetails?.tipAmount > 0 && (
+                      <div className="flex justify-between items-start gap-3 md:gap-4 lg:gap-5 pt-3 md:pt-4 lg:pt-5">
+                        <div className="flex-1">
+                          <p className="text-white font-medium text-base md:text-lg lg:text-xl">
+                            Propina
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-white font-medium text-base md:text-lg lg:text-xl">
+                            ${paymentDetails.tipAmount.toFixed(2)} MXN
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Total Summary with Info Button */}
+              <div className="flex justify-between items-center border-t border-white/20 pt-4 md:pt-5 lg:pt-6 mb-6 md:mb-8 lg:mb-10">
+                <div className="flex items-center gap-2 md:gap-3 lg:gap-4">
+                  <span className="text-lg md:text-xl lg:text-2xl font-medium text-white">
+                    Total
+                  </span>
+                  <button
+                    onClick={() => setIsBreakdownModalOpen(true)}
+                    className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    aria-label="Ver desglose"
+                  >
+                    <CircleAlert
+                      className="size-4 md:size-5 lg:size-6 cursor-pointer text-white/70"
+                      strokeWidth={2.3}
+                    />
+                  </button>
+                </div>
+                <span className="text-lg md:text-xl lg:text-2xl font-medium text-white">
+                  ${amount.toFixed(2)} MXN
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Breakdown Modal */}
+      {isBreakdownModalOpen && (
+        <div
+          className="fixed inset-0 flex items-end justify-center"
+          style={{ zIndex: 99999 }}
+        >
+          {/* Fondo */}
+          <div
+            className="absolute inset-0 bg-black/25"
+            onClick={() => setIsBreakdownModalOpen(false)}
+          ></div>
+
+          {/* Modal */}
+          <div className="relative bg-white rounded-t-4xl w-full mx-4 md:mx-6 lg:mx-8">
+            {/* Titulo */}
+            <div className="px-6 md:px-8 lg:px-10 pt-4 md:pt-6 lg:pt-8">
+              <div className="flex items-center justify-between pb-4 md:pb-5 lg:pb-6 border-b border-[#8e8e8e]">
+                <h3 className="text-lg md:text-xl lg:text-2xl font-semibold text-black">
+                  Desglose del pago
+                </h3>
+                <button
+                  onClick={() => setIsBreakdownModalOpen(false)}
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                >
+                  <X className="size-5 md:size-6 lg:size-7 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="px-6 md:px-8 lg:px-10 py-4 md:py-6 lg:py-8">
+              <p className="text-black text-base md:text-lg lg:text-xl mb-4 md:mb-5 lg:mb-6">
+                El total se obtiene de la suma de:
+              </p>
+              <div className="space-y-3 md:space-y-4 lg:space-y-5">
+                {paymentDetails?.baseAmount && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
+                      + Consumo
+                    </span>
+                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
+                      ${paymentDetails.baseAmount.toFixed(2)} MXN
+                    </span>
+                  </div>
+                )}
+
+                {paymentDetails?.tipAmount > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
+                      + Propina
+                    </span>
+                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
+                      ${paymentDetails.tipAmount.toFixed(2)} MXN
+                    </span>
+                  </div>
+                )}
+
+                {(paymentDetails?.xquisitoCommissionClient || 0) +
+                  (paymentDetails?.ivaXquisitoClient || 0) >
+                  0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
+                      + Comisión de servicio
+                    </span>
+                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
+                      $
+                      {(
+                        (paymentDetails?.xquisitoCommissionClient || 0) +
+                        (paymentDetails?.ivaXquisitoClient || 0)
+                      ).toFixed(2)}{" "}
+                      MXN
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
