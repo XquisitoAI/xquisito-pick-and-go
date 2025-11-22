@@ -94,8 +94,13 @@ export interface PickOrder {
   customer_email: string | null;
   total_amount: number;
   payment_status: "pending" | "paid" | "failed";
-  order_status: "pending" | "confirmed" | "preparing" | "completed" | "abandoned";
-  items: Dish[];  // Items están directamente aquí
+  order_status:
+    | "pending"
+    | "confirmed"
+    | "preparing"
+    | "completed"
+    | "abandoned";
+  items: Dish[]; // Items están directamente aquí
   payments: any[];
   prep_metadata: any;
   session_data: any;
@@ -351,7 +356,7 @@ class ApiService {
   // Method to clear guest session
   clearGuestSession(): void {
     if (typeof window !== "undefined") {
-      localStorage.removeItem("xquisito-guest-id");
+      //localStorage.removeItem("xquisito-guest-id");
       localStorage.removeItem("xquisito-table-number");
       localStorage.removeItem("xquisito-restaurant-id");
     }
@@ -631,7 +636,9 @@ class ApiService {
   /**
    * Get order by ID
    */
-  async getOrderById(orderId: string): Promise<ApiResponse<PickAndGoOrderResponse>> {
+  async getOrderById(
+    orderId: string
+  ): Promise<ApiResponse<PickAndGoOrderResponse>> {
     return this.makeRequest(`/pick-and-go/orders/${orderId}`);
   }
 
@@ -697,7 +704,9 @@ class ApiService {
    * Get review statistics for a menu item
    */
   async getMenuItemStats(menuItemId: number): Promise<ApiResponse<any>> {
-    return this.makeRequest(`/restaurants/reviews/menu-item/${menuItemId}/stats`);
+    return this.makeRequest(
+      `/restaurants/reviews/menu-item/${menuItemId}/stats`
+    );
   }
 
   /**

@@ -13,41 +13,25 @@ export default function MenuHeaderBack() {
   };
 
   return (
-    <header className="container mx-auto px-5 pt-5 z-10">
+    <header className="container mx-auto px-5 md:px-8 lg:px-10 pt-5 md:pt-7 lg:pt-9 z-10">
       <div className="relative flex items-center justify-between z-10">
         {/* Back */}
         <div className="flex items-center z-10">
           <div
             onClick={handleBack}
-            className="size-10 bg-white border border-gray-300 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
+            className="size-10 md:size-12 lg:size-14 bg-white border border-gray-300 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-200 active:scale-95 transition-transform duration-200"
           >
-            <ChevronLeft className="text-primary" />
+            <ChevronLeft className="text-primary size-5 md:size-6 lg:size-7" />
           </div>
         </div>
 
         {/* Xquisito Logo */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 size-10">
+        <div className="absolute left-1/2 transform -translate-x-1/2 size-10 md:size-12 lg:size-14">
           <img src="/logos/logo-short-green.webp" alt="Xquisito Logo" />
         </div>
 
-        {/* User avatar (simplified for Pick & Go) */}
-        {/* {isLoaded && user && (
-          <div className="flex items-center space-x-2">
-            <div className="size-10 rounded-full overflow-hidden border border-gray-300 shadow-sm">
-              {user.imageUrl ? (
-                <img
-                  src={user.imageUrl}
-                  alt={user.fullName || user.firstName || "Usuario"}
-                  className="size-10 rounded-full object-cover"
-                />
-              ) : (
-                <div className="size-10 bg-gradient-to-r from-[#34808C] to-[#173E44] rounded-full flex items-center justify-center text-white text-sm font-medium">
-                  {(user.fullName || user.firstName || "U").charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-          </div>
-        )} */}
+        {/* Espacio para mantener el layout */}
+        <div className="w-10 md:w-12 lg:w-14"></div>
       </div>
     </header>
   );

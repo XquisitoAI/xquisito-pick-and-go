@@ -48,15 +48,15 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
     if (user) {
       console.log("🔐 Fetching payment methods for registered user:", user.id);
 
-      // CRITICAL: Ensure guest session is cleared before making API calls
-      // This prevents the API from using x-guest-id header instead of Authorization token
+      // NO eliminar guest_id aquí - CartContext lo necesita para migrar el carrito
+      // El CartContext se encargará de limpiarlo después de la migración exitosa
       const guestIdBefore = localStorage.getItem("xquisito-guest-id");
       if (guestIdBefore) {
         console.log(
-          "  ⚠️ Found lingering guest-id, clearing it:",
+          " ℹ️ Guest-id found (will be used for cart migration):",
           guestIdBefore
         );
-        localStorage.removeItem("xquisito-guest-id");
+        //localStorage.removeItem("xquisito-guest-id");
         localStorage.removeItem("xquisito-table-number");
         localStorage.removeItem("xquisito-restaurant-id");
         localStorage.removeItem("xquisito-guest-name");

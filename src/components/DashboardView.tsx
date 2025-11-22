@@ -49,37 +49,51 @@ export default function DashboardView() {
     <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
       <DashboardHeader />
 
-      <div className="px-4 w-full flex-1 flex flex-col">
+      <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
         {/* Welcome Header */}
         <div className="left-4 right-4 bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
-          <div className="py-6 px-8 flex flex-col justify-center pb-12">
-            <h1 className="text-white text-2xl font-medium">
+          <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center pb-12 md:pb-14 lg:pb-16">
+            <h1 className="text-white text-2xl md:text-3xl lg:text-4xl font-medium">
               ¡Bienvenido{user?.firstName ? ` ${user.firstName}` : ""}!
             </h1>
           </div>
         </div>
 
         <div className="flex-1 h-full flex flex-col overflow-hidden">
-          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6">
+          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-7 lg:px-8">
             {/* Tabs */}
-            <div className="grid grid-cols-4 gap-2 my-6 w-full">
+            <div className="relative grid grid-cols-4 gap-2 my-6 md:my-7 lg:my-8 w-full">
+              {/* Animated Background Indicator */}
+              <div
+                className="absolute top-0 h-full bg-black rounded-full transition-all duration-300 ease-out"
+                style={{
+                  left:
+                    activeTab === "profile"
+                      ? "0%"
+                      : activeTab === "support"
+                        ? "calc(25% + 0.125rem)"
+                        : activeTab === "history"
+                          ? "calc(50% + 0.25rem)"
+                          : "calc(75% + 0.375rem)",
+                  width: "calc(25% - 0.125rem)",
+                }}
+              />
 
               <button
                 onClick={() => setActiveTab("profile")}
-                className={`px-3 py-0.5 rounded-full cursor-pointer whitespace-nowrap ${
+                className={`relative px-3 md:px-4 lg:px-5 py-0.5 md:py-1 lg:py-1.5 rounded-full cursor-pointer whitespace-nowrap text-base md:text-lg lg:text-xl transition-colors duration-300 ${
                   activeTab === "profile"
-                    ? "bg-black text-white hover:bg-slate-800"
+                    ? "text-white"
                     : "text-gray-500 hover:bg-gray-100"
                 }`}
               >
                 Perfil
               </button>
-              
               <button
                 onClick={() => setActiveTab("support")}
-                className={`px-3 py-0.5 rounded-full cursor-pointer whitespace-nowrap ${
+                className={`relative px-3 md:px-4 lg:px-5 py-0.5 md:py-1 lg:py-1.5 rounded-full cursor-pointer whitespace-nowrap text-base md:text-lg lg:text-xl transition-colors duration-300 ${
                   activeTab === "support"
-                    ? "bg-black text-white hover:bg-slate-800"
+                    ? "text-white"
                     : "text-gray-500 hover:bg-gray-100"
                 }`}
               >
@@ -87,9 +101,9 @@ export default function DashboardView() {
               </button>
               <button
                 onClick={() => setActiveTab("history")}
-                className={`px-3 py-0.5 rounded-full cursor-pointer whitespace-nowrap ${
+                className={`relative px-3 md:px-4 lg:px-5 py-0.5 md:py-1 lg:py-1.5 rounded-full cursor-pointer whitespace-nowrap text-base md:text-lg lg:text-xl transition-colors duration-300 ${
                   activeTab === "history"
-                    ? "bg-black text-white hover:bg-slate-800"
+                    ? "text-white"
                     : "text-gray-500 hover:bg-gray-100"
                 }`}
               >
@@ -98,9 +112,9 @@ export default function DashboardView() {
 
               <button
                 onClick={() => setActiveTab("cards")}
-                className={`px-3 py-0.5 rounded-full cursor-pointer whitespace-nowrap ${
+                className={`relative px-3 md:px-4 lg:px-5 py-0.5 md:py-1 lg:py-1.5 rounded-full cursor-pointer whitespace-nowrap text-base md:text-lg lg:text-xl transition-colors duration-300 ${
                   activeTab === "cards"
-                    ? "bg-black text-white hover:bg-slate-800"
+                    ? "text-white"
                     : "text-gray-500 hover:bg-gray-100"
                 }`}
               >
@@ -109,7 +123,7 @@ export default function DashboardView() {
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 flex flex-col pb-6">
+            <div className="flex-1 flex flex-col overflow-y-auto pb-6">
               {activeTab === "profile" && <ProfileTab />}
               {activeTab === "cards" && <CardsTab />}
               {activeTab === "history" && <HistoryTab />}

@@ -6,7 +6,7 @@ import * as SignUp from "@clerk/elements/sign-up";
 import { useUser, useSignUp } from "@clerk/nextjs";
 import { useUserData } from "@/context/userDataContext";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
-import { Mail, KeyRound, User } from "lucide-react";
+import { Mail, KeyRound, User, ArrowLeft } from "lucide-react";
 import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
 
@@ -85,6 +85,14 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col justify-center items-center px-4">
+      {/* Back Button */}
+      <button
+        onClick={() => router.back()}
+        className="absolute top-4 md:top-6 lg:top-8 left-4 md:left-6 lg:left-8 p-2 md:p-3 text-white hover:bg-white/10 rounded-full transition-colors z-20"
+      >
+        <ArrowLeft className="size-5 md:size-6 lg:size-7" />
+      </button>
+
       <div className="relative z-10 w-full max-w-md text-center flex flex-col items-center mb-12">
         <div className="mb-6">
           <img
@@ -210,22 +218,13 @@ export default function SignUpPage() {
               {/* CAPTCHA container */}
               <div id="clerk-captcha" className="mt-6"></div>
 
-              <div className="flex items-center justify-center gap-3 mt-6">
+              <div className="flex items-center justify-center gap-3 my-6">
                 <SignUp.Action
                   submit
                   className="bg-black hover:bg-stone-950 w-full text-white py-3 rounded-full cursor-pointer transition-colors"
                 >
                   Crear cuenta
                 </SignUp.Action>
-              </div>
-
-              <div
-                className="text-white text-sm my-6 underline cursor-pointer"
-                onClick={() => {
-                  navigateWithRestaurantId("/user");
-                }}
-              >
-                Continuar como invitado
               </div>
 
               {/* Social Login */}

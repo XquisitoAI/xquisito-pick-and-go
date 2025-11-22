@@ -4,7 +4,7 @@ import { useState, Suspense, useEffect, useCallback } from "react";
 import * as Clerk from "@clerk/elements/common";
 import * as SignIn from "@clerk/elements/sign-in";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ScanFace, Mail, KeyRound } from "lucide-react";
+import { ScanFace, Mail, KeyRound, ArrowLeft } from "lucide-react";
 import { useNavigation } from "@/hooks/useNavigation";
 import { useUser, useSignIn } from "@clerk/nextjs";
 import { usePasskeySupport } from "@/hooks/usePasskeySupport";
@@ -260,6 +260,14 @@ function SignInContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col justify-center items-center px-4">
+      {/* Back Button */}
+      <button
+        onClick={() => router.back()}
+        className="absolute top-4 md:top-6 lg:top-8 left-4 md:left-6 lg:left-8 p-2 md:p-3 text-white hover:bg-white/10 rounded-full transition-colors z-20"
+      >
+        <ArrowLeft className="size-5 md:size-6 lg:size-7" />
+      </button>
+
       <div className="relative z-10 w-full max-w-md text-center flex flex-col items-center mb-12">
         <div className="mb-6">
           <img
@@ -361,24 +369,10 @@ function SignInContent() {
               <button
                 type="button"
                 onClick={() => setForgotPasswordStep("email")}
-                className="text-white text-sm underline cursor-pointer mt-6 mb-2 block mx-auto"
+                className="text-white text-sm underline cursor-pointer my-6 block mx-auto"
               >
                 Olvidaste tu contraseña
               </button>
-
-              <div className="mb-6">
-
-                <div
-                  className="text-white text-sm underline cursor-pointer text-center"
-                  onClick={() => {
-                    navigateWithRestaurantId("/user");
-
-                  }}
-                >
-                  Continuar como invitado
-                </div>
-                
-              </div>
 
               {/* Social Login */}
               <div className="flex items-center justify-center gap-12">

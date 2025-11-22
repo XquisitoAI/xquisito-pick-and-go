@@ -6,7 +6,7 @@ import { useCart } from "@/context/CartContext";
 import { usePickAndGoContext } from "@/context/PickAndGoContext";
 import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, X, Home } from "lucide-react";
 import MenuHeaderDish from "@/components/headers/MenuHeaderDish";
 import Loader from "@/components/UI/Loader";
 import RestaurantClosedModal from "@/components/RestaurantClosedModal";
@@ -26,7 +26,7 @@ export default function DishDetailPage() {
   const restaurantId = params.restaurantId as string;
   const { state: cartState, addItem, updateQuantity } = useCart();
   const { setRestaurantId: setPickAndGoRestaurantId } = usePickAndGoContext();
-  const { goBack, navigateWithRestaurantId } = useNavigation();
+  const { navigateWithRestaurantId } = useNavigation();
   const { restaurant, menu, loading, isOpen } = useRestaurant();
   const [localQuantity, setLocalQuantity] = useState(0);
   const [isPulsing, setIsPulsing] = useState(false);
@@ -49,10 +49,11 @@ export default function DishDetailPage() {
   const [isLoadingReviews, setIsLoadingReviews] = useState(true);
   const { isLoaded, user } = useUser();
 
-  // Buscar el dish en el menú del contexto
-  const dishData = useMemo(() => {
-    if (!menu || menu.length === 0) return null;
+  // Intentar cargar datos del menú del contexto de forma sincrónica (precarga instantánea)
+  const initialDishData = useMemo(() => {
+    if (!menu || menu.length === 0 || !dishId) return null;
 
+    // Buscar el platillo en el menú del contexto
     for (const section of menu) {
       const foundItem = section.items.find((item) => item.id === dishId);
       if (foundItem) {
@@ -81,16 +82,114 @@ export default function DishDetailPage() {
           features: [],
           discount: foundItem.discount || 0,
         };
+
         return {
           dish: adaptedDish,
           section: section.name,
           customFields: parsedCustomFields,
-          rawItem: foundItem,
         };
       }
     }
     return null;
   }, [menu, dishId]);
+
+  const [dishLoading, setDishLoading] = useState(!initialDishData);
+  const [dishError, setDishError] = useState<string | null>(null);
+  const [dishData, setDishData] = useState<{
+    dish: MenuItemData;
+    section: string;
+    customFields: CustomField[];
+  } | null>(initialDishData);
+
+  // Obtener datos del platillo directamente de la API (para recargas o si no está en caché)
+  useEffect(() => {
+    const fetchDish = async () => {
+      if (!dishId) return;
+
+      // Si ya tenemos datos del menú, no mostrar skeleton
+      const hasDataFromMenu = dishData !== null;
+
+      if (!hasDataFromMenu) {
+        setDishLoading(true);
+      }
+      setDishError(null);
+
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL;
+        const response = await fetch(`${API_URL}/menu/items/${dishId}`);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            setDishError("not_found");
+          } else {
+            setDishError("error");
+          }
+          setDishLoading(false);
+          return;
+        }
+
+        const result = await response.json();
+
+        if (!result.success || !result.data) {
+          setDishError("error");
+          setDishLoading(false);
+          return;
+        }
+
+        const foundItem = result.data;
+
+        // Buscar la sección en el menú del contexto si está disponible
+        let sectionName = "Menú";
+        if (menu && menu.length > 0) {
+          for (const section of menu) {
+            if (section.items.some((item) => item.id === dishId)) {
+              sectionName = section.name;
+              break;
+            }
+          }
+        }
+
+        // Parsear custom_fields si es string JSON
+        let parsedCustomFields: CustomField[] = [];
+        if (foundItem.custom_fields) {
+          if (typeof foundItem.custom_fields === "string") {
+            try {
+              const parsed = JSON.parse(foundItem.custom_fields);
+              parsedCustomFields = Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+              console.error("Error parsing custom_fields:", e);
+            }
+          } else {
+            parsedCustomFields = foundItem.custom_fields;
+          }
+        }
+
+        // Adaptar el item de BD al formato esperado
+        const adaptedDish: MenuItemData = {
+          id: foundItem.id,
+          name: foundItem.name,
+          description: foundItem.description || "",
+          price: Number(foundItem.price),
+          images: foundItem.image_url ? [foundItem.image_url] : [],
+          features: [],
+          discount: foundItem.discount || 0,
+        };
+
+        setDishData({
+          dish: adaptedDish,
+          section: sectionName,
+          customFields: parsedCustomFields,
+        });
+        setDishLoading(false);
+      } catch (error) {
+        console.error("Error fetching dish:", error);
+        setDishError("error");
+        setDishLoading(false);
+      }
+    };
+
+    fetchDish();
+  }, [dishId]);
 
   // Inicializar selecciones por defecto para dropdown fields
   useEffect(() => {
@@ -474,36 +573,79 @@ export default function DishDetailPage() {
     }
   }, [isPulsing]);
 
-  if (loading) {
+  if (loading || dishLoading) {
     return <Loader />;
   }
 
   if (!restaurantId || isNaN(parseInt(restaurantId))) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-medium text-gray-800 mb-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex items-center justify-center">
+        <div className="text-center px-6 md:px-8 lg:px-10">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-medium text-white mb-4 md:mb-5 lg:mb-6">
             Restaurante Inválido
           </h1>
-          <p className="text-gray-600">ID de restaurante no válido</p>
+          <p className="text-white/80 text-base md:text-lg lg:text-xl mb-6 md:mb-8 lg:mb-10">
+            ID de restaurante no válido
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="bg-white text-[#0a8b9b] px-6 md:px-8 lg:px-10 py-3 md:py-4 lg:py-5 rounded-lg md:rounded-xl hover:bg-gray-100 transition-colors text-base md:text-lg lg:text-xl"
+          >
+            Volver al inicio
+          </button>
         </div>
       </div>
     );
   }
 
-  if (!dishData) {
+  if (dishError === "not_found" || !dishData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex items-center justify-center">
-        <div className="text-center px-6">
-          <h1 className="text-2xl font-medium text-white mb-4">
-            Platillo no encontrado
-          </h1>
-          <button
-            onClick={() => goBack()}
-            className="bg-white text-[#0a8b9b] px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            Volver al menú
-          </button>
+      <div className="h-[100dvh] bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center px-5 md:px-8 lg:px-10 pb-12 md:py-10 lg:py-12">
+          <div className="w-full max-w-md">
+            {/* Logo */}
+            <div className="mb-6 md:mb-8 lg:mb-10 text-center">
+              <img
+                src="/logos/logo-short-green.webp"
+                alt="Xquisito Logo"
+                className="size-16 md:size-20 lg:size-24 mx-auto mb-4 md:mb-5 lg:mb-6"
+              />
+              <h1 className="text-white text-xl md:text-2xl lg:text-3xl font-medium mb-2 md:mb-3 lg:mb-4">
+                Platillo no encontrado
+              </h1>
+              <p className="text-white/80 text-sm md:text-base lg:text-lg">
+                Este platillo no está disponible
+              </p>
+            </div>
+
+            {/* Options */}
+            <div className="space-y-3 md:space-y-4 lg:space-y-5">
+              {/* Go to Menu Option */}
+              <button
+                onClick={() => navigateWithRestaurantId("/menu")}
+                className="w-full bg-white hover:bg-gray-50 text-black py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6 rounded-xl md:rounded-2xl transition-all duration-200 flex items-center gap-3 md:gap-4 lg:gap-5 active:scale-95"
+              >
+                <div className="bg-gradient-to-r from-[#34808C] to-[#173E44] p-2 md:p-2.5 lg:p-3 rounded-full group-hover:scale-110 transition-transform">
+                  <Home className="size-5 md:size-6 lg:size-7 text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h2 className="text-base md:text-lg lg:text-xl font-medium mb-0.5 md:mb-1">
+                    Volver al menú
+                  </h2>
+                  <p className="text-xs md:text-sm lg:text-base text-gray-600">
+                    Ver platillos disponibles
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            {/* Additional Info */}
+            <div className="mt-6 md:mt-7 lg:mt-8 text-center">
+              <p className="text-white/70 text-xs md:text-sm lg:text-base">
+                Es posible que este platillo ya no esté disponible en el menú
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -521,7 +663,7 @@ export default function DishDetailPage() {
         restaurantLogo={restaurant?.logo_url}
       />
       {/* Slider de imágenes */}
-      <div className="absolute top-0 left-0 w-full h-96 z-0">
+      <div className="absolute top-0 left-0 w-full h-96 md:h-[28rem] lg:h-[32rem] z-0">
         <div
           className="relative w-full h-full overflow-hidden"
           onTouchStart={handleTouchStart}
@@ -544,7 +686,7 @@ export default function DishDetailPage() {
               <img
                 src="/logos/logo-short-green.webp"
                 alt="Logo"
-                className="w-32 h-32 object-contain"
+                className="w-32 h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 object-contain"
               />
             </div>
           )}
@@ -552,15 +694,15 @@ export default function DishDetailPage() {
 
         {/* Indicadores */}
         {dish.images.length > 1 && (
-          <div className="absolute bottom-12 left-0 right-0 flex justify-center gap-2 z-10">
+          <div className="absolute bottom-12 md:bottom-14 lg:bottom-16 left-0 right-0 flex justify-center gap-2 md:gap-2.5 lg:gap-3 z-10">
             {dish.images.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentImageIndex(index)}
-                className={`h-2.5 rounded-full transition-all duration-300 border border-white cursor-pointer ${
+                className={`h-2.5 md:h-3 lg:h-3.5 rounded-full transition-all duration-300 border border-white cursor-pointer ${
                   index === currentImageIndex
-                    ? "w-2.5 bg-white"
-                    : "w-2.5 bg-white/10"
+                    ? "w-2.5 md:w-3 lg:w-3.5 bg-white"
+                    : "w-2.5 md:w-3 lg:w-3.5 bg-white/10"
                 }`}
                 aria-label={`Ver imagen ${index + 1}`}
               />
@@ -571,25 +713,25 @@ export default function DishDetailPage() {
 
       <MenuHeaderDish />
 
-      <main className="mt-72 relative z-10">
-        <div className="bg-white rounded-t-4xl flex flex-col px-6 pb-[100px]">
-          <div className="mt-8">
-            <div className="flex justify-between items-center text-black mb-6">
+      <main className="mt-64 md:mt-80 lg:mt-96 relative z-10">
+        <div className="bg-white rounded-t-4xl flex flex-col px-6 md:px-8 lg:px-10 pb-[100px] md:pb-[120px] lg:pb-[140px]">
+          <div className="mt-8 md:mt-10 lg:mt-12">
+            <div className="flex justify-between items-center text-black mb-6 md:mb-7 lg:mb-8">
               {isLoadingReviews ? (
                 <>
                   {/* Skeleton para el rating */}
-                  <div className="flex items-center gap-1.5">
-                    <div className="size-6 bg-gray-200 rounded animate-pulse" />
-                    <div className="h-5 w-8 bg-gray-200 rounded animate-pulse" />
+                  <div className="flex items-center gap-1.5 md:gap-2 lg:gap-2.5">
+                    <div className="size-6 md:size-7 lg:size-8 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-5 md:h-6 lg:h-7 w-8 md:w-10 lg:w-12 bg-gray-200 rounded animate-pulse" />
                   </div>
                   {/* Skeleton para el botón */}
-                  <div className="h-5 w-32 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-5 md:h-6 lg:h-7 w-32 md:w-36 lg:w-40 bg-gray-200 rounded animate-pulse" />
                 </>
               ) : (
                 <>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 md:gap-2 lg:gap-2.5">
                     <svg
-                      className="size-6 text-black"
+                      className="size-6 md:size-7 lg:size-8 text-black"
                       fill="currentColor"
                       viewBox="0 0 24 24"
                     >
@@ -597,15 +739,15 @@ export default function DishDetailPage() {
                     </svg>
                     {dishStats && dishStats.total_reviews > 0 ? (
                       <>
-                        <span className="text-lg">
+                        <span className="text-lg md:text-xl lg:text-2xl">
                           {dishStats.average_rating.toFixed(1)}
                         </span>
-                        <span className="text-xs text-gray-600">
+                        <span className="text-xs md:text-sm lg:text-base text-gray-600">
                           ({dishStats.total_reviews})
                         </span>
                       </>
                     ) : (
-                      <span className="text-sm text-gray-600">Sin reseñas</span>
+                      <span className="text-sm md:text-base lg:text-lg text-gray-600">Sin reseñas</span>
                     )}
                   </div>
                   <button
@@ -618,40 +760,40 @@ export default function DishDetailPage() {
                       }
                       setIsReviewModalOpen(true);
                     }}
-                    className="underline text-black"
+                    className="underline text-black text-sm md:text-base lg:text-lg"
                   >
                     {myReview ? "Editar mi reseña" : "Comparte tu reseña"}
                   </button>
                 </>
               )}
             </div>
-            <div className="flex flex-col justify-between items-start mb-4">
-              <h2 className="text-3xl font-medium text-black capitalize">
+            <div className="flex flex-col justify-between items-start mb-4 md:mb-5 lg:mb-6">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-medium text-black capitalize">
                 {dish.name}
               </h2>
               {dish.discount > 0 ? (
                 <div>
-                  <h2 className="text-black line-through text-sm">
+                  <h2 className="text-black line-through text-sm md:text-base lg:text-lg">
                     ${dish.price} MXN
                   </h2>
-                  <span className="text-black text-xl">
+                  <span className="text-black text-xl md:text-2xl lg:text-3xl">
                     ${(dish.price * (1 - dish.discount / 100)).toFixed(2)}{" "}
                     MXN{" "}
                   </span>
                 </div>
               ) : (
                 <div>
-                  <h2 className="text-black text-xl">${dish.price} MXN</h2>
+                  <h2 className="text-black text-xl md:text-2xl lg:text-3xl">${dish.price} MXN</h2>
                 </div>
               )}
             </div>
 
             {dish.features.length > 0 && (
-              <div className="flex gap-1 mt-1 mb-3">
+              <div className="flex gap-1 md:gap-1.5 lg:gap-2 mt-1 md:mt-1.5 lg:mt-2 mb-3 md:mb-4 lg:mb-5">
                 {dish.features.map((feature, index) => (
                   <div
                     key={index}
-                    className="text-sm text-black font-medium border border-[#bfbfbf]/50 rounded-3xl px-3 py-1 shadow-sm"
+                    className="text-sm md:text-base lg:text-lg text-black font-medium border border-[#bfbfbf]/50 rounded-3xl px-3 md:px-4 lg:px-5 py-1 md:py-1.5 lg:py-2 shadow-sm"
                   >
                     {feature}
                   </div>
@@ -659,25 +801,25 @@ export default function DishDetailPage() {
               </div>
             )}
 
-            <p className="text-black text-base leading-relaxed mb-8">
+            <p className="text-black text-base md:text-lg lg:text-xl leading-relaxed mb-8 md:mb-10 lg:mb-12">
               {dish.description}
             </p>
 
             {/* Custom Fields Dinámicos */}
             {dishData.customFields && dishData.customFields.length > 0 && (
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
+              <div className="grid md:grid-cols-2 gap-6 md:gap-7 lg:gap-8 mb-6 md:mb-8 lg:mb-10">
                 {dishData.customFields.map((field) => (
                   <div key={field.id}>
                     <div
-                      className="flex justify-between items-center pb-2 border-b border-[#8e8e8e] cursor-pointer"
+                      className="flex justify-between items-center pb-2 md:pb-2.5 lg:pb-3 border-b border-[#8e8e8e] cursor-pointer"
                       onClick={() => toggleSection(field.id)}
                     >
-                      <h3 className="font-medium text-black text-xl">
+                      <h3 className="font-medium text-black text-xl md:text-2xl lg:text-3xl">
                         {field.name}
                       </h3>
-                      <div className="size-7 bg-[#f9f9f9] rounded-full flex items-center justify-center border border-[#8e8e8e]/50">
+                      <div className="size-7 md:size-8 lg:size-9 bg-[#f9f9f9] rounded-full flex items-center justify-center border border-[#8e8e8e]/50">
                         <ChevronDown
-                          className={`size-5 text-black transition-transform duration-250 ${openSections[field.id] ? "rotate-180" : ""}`}
+                          className={`size-5 md:size-6 lg:size-7 text-black transition-transform duration-250 ${openSections[field.id] ? "rotate-180" : ""}`}
                         />
                       </div>
                     </div>
@@ -694,14 +836,14 @@ export default function DishDetailPage() {
                               return (
                                 <label
                                   key={option.id}
-                                  className="flex items-center justify-between gap-2 cursor-pointer py-6"
+                                  className="flex items-center justify-between gap-2 md:gap-3 lg:gap-4 cursor-pointer py-6 md:py-7 lg:py-8"
                                 >
                                   <div className="flex flex-col">
-                                    <span className="text-black">
+                                    <span className="text-black text-base md:text-lg lg:text-xl">
                                       {option.name}
                                     </span>
                                     {option.price > 0 && (
-                                      <span className="text-[#eab3f4] font-medium text-sm">
+                                      <span className="text-[#eab3f4] font-medium text-sm md:text-base lg:text-lg">
                                         +${option.price}
                                       </span>
                                     )}
@@ -712,7 +854,7 @@ export default function DishDetailPage() {
                                     onChange={() =>
                                       handleDropdownChange(field.id, option.id)
                                     }
-                                    className="myradio"
+                                    className="myradio w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7"
                                   />
                                 </label>
                               );
@@ -724,14 +866,14 @@ export default function DishDetailPage() {
                             {field.options.map((option) => (
                               <label
                                 key={option.id}
-                                className="flex items-center justify-between gap-2 cursor-pointer py-6"
+                                className="flex items-center justify-between gap-2 md:gap-3 lg:gap-4 cursor-pointer py-6 md:py-7 lg:py-8"
                               >
                                 <div className="flex flex-col">
-                                  <span className="text-black">
+                                  <span className="text-black text-base md:text-lg lg:text-xl">
                                     {option.name}
                                   </span>
                                   {option.price > 0 && (
-                                    <span className="text-[#eab3f4] font-medium text-sm">
+                                    <span className="text-[#eab3f4] font-medium text-sm md:text-base lg:text-lg">
                                       +${option.price}
                                     </span>
                                   )}
@@ -748,7 +890,7 @@ export default function DishDetailPage() {
                                   onChange={() =>
                                     handleCheckboxChange(field.id, option.id)
                                   }
-                                  className="w-4 h-4 rounded border-[#8e8e8e] text-[#eab3f4] focus:ring-[#eab3f4] accent-[#eab3f4]"
+                                  className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 rounded border-[#8e8e8e] text-[#eab3f4] focus:ring-[#eab3f4] accent-[#eab3f4]"
                                 />
                               </label>
                             ))}
@@ -763,21 +905,21 @@ export default function DishDetailPage() {
 
             {/* Comentarios Textarea */}
             <div className="text-black">
-              <span className="font-medium text-xl">
+              <span className="font-medium text-xl md:text-2xl lg:text-3xl">
                 ¿Algo que debamos saber?
               </span>
               <textarea
                 name=""
                 id=""
-                className="h-24 text-base w-full bg-[#f9f9f9] border border-[#bfbfbf] px-3 py-2 rounded-lg resize-none focus:outline-none mt-2"
+                className="h-24 md:h-28 lg:h-32 text-base md:text-lg lg:text-xl w-full bg-[#f9f9f9] border border-[#bfbfbf] px-3 md:px-4 lg:px-5 py-2 md:py-3 lg:py-4 rounded-lg md:rounded-xl resize-none focus:outline-none mt-2 md:mt-3 lg:mt-4"
                 placeholder="Alergias, instrucciones especiales, comentarios..."
               ></textarea>
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 mx-4 px-6 p-6 z-10">
+            <div className="fixed bottom-0 left-0 right-0 mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 p-6 md:p-7 lg:p-8 z-10">
               <button
                 onClick={handleAddToCartAndReturn}
-                className="bg-gradient-to-r from-[#34808C] to-[#173E44] w-full text-white py-3 rounded-full cursor-pointer transition-colors flex items-center justify-center gap-2"
+                className="bg-gradient-to-r from-[#34808C] to-[#173E44] w-full text-white py-3 md:py-4 lg:py-5 rounded-full cursor-pointer flex items-center justify-center gap-2 md:gap-2.5 lg:gap-3 text-base md:text-lg lg:text-xl animate-pulse-button active:scale-95 transition-transform"
               >
                 <span>
                   Agregar al carrito • ${calculateTotalPrice().toFixed(2)} MXN
@@ -795,51 +937,51 @@ export default function DishDetailPage() {
           onClick={() => setIsReviewModalOpen(false)}
         >
           <div
-            className="bg-white w-full rounded-t-4xl overflow-y-auto z-999 max-h-[85vh] animate-slide-up"
+            className="bg-white w-full mx-4 md:mx-6 lg:mx-8 rounded-t-4xl overflow-y-auto z-999 max-h-[85vh] animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-full flex justify-end">
               <button
                 onClick={() => setIsReviewModalOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors justify-end flex items-end mt-3 mr-3"
+                className="p-2 md:p-2.5 lg:p-3 hover:bg-gray-100 rounded-lg md:rounded-xl transition-colors justify-end flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
               >
-                <X className="w-6 h-6 text-gray-600" />
+                <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-600" />
               </button>
             </div>
 
             {/* Header */}
-            <div className="px-6 flex items-center justify-center mb-4">
-              <div className="flex flex-col justify-center items-center gap-3">
+            <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-4 md:mb-5 lg:mb-6">
+              <div className="flex flex-col justify-center items-center gap-3 md:gap-4 lg:gap-5">
                 {dish.images.length > 0 ? (
                   <img
                     src={dish.images[0]}
                     alt={dish.name}
-                    className="size-20 object-cover rounded-lg"
+                    className="size-20 md:size-24 lg:size-28 object-cover rounded-lg md:rounded-xl"
                   />
                 ) : (
-                  <div className="size-20 bg-gray-300 rounded-lg flex items-center justify-center">
+                  <div className="size-20 md:size-24 lg:size-28 bg-gray-300 rounded-lg md:rounded-xl flex items-center justify-center">
                     <img
                       src="/logos/logo-short-green.webp"
                       alt="Logo"
-                      className="size-16 object-contain"
+                      className="size-16 md:size-20 lg:size-24 object-contain"
                     />
                   </div>
                 )}
                 <div className="flex flex-col items-center justify-center">
-                  <h2 className="text-xl text-black capitalize">{dish.name}</h2>
-                  <p className="text-sm text-gray-600">{section}</p>
+                  <h2 className="text-xl md:text-2xl lg:text-3xl text-black capitalize">{dish.name}</h2>
+                  <p className="text-sm md:text-base lg:text-lg text-gray-600">{section}</p>
                 </div>
               </div>
             </div>
 
             {/* Content */}
-            <div className="px-6 space-y-4">
+            <div className="px-6 md:px-8 lg:px-10 space-y-4 md:space-y-5 lg:space-y-6">
               {/* Rating Section */}
-              <div className="border-t border-[#8e8e8e] pt-4">
-                <h3 className="font-normal text-lg text-black mb-3 text-center">
+              <div className="border-t border-[#8e8e8e] pt-4 md:pt-5 lg:pt-6">
+                <h3 className="font-normal text-lg md:text-xl lg:text-2xl text-black mb-3 md:mb-4 lg:mb-5 text-center">
                   ¿Cómo calificarías este platillo?
                 </h3>
-                <div className="flex justify-center gap-2 mb-4">
+                <div className="flex justify-center gap-2 md:gap-3 lg:gap-4 mb-4 md:mb-5 lg:mb-6">
                   {[1, 2, 3, 4, 5].map((starIndex) => {
                     const currentRating = hoveredReviewRating || reviewRating;
                     const isFilled = currentRating >= starIndex;
@@ -853,7 +995,7 @@ export default function DishDetailPage() {
                         onClick={() => setReviewRating(starIndex)}
                       >
                         <svg
-                          className={`size-8 ${
+                          className={`size-8 md:size-10 lg:size-12 ${
                             isFilled ? "text-yellow-400" : "text-white"
                           }`}
                           fill="currentColor"
@@ -870,11 +1012,11 @@ export default function DishDetailPage() {
               </div>
 
               {/* Submit Button */}
-              <div className="pt-4 pb-6">
+              <div className="pt-4 md:pt-5 lg:pt-6 pb-6 md:pb-8 lg:pb-10">
                 <button
                   onClick={handleSubmitReview}
                   disabled={reviewRating === 0 || isSubmittingReview}
-                  className={`w-full text-white py-3 rounded-full transition-colors ${
+                  className={`w-full text-white py-3 md:py-4 lg:py-5 rounded-full transition-colors text-base md:text-lg lg:text-xl ${
                     reviewRating > 0 && !isSubmittingReview
                       ? "bg-black hover:bg-stone-950 cursor-pointer"
                       : "bg-stone-800 cursor-not-allowed"
