@@ -74,11 +74,16 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
         }
 
         const response = await apiService.getPaymentMethods();
-        if (response.success && response.data?.paymentMethods) {
-          setPaymentMethods(response.data.paymentMethods);
+        console.log("🔍 GetPaymentMethods response for registered user:", response);
+
+        // Handle response structure: check both possible locations
+        const paymentMethods = response.data?.paymentMethods || response.paymentMethods || [];
+
+        if (response.success && paymentMethods.length > 0) {
+          setPaymentMethods(paymentMethods);
           console.log(
             "💳 Loaded payment methods for registered user:",
-            response.data.paymentMethods.length
+            paymentMethods.length
           );
         } else {
           setPaymentMethods([]);
@@ -96,17 +101,22 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       return;
     }
 
-    // For guests, ensure we have a guest ID
+    // For guests, we need either a guestId OR if we're in Pick & Go mode
     if (isGuest && guestId) {
       console.log("👥 Fetching payment methods for guest:", guestId);
       setIsLoading(true);
       try {
         const response = await apiService.getPaymentMethods();
-        if (response.success && response.data?.paymentMethods) {
-          setPaymentMethods(response.data.paymentMethods);
+        console.log("🔍 GetPaymentMethods response for guest:", response);
+
+        // Handle response structure: check both possible locations
+        const paymentMethods = response.data?.paymentMethods || response.paymentMethods || [];
+
+        if (response.success && paymentMethods.length > 0) {
+          setPaymentMethods(paymentMethods);
           console.log(
             "💳 Loaded payment methods for guest:",
-            response.data.paymentMethods.length
+            paymentMethods.length
           );
         } else {
           setPaymentMethods([]);
@@ -121,8 +131,43 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       return;
     }
 
+    // For Pick & Go, if no guest context yet but we have guestId in localStorage, try anyway
+    if (!isGuest && !user) {
+      const storedGuestId = localStorage.getItem("xquisito-guest-id");
+      if (storedGuestId) {
+        console.log("🔍 Pick & Go: Found stored guestId, fetching payment methods:", storedGuestId);
+        setIsLoading(true);
+        try {
+          const response = await apiService.getPaymentMethods();
+          console.log("🔍 GetPaymentMethods response for stored guest:", response);
+
+          const paymentMethods = response.data?.paymentMethods || response.paymentMethods || [];
+
+          if (response.success && paymentMethods.length > 0) {
+            setPaymentMethods(paymentMethods);
+            console.log("💳 Loaded payment methods for stored guest:", paymentMethods.length);
+          } else {
+            setPaymentMethods([]);
+            console.log("💳 No payment methods found for stored guest");
+          }
+        } catch (error) {
+          console.error("❌ Error fetching payment methods for stored guest:", error);
+          setPaymentMethods([]);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+    }
+
     // No valid authentication context
-    console.log("⚠️ No valid authentication context for payment methods");
+    console.log("⚠️ No valid authentication context for payment methods", {
+      isLoaded,
+      hasUser: !!user,
+      isGuest,
+      guestId,
+      storedGuestId: localStorage.getItem("xquisito-guest-id")
+    });
     setPaymentMethods([]);
   };
 

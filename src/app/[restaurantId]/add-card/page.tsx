@@ -150,13 +150,26 @@ function AddCardContent() {
       });
 
       if (result.success) {
+        console.log("💳 AddCard response:", result);
+
         // Add the new payment method to the context if it exists
-        if (result.data?.paymentMethod) {
-          addPaymentMethod(result.data.paymentMethod);
+        // Backend returns: { success: true, paymentMethod: {...} }
+        // api2.ts wraps it as: { success: true, data: { success: true, paymentMethod: {...} } }
+        const paymentMethod = result.data?.paymentMethod || result.paymentMethod;
+
+        if (paymentMethod) {
+          console.log("✅ Adding payment method to context:", paymentMethod);
+          addPaymentMethod(paymentMethod);
         } else {
+          console.log("⚠️ No paymentMethod in response, refreshing from API");
           // Fallback: refresh payment methods from API
           await refreshPaymentMethods();
         }
+
+        // Force refresh payment methods to ensure sync
+        console.log("🔄 Force refreshing payment methods after add...");
+        await refreshPaymentMethods();
+
         alert("Card added successfully!");
 
         // Check if we came from saved-cards page

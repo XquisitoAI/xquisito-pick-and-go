@@ -120,25 +120,44 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
         return;
       }
 
-      // Priority 2: Restore existing guest session (only if no table param)
-      if (storedGuestId && storedTableNumber) {
+      // Priority 2: Restore existing guest session
+      if (storedGuestId) {
         const storedGuestName = localStorage.getItem("xquisito-guest-name");
         setIsGuest(true);
         setGuestId(storedGuestId);
-        setTableNumber(storedTableNumber);
+
+        // For Pick & Go, tableNumber might be null/undefined
+        if (storedTableNumber) {
+          setTableNumber(storedTableNumber);
+          apiService.setTableNumber(storedTableNumber);
+        } else {
+          // Pick & Go mode - no table number needed
+          setTableNumber(null);
+        }
+
         setGuestName(storedGuestName);
         console.log("🔄 Restored guest session:", {
           guestId: storedGuestId,
-          tableNumber: storedTableNumber,
+          tableNumber: storedTableNumber || "Pick & Go (no table)",
           guestName: storedGuestName,
+          isPickAndGo: !storedTableNumber
         });
         return;
       }
 
-      // Priority 3: No table param and no valid stored session - stay as non-guest
-      console.log(
-        "ℹ️ No table parameter and no valid guest session - staying as non-guest"
-      );
+      // Priority 3: No guest session found - create one for Pick & Go
+      const newGuestId = generateGuestId();
+      localStorage.setItem("xquisito-guest-id", newGuestId);
+
+      setIsGuest(true);
+      setGuestId(newGuestId);
+      setTableNumber(null); // Pick & Go doesn't need table number
+
+      console.log("👤 Created new Pick & Go guest session:", {
+        guestId: newGuestId,
+        tableNumber: null,
+        isPickAndGo: true
+      });
     }
   }, [isLoaded, user, searchParams]);
 

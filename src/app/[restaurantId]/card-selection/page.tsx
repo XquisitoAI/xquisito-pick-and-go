@@ -378,6 +378,52 @@ export default function CardSelectionPage() {
         user?.firstName || user?.fullName || cartState.userName || "Usuario";
       setCompletedUserName(userName);
 
+      // Guardar detalles del pago para la página de payment-success
+      const paymentDetailsForSuccess = {
+        orderId: pickAndGoOrderId,
+        paymentId: paymentResult.data?.paymentId || `pick-go-${pickAndGoOrderId}`,
+        transactionId: paymentResult.data?.transactionId || pickAndGoOrderId,
+        totalAmountCharged: totalAmount,
+        amount: totalAmount,
+        baseAmount: baseAmount,
+        tipAmount: tipAmount,
+        xquisitoCommissionClient: xquisitoCommissionClient || 0,
+        ivaXquisitoClient: ivaXquisitoClient || 0,
+        xquisitoCommissionTotal: xquisitoCommissionTotal || 0,
+        userName: userName,
+        customerName: customerName,
+        customerEmail: customerEmail,
+        customerPhone: customerPhone,
+        cardLast4: paymentMethods.find(pm => pm.id === selectedPaymentMethodId)?.lastFourDigits || "****",
+        cardBrand: paymentMethods.find(pm => pm.id === selectedPaymentMethodId)?.cardBrand || "unknown",
+        orderStatus: "confirmed",
+        paymentStatus: "paid",
+        createdAt: new Date().toISOString(),
+        // Transform cart items to dishOrders format expected by payment-success
+        dishOrders: cartState.items.map(item => ({
+          dish_order_id: `item-${item.id}-${Date.now()}`,
+          item: item.name,
+          quantity: item.quantity || 1,
+          price: item.price,
+          extra_price: item.extraPrice || 0,
+          total_price: (item.price * (item.quantity || 1)) + (item.extraPrice || 0),
+          guest_name: userName,
+          custom_fields: item.customFields || null
+        })),
+        // Additional metadata
+        restaurantId: parseInt(restaurantId),
+        paymentMethodId: selectedPaymentMethodId,
+        timestamp: Date.now()
+      };
+
+      // Guardar en localStorage para payment-success
+      console.log("💾 Saving payment details for payment-success:", paymentDetailsForSuccess);
+      localStorage.setItem("xquisito-completed-payment", JSON.stringify(paymentDetailsForSuccess));
+
+      // También guardarlo con ID único para evitar conflictos
+      const uniqueKey = `xquisito-payment-success-${pickAndGoOrderId}`;
+      sessionStorage.setItem(uniqueKey, JSON.stringify(paymentDetailsForSuccess));
+
       // Limpiar el carrito después de completar la orden
       await clearCart();
       console.log("🧹 Cart cleared after successful order");
@@ -669,7 +715,7 @@ export default function CardSelectionPage() {
           orderedItems={completedOrderItems}
           onContinue={() => {
             navigateWithRestaurantId(
-              `/order-view?orderId=${completedOrderId}&success=true`
+              `/payment-success?orderId=${completedOrderId}&success=true`
             );
           }}
         />
