@@ -21,7 +21,7 @@ export const usePickAndGo = () => {
 
       const result = await pickAndGoApiService.createOrder(orderData);
 
-      if (result.success && result.data) {
+      if (result.success && 'data' in result && result.data) {
         setCurrentOrder(result.data);
         console.log('✅ Order created in hook:', result.data.id);
         return result.data;
@@ -48,7 +48,7 @@ export const usePickAndGo = () => {
 
       const result = await pickAndGoApiService.getOrder(orderId);
 
-      if (result.success && result.data) {
+      if (result.success && 'data' in result && result.data) {
         setCurrentOrder(result.data);
         console.log('✅ Order retrieved in hook:', result.data.id);
         return result.data;
@@ -79,7 +79,7 @@ export const usePickAndGo = () => {
 
       const result = await pickAndGoApiService.getUserOrders(userId, filters);
 
-      if (result.success && result.data) {
+      if (result.success && 'data' in result && result.data) {
         setUserOrders(result.data);
         console.log('✅ User orders retrieved in hook:', result.data.length);
         return result.data;
@@ -110,7 +110,7 @@ export const usePickAndGo = () => {
 
       const result = await pickAndGoApiService.addItemToOrder(currentOrder.id, itemData);
 
-      if (result.success && result.data) {
+      if (result.success && 'data' in result && result.data) {
         // Actualizar la orden actual con el nuevo item
         setCurrentOrder(prev => {
           if (!prev) return prev;
@@ -150,7 +150,7 @@ export const usePickAndGo = () => {
 
       const result = await pickAndGoApiService.updateOrderStatus(currentOrder.id, orderStatus, prepMetadata);
 
-      if (result.success && result.data) {
+      if (result.success && 'data' in result && result.data) {
         setCurrentOrder(result.data);
         console.log('✅ Order status updated in hook:', result.data.order_status);
         return result.data;
@@ -181,7 +181,7 @@ export const usePickAndGo = () => {
 
       const result = await pickAndGoApiService.updatePaymentStatus(currentOrder.id, paymentStatus);
 
-      if (result.success && result.data) {
+      if (result.success && 'data' in result && result.data) {
         setCurrentOrder(result.data);
         console.log('✅ Payment status updated in hook:', result.data.payment_status);
         return result.data;
@@ -208,7 +208,7 @@ export const usePickAndGo = () => {
 
       const result = await pickAndGoApiService.estimatePrepTime(items, restaurantId);
 
-      if (result.success && result.data) {
+      if (result.success && 'data' in result && result.data) {
         console.log('✅ Prep time estimated in hook:', result.data.estimated_minutes, 'minutes');
         return result.data;
       } else {

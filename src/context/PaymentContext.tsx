@@ -76,8 +76,8 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
         const response = await apiService.getPaymentMethods();
         console.log("🔍 GetPaymentMethods response for registered user:", response);
 
-        // Handle response structure: check both possible locations
-        const paymentMethods = response.data?.paymentMethods || response.paymentMethods || [];
+        // Handle response structure
+        const paymentMethods = response.data?.paymentMethods || [];
 
         if (response.success && paymentMethods.length > 0) {
           setPaymentMethods(paymentMethods);
@@ -109,8 +109,8 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
         const response = await apiService.getPaymentMethods();
         console.log("🔍 GetPaymentMethods response for guest:", response);
 
-        // Handle response structure: check both possible locations
-        const paymentMethods = response.data?.paymentMethods || response.paymentMethods || [];
+        // Handle response structure
+        const paymentMethods = response.data?.paymentMethods || [];
 
         if (response.success && paymentMethods.length > 0) {
           setPaymentMethods(paymentMethods);
@@ -141,7 +141,7 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
           const response = await apiService.getPaymentMethods();
           console.log("🔍 GetPaymentMethods response for stored guest:", response);
 
-          const paymentMethods = response.data?.paymentMethods || response.paymentMethods || [];
+          const paymentMethods = response.data?.paymentMethods || [];
 
           if (response.success && paymentMethods.length > 0) {
             setPaymentMethods(paymentMethods);

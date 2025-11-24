@@ -273,10 +273,10 @@ class ApiService extends BaseApiService {
    * Crear nueva orden Pick & Go
    */
   async createPickAndGoOrder(orderData: {
-    clerk_user_id: string;
-    customer_name?: string;
-    customer_phone?: string;
-    customer_email?: string;
+    clerk_user_id: string | null;
+    customer_name?: string | null;
+    customer_phone?: string | null;
+    customer_email?: string | null;
     session_data?: any;
     prep_metadata?: any;
   }) {

@@ -154,8 +154,8 @@ function AddCardContent() {
 
         // Add the new payment method to the context if it exists
         // Backend returns: { success: true, paymentMethod: {...} }
-        // api2.ts wraps it as: { success: true, data: { success: true, paymentMethod: {...} } }
-        const paymentMethod = result.data?.paymentMethod || result.paymentMethod;
+        // api2.ts wraps it as: { success: true, data: { paymentMethod: {...} } }
+        const paymentMethod = result.data?.paymentMethod;
 
         if (paymentMethod) {
           console.log("✅ Adding payment method to context:", paymentMethod);

@@ -1,4 +1,4 @@
-"use client";
+/*"use client";
 
 import React, {
   createContext,
@@ -29,7 +29,7 @@ import { apiService } from "../utils/api";
 // PREVIOUS IMPLEMENTATION (COMMENTED OUT)
 // ===============================================
 
-/*
+
 // Interfaz para un item del carrito
 export interface CartItem extends MenuItemData {
   quantity: number;
@@ -50,7 +50,7 @@ interface TableState {
   error: string | null;
   tableClosed: boolean;
 }
-*/
+
 
 // ===============================================
 // NEW IMPLEMENTATION - DISH-BASED SYSTEM
@@ -87,7 +87,7 @@ interface TableState {
   isSplitBillActive: boolean;
 }
 
-/*
+
 // Acciones del contexto de mesa
 type TableAction =
   | { type: "SET_TABLE_NUMBER"; payload: string }
@@ -110,7 +110,7 @@ type TableAction =
   | { type: "SET_PAID_ORDERS"; payload: UserOrder[] }
   | { type: "SET_TABLE_CLOSED"; payload: boolean }
   | { type: "CLEAR_ORDERS" };
-*/
+
 
 // Nuevas acciones para el sistema de platillos
 type TableAction =
@@ -146,7 +146,7 @@ type TableAction =
       payload: { dishId: string; paymentStatus: DishOrder["payment_status"] };
     };
 
-/*
+
 // Estado inicial
 const initialState: TableState = {
   tableNumber: "",
@@ -160,7 +160,7 @@ const initialState: TableState = {
   error: null,
   tableClosed: false,
 };
-*/
+
 
 // Nuevo estado inicial
 const initialState: TableState = {
@@ -178,7 +178,7 @@ const initialState: TableState = {
   isSplitBillActive: false,
 };
 
-/*
+
 // Función para calcular totales
 const calculateTotals = (items: CartItem[]) => {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -188,7 +188,7 @@ const calculateTotals = (items: CartItem[]) => {
   );
   return { totalItems, totalPrice };
 };
-*/
+
 
 // Función para calcular totales (incluye extraPrice)
 const calculateTotals = (items: CartItem[]) => {
@@ -411,7 +411,7 @@ function tableReducer(state: TableState, action: TableAction): TableState {
   }
 }
 
-/*
+
 // Contexto de la mesa
 const TableContext = createContext<{
   state: TableState;
@@ -425,7 +425,7 @@ const TableContext = createContext<{
     userNames?: string[]
   ) => Promise<void>;
 } | null>(null);
-*/
+
 
 // Nuevo contexto de la mesa
 const TableContext = createContext<{
@@ -493,19 +493,21 @@ export function TableProvider({ children }: { children: ReactNode }) {
     if (!state.tableNumber || !restaurantId) return;
 
     try {
-      const response = await apiService.getTableSummary(
-        restaurantId.toString(),
-        state.tableNumber
-      );
+      // TODO: This context is not used in pick-and-go, method needs to be implemented if needed
+      // const response = await apiService.getTableSummary(
+      //   restaurantId.toString(),
+      //   state.tableNumber
+      // );
 
-      if (response.success && response.data) {
-        dispatch({ type: "SET_TABLE_SUMMARY", payload: response });
-      } else {
-        dispatch({
-          type: "SET_ERROR",
-          payload: response.error?.message || "Failed to load table summary",
-        });
-      }
+      // if (response.success && response.data) {
+      //   dispatch({ type: "SET_TABLE_SUMMARY", payload: response });
+      // } else {
+      //   dispatch({
+      //     type: "SET_ERROR",
+      //     payload: response.error?.message || "Failed to load table summary",
+      //   });
+      // }
+      console.warn("loadTableSummary not implemented in pick-and-go");
     } catch (error) {
       dispatch({ type: "SET_ERROR", payload: "Network error occurred" });
     }
@@ -516,20 +518,22 @@ export function TableProvider({ children }: { children: ReactNode }) {
     if (!state.tableNumber || !restaurantId) return;
 
     try {
-      const response = await apiService.getTableOrders(
-        restaurantId.toString(),
-        state.tableNumber
-      );
+      // TODO: This context is not used in pick-and-go, method needs to be implemented if needed
+      // const response = await apiService.getTableOrders(
+      //   restaurantId.toString(),
+      //   state.tableNumber
+      // );
 
-      if (response.success && Array.isArray(response?.data?.data)) {
-        const dishOrders = response.data.data;
-        dispatch({ type: "SET_DISH_ORDERS", payload: dishOrders });
-      } else {
-        dispatch({
-          type: "SET_ERROR",
-          payload: response.error?.message || "Failed to load dish orders",
-        });
-      }
+      // if (response.success && Array.isArray(response?.data?.data)) {
+      //   const dishOrders = response.data.data;
+      //   dispatch({ type: "SET_DISH_ORDERS", payload: dishOrders });
+      // } else {
+      //   dispatch({
+      //     type: "SET_ERROR",
+      //     payload: response.error?.message || "Failed to load dish orders",
+      //   });
+      // }
+      console.warn("loadDishOrders not implemented in pick-and-go");
     } catch (error) {
       dispatch({ type: "SET_ERROR", payload: "Network error occurred" });
     }
@@ -537,20 +541,8 @@ export function TableProvider({ children }: { children: ReactNode }) {
 
   // Cargar usuarios activos
   const loadActiveUsers = async () => {
-    if (!state.tableNumber || !restaurantId) return;
-
-    try {
-      const response = await apiService.getActiveUsers(
-        restaurantId.toString(),
-        state.tableNumber
-      );
-
-      if (response.success && response.data) {
-        dispatch({ type: "SET_ACTIVE_USERS", payload: response.data });
-      }
-    } catch (error) {
-      console.error("Error loading active users:", error);
-    }
+    // TODO: Not used in pick-and-go
+    console.warn("loadActiveUsers not implemented in pick-and-go");
   };
 
   // Cargar pagos divididos
@@ -655,7 +647,7 @@ export function TableProvider({ children }: { children: ReactNode }) {
 
           const totalUsers = formattedUsers.length;
           // Separar usuarios autenticados de invitados
-          /*const activeUserIds = activeUsers
+          const activeUserIds = activeUsers
             .filter((user: any) => user.user_id)
             .map((user: any) => user.user_id);
 
@@ -663,7 +655,7 @@ export function TableProvider({ children }: { children: ReactNode }) {
             .filter((user: any) => !user.user_id && user.guest_name)
             .map((user: any) => user.guest_name);
 
-          const totalUsers = activeUserIds.length + activeGuestNames.length;*/
+          const totalUsers = activeUserIds.length + activeGuestNames.length;
 
           if (totalUsers > 1) {
             await initializeSplitBill(
@@ -1010,3 +1002,4 @@ export function useTable() {
   }
   return context;
 }
+*/
