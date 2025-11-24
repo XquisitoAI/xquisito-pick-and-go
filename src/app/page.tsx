@@ -106,16 +106,16 @@ export default function Home() {
               Bienvenido a Xquisito
             </h1>
             <p className="text-white/80 text-sm md:text-base lg:text-lg">
-              Por favor tapee la tarjeta o escanee el código QR de su mesa para
-              comenzar
+              Ordena para llevar desde tu dispositivo y recoge en el restaurante
             </p>
           </div>
 
           {/* Additional Info */}
           <div className="mt-6 md:mt-7 lg:mt-8 text-center">
             <p className="text-white/70 text-xs md:text-sm lg:text-base">
-              Encontrará la tarjeta en su mesa. Cada tarjeta tiene un código
-              único para acceder al menú digital.
+              Accede al menú de tu restaurante favorito mediante el enlace
+              proporcionado. Próximamente podrás explorar todos los restaurantes
+              disponibles.
             </p>
           </div>
         </div>

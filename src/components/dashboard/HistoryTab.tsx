@@ -261,16 +261,13 @@ export default function HistoryTab() {
                       <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-blue-600" />
                     </div>
                     <span className="text-sm md:text-base lg:text-lg">
-                      {new Date(
-                        selectedOrderDetails.tableOrderDate
-                      ).toLocaleDateString("es-MX", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {new Date(selectedOrderDetails.tableOrderDate)
+                        .toLocaleDateString("es-MX", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "2-digit",
+                        })
+                        .replace(/\//g, "/")}
                     </span>
                   </div>
                   {selectedOrderDetails.orderType !== "pick-and-go" && (
@@ -294,8 +291,8 @@ export default function HistoryTab() {
                         )}
                       </div>
                       <span className="text-sm md:text-base lg:text-lg">
-                        •••• •••• ••••{" "}
-                        {selectedOrderDetails.paymentCardLastFour}
+                        ****{" "}
+                        {selectedOrderDetails.paymentCardLastFour.slice(-3)}
                       </span>
                     </div>
                   )}

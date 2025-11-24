@@ -84,8 +84,8 @@ const OrderAnimation = ({
 
       {/* Contenido */}
       {(animationState === "content" || animationState === "greenCircle") && (
-        <div className="fixed inset-0 z-[9999] bg-white overflow-y-auto">
-          <div className="min-h-screen bg-white p-8 animate-fade-in flex flex-col">
+        <div className="fixed inset-0 z-[9999] bg-white overflow-hidden">
+          <div className="h-[100dvh] bg-white p-8 animate-fade-in flex flex-col overflow-y-auto">
             <div className="flex flex-col flex-1">
               {/* Logo animado */}
               <div className="mb-8 mt-12 w-fit relative">
@@ -224,8 +224,8 @@ const OrderAnimation = ({
 
       {/* Success screen */}
       {animationState === "success" && (
-        <div className="fixed inset-0 z-[9999] bg-green-500">
-          <div className="min-h-screen p-8 flex flex-col">
+        <div className="fixed inset-0 z-[9999] bg-green-500 overflow-hidden">
+          <div className="h-[100dvh] p-8 flex flex-col">
             <div className="flex flex-col flex-1">
               {/* Checkmark */}
               <div className="mb-8 mt-12 animate-simple-fade-in">

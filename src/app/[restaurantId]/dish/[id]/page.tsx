@@ -559,9 +559,8 @@ export default function DishDetailPage() {
   };
 
   const currentQuantity = dishData
-    ? cartState.items.find(
-        (cartItem) => cartItem.id === dishData.dish.id
-      )?.quantity || 0
+    ? cartState.items.find((cartItem) => cartItem.id === dishData.dish.id)
+        ?.quantity || 0
     : 0;
 
   const displayQuantity = Math.max(localQuantity, currentQuantity);
@@ -747,7 +746,9 @@ export default function DishDetailPage() {
                         </span>
                       </>
                     ) : (
-                      <span className="text-sm md:text-base lg:text-lg text-gray-600">Sin reseñas</span>
+                      <span className="text-sm md:text-base lg:text-lg text-gray-600">
+                        Sin reseñas
+                      </span>
                     )}
                   </div>
                   <button
@@ -783,7 +784,9 @@ export default function DishDetailPage() {
                 </div>
               ) : (
                 <div>
-                  <h2 className="text-black text-xl md:text-2xl lg:text-3xl">${dish.price} MXN</h2>
+                  <h2 className="text-black text-xl md:text-2xl lg:text-3xl">
+                    ${dish.price} MXN
+                  </h2>
                 </div>
               )}
             </div>
@@ -968,8 +971,12 @@ export default function DishDetailPage() {
                   </div>
                 )}
                 <div className="flex flex-col items-center justify-center">
-                  <h2 className="text-xl md:text-2xl lg:text-3xl text-black capitalize">{dish.name}</h2>
-                  <p className="text-sm md:text-base lg:text-lg text-gray-600">{section}</p>
+                  <h2 className="text-xl md:text-2xl lg:text-3xl text-black capitalize">
+                    {dish.name}
+                  </h2>
+                  <p className="text-sm md:text-base lg:text-lg text-gray-600">
+                    {section}
+                  </p>
                 </div>
               </div>
             </div>
@@ -1018,8 +1025,8 @@ export default function DishDetailPage() {
                   disabled={reviewRating === 0 || isSubmittingReview}
                   className={`w-full text-white py-3 md:py-4 lg:py-5 rounded-full transition-colors text-base md:text-lg lg:text-xl ${
                     reviewRating > 0 && !isSubmittingReview
-                      ? "bg-black hover:bg-stone-950 cursor-pointer"
-                      : "bg-stone-800 cursor-not-allowed"
+                      ? "bg-gradient-to-r from-[#34808C] to-[#173E44] cursor-pointer"
+                      : "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
                   }`}
                 >
                   {isSubmittingReview
