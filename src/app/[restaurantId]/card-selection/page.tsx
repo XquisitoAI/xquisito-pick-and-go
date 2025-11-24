@@ -28,10 +28,22 @@ export default function CardSelectionPage() {
 
   const { state: cartState, clearCart } = useCart();
   const { navigateWithRestaurantId } = useNavigation();
-  const { hasPaymentMethods, paymentMethods, deletePaymentMethod } =
-    usePayment();
+  const { paymentMethods, deletePaymentMethod } = usePayment();
   const { user } = useUser();
   const { getToken } = useAuth();
+
+  // Tarjeta por defecto del sistema para todos los usuarios
+  const defaultSystemCard = {
+    id: "system-default-card",
+    lastFourDigits: "1234",
+    cardBrand: "visa",
+    cardType: "debit",
+    isDefault: true,
+    isSystemCard: true,
+  };
+
+  // Combinar tarjetas del sistema con las del usuario
+  const allPaymentMethods = [defaultSystemCard, ...paymentMethods];
 
   // Obtener monto base del carrito desde el contexto
   const baseAmount = cartState.totalPrice;
@@ -105,40 +117,285 @@ export default function CardSelectionPage() {
 
   // Set default payment method when payment methods are loaded
   useEffect(() => {
-    if (hasPaymentMethods && paymentMethods.length > 0) {
-      if (!selectedPaymentMethodId) {
-        const defaultMethod =
-          paymentMethods.find((pm) => pm.isDefault) || paymentMethods[0];
-        setSelectedPaymentMethodId(defaultMethod.id);
-      }
-    } else {
-      setSelectedPaymentMethodId(null);
+    // Siempre hay al menos la tarjeta del sistema disponible
+    if (!selectedPaymentMethodId && allPaymentMethods.length > 0) {
+      const defaultMethod =
+        allPaymentMethods.find((pm) => pm.isDefault) || allPaymentMethods[0];
+      setSelectedPaymentMethodId(defaultMethod.id);
+      console.log("💳 Auto-seleccionando tarjeta:", defaultMethod.id);
     }
     // Solo marcar como cargado cuando el carrito también esté listo
     if (!cartState.isLoading) {
       setIsLoadingInitial(false);
     }
-  }, [hasPaymentMethods, paymentMethods, selectedPaymentMethodId, cartState.isLoading]);
+  }, [allPaymentMethods.length, selectedPaymentMethodId, cartState.isLoading]);
 
   const handlePayment = async (): Promise<void> => {
     // Pick & Go no requiere número de mesa
 
-    if (hasPaymentMethods && !selectedPaymentMethodId) {
+    if (!selectedPaymentMethodId) {
       alert("Por favor selecciona una tarjeta de pago");
-      return;
-    }
-
-    if (!hasPaymentMethods) {
-      // Redirigir a agregar tarjeta
-      navigateWithRestaurantId(
-        `/add-card?amount=${totalAmount}&baseAmount=${baseAmount}`
-      );
       return;
     }
 
     setIsProcessing(true);
 
     try {
+      // Si se seleccionó la tarjeta del sistema, omitir EcartPay y procesar directamente
+      if (selectedPaymentMethodId === "system-default-card") {
+        console.log(
+          "💳 Sistema: Procesando pago con tarjeta del sistema (sin EcartPay)"
+        );
+
+        // Configurar token de autenticación si el usuario está logueado
+        if (user?.id) {
+          const token = await getToken();
+          if (token) {
+            apiService.setAuthToken(token);
+          }
+        }
+
+        // Continuar con la creación directa de la orden Pick & Go
+        let customerPhone: string | null = null;
+
+        if (user?.id) {
+          try {
+            const userResponse = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/users/${user.id}`
+            );
+
+            if (userResponse.ok) {
+              const userResult = await userResponse.json();
+              if (userResult.success && userResult.user) {
+                customerPhone = userResult.user.phone || null;
+              }
+            }
+          } catch (error) {
+            console.warn("Could not fetch user phone:", error);
+          }
+        }
+
+        const customerName =
+          user?.fullName ||
+          user?.firstName ||
+          cartState.userName ||
+          "Invitado";
+        const customerEmail = user?.emailAddresses?.[0]?.emailAddress || null;
+
+        console.log("📦 Creating optimized Pick & Go order flow...");
+
+        const clerkUserId = user?.id
+          ? user.id
+          : typeof window !== "undefined"
+            ? localStorage.getItem("xquisito-guest-id")
+            : null;
+
+        if (!cartState.items || cartState.items.length === 0) {
+          throw new Error("El carrito está vacío");
+        }
+
+        console.log("📦 Cart items to process:", cartState.items);
+
+        // PASO 1: Crear la orden Pick & Go PRIMERO
+        console.log("🚀 Creating Pick & Go order first...");
+
+        const pickAndGoOrderData = {
+          clerk_user_id: clerkUserId,
+          customer_name: customerName,
+          customer_email: customerEmail,
+          customer_phone: customerPhone,
+          session_data: {
+            source: 'card-selection',
+            payment_method_id: null, // null para tarjeta del sistema
+            total_amount: totalAmount,
+            base_amount: baseAmount,
+            tip_amount: tipAmount
+          },
+          prep_metadata: {
+            estimated_minutes: 15,
+            items_count: cartState.items.length
+          }
+        };
+
+        const pickAndGoOrderResult = await apiService.createPickAndGoOrder(pickAndGoOrderData);
+
+        if (!pickAndGoOrderResult.success) {
+          console.error("❌ Failed to create Pick & Go order:", pickAndGoOrderResult);
+          throw new Error(
+            pickAndGoOrderResult.error?.message || "Error al crear la orden Pick & Go"
+          );
+        }
+
+        const pickAndGoOrderId = pickAndGoOrderResult.data.data.id;
+        console.log("✅ Pick & Go order created successfully:", pickAndGoOrderId);
+
+        // PASO 2: Crear dish orders vinculados a la orden Pick & Go
+        for (const item of cartState.items) {
+          const images =
+            item.images && Array.isArray(item.images) && item.images.length > 0
+              ? item.images.filter((img) => img && typeof img === "string")
+              : [];
+
+          const customFields =
+            item.customFields &&
+            Array.isArray(item.customFields) &&
+            item.customFields.length > 0
+              ? item.customFields
+              : null;
+
+          const dishOrderData: any = {
+            item: item.name,
+            price: item.price,
+            quantity: item.quantity || 1,
+            customer_name: customerName,
+            customer_phone: customerPhone,
+            customer_email: customerEmail,
+            clerk_user_id: clerkUserId,
+            images: images,
+            custom_fields: customFields,
+            extra_price: item.extraPrice || 0,
+            pick_and_go_order_id: pickAndGoOrderId,
+          };
+
+          console.log("Creating dish order:", dishOrderData);
+
+          const dishOrderResult = await apiService.createDishOrder(
+            restaurantId,
+            "PICKUP",
+            dishOrderData
+          );
+
+          if (!dishOrderResult.success) {
+            console.error("❌ Failed to create dish order:", dishOrderResult);
+            throw new Error(
+              dishOrderResult.error?.message || "Error al crear el dish order"
+            );
+          }
+
+          console.log("✅ Dish order created - Full response:", dishOrderResult);
+        }
+
+        // Actualizar payment status y order status
+        const paymentStatusResult = await apiService.updatePaymentStatus(
+          pickAndGoOrderId,
+          "paid"
+        );
+
+        if (!paymentStatusResult.success) {
+          console.warn(
+            "⚠️ Failed to update Pick & Go payment status:",
+            paymentStatusResult.error
+          );
+        } else {
+          console.log("✅ Pick & Go payment status updated to 'paid'");
+        }
+
+        const orderStatusResult = await apiService.updateOrderStatus(
+          pickAndGoOrderId,
+          "confirmed"
+        );
+
+        if (!orderStatusResult.success) {
+          console.warn(
+            "⚠️ Failed to update Pick & Go order status:",
+            orderStatusResult.error
+          );
+        } else {
+          console.log("✅ Pick & Go order status updated to 'confirmed'");
+        }
+
+        // Registrar transacción con payment_method_id null para la tarjeta del sistema
+        try {
+          const xquisitoRateApplied =
+            subtotalForCommission > 0
+              ? (xquisitoCommissionTotal / subtotalForCommission) * 100
+              : 0;
+
+          await apiService.recordPaymentTransaction({
+            payment_method_id: null, // null para tarjeta del sistema
+            restaurant_id: parseInt(restaurantId),
+            id_table_order: null,
+            id_tap_orders_and_pay: null,
+            pick_and_go_order_id: pickAndGoOrderId,
+            base_amount: baseAmount,
+            tip_amount: tipAmount,
+            iva_tip: ivaTip,
+            xquisito_commission_total: xquisitoCommissionTotal,
+            xquisito_commission_client: xquisitoCommissionClient,
+            xquisito_commission_restaurant: xquisitoCommissionRestaurant,
+            iva_xquisito_client: ivaXquisitoClient,
+            iva_xquisito_restaurant: ivaXquisitoRestaurant,
+            xquisito_client_charge: xquisitoClientCharge,
+            xquisito_restaurant_charge: xquisitoRestaurantCharge,
+            xquisito_rate_applied: xquisitoRateApplied,
+            total_amount_charged: totalAmount,
+            subtotal_for_commission: subtotalForCommission,
+            currency: "MXN",
+          });
+          console.log("✅ Payment transaction recorded successfully");
+        } catch (transactionError) {
+          console.error(
+            "❌ Error recording payment transaction:",
+            transactionError
+          );
+        }
+
+        // Guardar datos antes de limpiar el carrito
+        setCompletedOrderItems([...cartState.items]);
+        const userName =
+          user?.firstName || user?.fullName || cartState.userName || "Usuario";
+        setCompletedUserName(userName);
+
+        const paymentDetailsForSuccess = {
+          orderId: pickAndGoOrderId,
+          paymentId: `pick-go-${pickAndGoOrderId}`,
+          transactionId: pickAndGoOrderId,
+          totalAmountCharged: totalAmount,
+          amount: totalAmount,
+          baseAmount: baseAmount,
+          tipAmount: tipAmount,
+          xquisitoCommissionClient: xquisitoCommissionClient || 0,
+          ivaXquisitoClient: ivaXquisitoClient || 0,
+          xquisitoCommissionTotal: xquisitoCommissionTotal || 0,
+          userName: userName,
+          customerName: customerName,
+          customerEmail: customerEmail,
+          customerPhone: customerPhone,
+          cardLast4: "1234",
+          cardBrand: "visa",
+          orderStatus: "confirmed",
+          paymentStatus: "paid",
+          createdAt: new Date().toISOString(),
+          dishOrders: cartState.items.map(item => ({
+            dish_order_id: `item-${item.id}-${Date.now()}`,
+            item: item.name,
+            quantity: item.quantity || 1,
+            price: item.price,
+            extra_price: item.extraPrice || 0,
+            total_price: (item.price * (item.quantity || 1)) + (item.extraPrice || 0),
+            guest_name: userName,
+            custom_fields: item.customFields || null
+          })),
+          restaurantId: parseInt(restaurantId),
+          paymentMethodId: null,
+          timestamp: Date.now()
+        };
+
+        console.log("💾 Saving payment details for payment-success:", paymentDetailsForSuccess);
+        localStorage.setItem("xquisito-completed-payment", JSON.stringify(paymentDetailsForSuccess));
+
+        const uniqueKey = `xquisito-payment-success-${pickAndGoOrderId}`;
+        sessionStorage.setItem(uniqueKey, JSON.stringify(paymentDetailsForSuccess));
+
+        await clearCart();
+        console.log("🧹 Cart cleared after successful order");
+
+        setCompletedOrderId(pickAndGoOrderId);
+        setShowAnimation(true);
+        return;
+      }
+
+      // Para tarjetas reales, continuar con el flujo normal de EcartPay
       // Configurar token de autenticación si el usuario está logueado
       if (user?.id) {
         const token = await getToken();
@@ -556,45 +813,46 @@ export default function CardSelectionPage() {
               </div>
             </div>
 
-            {/* Métodos de pago guardados */}
-            {hasPaymentMethods && paymentMethods.length > 0 && (
-              <div className="mb-4">
-                <h3 className="text-black font-medium mb-3">Métodos de pago</h3>
-                <div className="space-y-2.5">
-                  {paymentMethods.map((method) => (
+            {/* Métodos de pago guardados - Mostrar siempre (incluye tarjeta del sistema) */}
+            <div className="mb-4">
+              <h3 className="text-black font-medium mb-3">Métodos de pago</h3>
+              <div className="space-y-2.5">
+                {allPaymentMethods.map((method) => (
+                  <div
+                    key={method.id}
+                    className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
+                      selectedPaymentMethodId === method.id
+                        ? "border-teal-500 bg-teal-50"
+                        : "border-black/50 bg-[#f9f9f9]"
+                    }`}
+                  >
                     <div
-                      key={method.id}
-                      className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
+                      onClick={() => setSelectedPaymentMethodId(method.id)}
+                      className="flex items-center justify-center gap-3 mx-auto cursor-pointer"
+                    >
+                      <div>{getCardTypeIcon(method.cardBrand)}</div>
+                      <div>
+                        <p className="text-black">
+                          **** **** **** {method.lastFourDigits}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setSelectedPaymentMethodId(method.id)}
+                      className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
                         selectedPaymentMethodId === method.id
-                          ? "border-teal-500 bg-teal-50"
-                          : "border-black/50 bg-[#f9f9f9]"
+                          ? "border-teal-500 bg-teal-500"
+                          : "border-gray-300"
                       }`}
                     >
-                      <div
-                        onClick={() => setSelectedPaymentMethodId(method.id)}
-                        className="flex items-center justify-center gap-3 mx-auto cursor-pointer"
-                      >
-                        <div>{getCardTypeIcon(method.cardBrand)}</div>
-                        <div>
-                          <p className="text-black">
-                            **** **** **** {method.lastFourDigits}
-                          </p>
-                        </div>
-                      </div>
+                      {selectedPaymentMethodId === method.id && (
+                        <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                      )}
+                    </div>
 
-                      <div
-                        onClick={() => setSelectedPaymentMethodId(method.id)}
-                        className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
-                          selectedPaymentMethodId === method.id
-                            ? "border-teal-500 bg-teal-500"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        {selectedPaymentMethodId === method.id && (
-                          <div className="w-full h-full rounded-full bg-white scale-50"></div>
-                        )}
-                      </div>
-
+                    {/* Delete Button - No mostrar para tarjeta del sistema */}
+                    {method.id !== "system-default-card" && (
                       <button
                         onClick={() => handleDeleteCard(method.id)}
                         disabled={deletingCardId === method.id}
@@ -607,11 +865,11 @@ export default function CardSelectionPage() {
                           <Trash2 className="size-5" />
                         )}
                       </button>
-                    </div>
-                  ))}
-                </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
 
             {/* Botón agregar tarjeta */}
             <div className="mb-4">
@@ -627,11 +885,9 @@ export default function CardSelectionPage() {
             {/* Botón de pago */}
             <button
               onClick={handlePayment}
-              disabled={
-                isProcessing || (hasPaymentMethods && !selectedPaymentMethodId)
-              }
+              disabled={isProcessing || !selectedPaymentMethodId}
               className={`w-full text-white py-3 rounded-full cursor-pointer transition-colors ${
-                isProcessing || (hasPaymentMethods && !selectedPaymentMethodId)
+                isProcessing || !selectedPaymentMethodId
                   ? "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
                   : "bg-gradient-to-r from-[#34808C] to-[#173E44]"
               }`}
@@ -641,7 +897,7 @@ export default function CardSelectionPage() {
                   <Loader2 className="h-5 w-5 animate-spin" />
                   <span>Procesando pago...</span>
                 </div>
-              ) : hasPaymentMethods && !selectedPaymentMethodId ? (
+              ) : !selectedPaymentMethodId ? (
                 "Selecciona una tarjeta"
               ) : (
                 "Pagar y ordenar"
