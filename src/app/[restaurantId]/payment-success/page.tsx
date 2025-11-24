@@ -42,8 +42,14 @@ export default function PaymentSuccessPage() {
   const [hoveredRating, setHoveredRating] = useState(0);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [hasRated, setHasRated] = useState(false); // Track if user has already rated
   const { restaurant } = useRestaurant();
+
+  // Order progress simulation
+  const [orderTime] = useState(new Date()); // Tiempo cuando se creó el pedido
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [orderProgress, setOrderProgress] = useState(0); // Progress percentage (0-100)
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -124,6 +130,32 @@ export default function PaymentSuccessPage() {
     }
   }, [paymentId, searchParams]);
 
+  // useEffect para simular el progreso del pedido
+  useEffect(() => {
+    const updateProgress = () => {
+      const now = new Date();
+      setCurrentTime(now);
+
+      // Calcular minutos transcurridos desde que se hizo el pedido
+      const minutesElapsed = Math.floor((now.getTime() - orderTime.getTime()) / (1000 * 60));
+      const totalMinutes = 20; // 20 minutos total para completar el pedido
+
+      // Calcular el progreso como porcentaje (0-100)
+      let progress = (minutesElapsed / totalMinutes) * 100;
+      progress = Math.min(progress, 100); // No exceder 100%
+
+      setOrderProgress(progress);
+    };
+
+    // Actualizar inmediatamente
+    updateProgress();
+
+    // Actualizar cada 60 segundos (1 minuto)
+    const interval = setInterval(updateProgress, 60000);
+
+    return () => clearInterval(interval);
+  }, [orderTime]);
+
   const clearGuestSession = async () => {
     if (typeof window !== "undefined") {
       // Use apiService method for consistent cleanup
@@ -161,6 +193,23 @@ export default function PaymentSuccessPage() {
 
   // Get dish orders from paymentDetails
   const dishOrders = paymentDetails?.dishOrders || [];
+
+  // Función para determinar el estado de cada paso basado en el progreso
+  const getStepStatus = (stepNumber: number) => {
+    if (stepNumber === 1) return 'completed'; // Siempre completado (Recibido)
+    if (stepNumber === 2) return orderProgress > 25 ? 'active' : 'pending';
+    if (stepNumber === 3) return orderProgress > 75 ? 'completed' : (orderProgress > 50 ? 'active' : 'pending');
+    if (stepNumber === 4) return orderProgress >= 100 ? 'completed' : 'pending';
+    return 'pending';
+  };
+
+  // Función para calcular el ancho de las líneas de progreso
+  const getProgressLineWidth = (lineNumber: number) => {
+    if (lineNumber === 1) return Math.min(orderProgress * 4, 100); // 0-25% del progreso total
+    if (lineNumber === 2) return Math.max(0, Math.min((orderProgress - 25) * 4, 100)); // 25-50%
+    if (lineNumber === 3) return Math.max(0, Math.min((orderProgress - 50) * 4, 100)); // 50-75%
+    return 0;
+  };
 
   const handleBackToMenu = () => {
     // Clear payment success data from sessionStorage
@@ -328,6 +377,18 @@ export default function PaymentSuccessPage() {
                   strokeWidth={1.5}
                 />
                 Ver ticket de compra
+              </button>
+
+              {/* Status btn */}
+              <button
+                onClick={() => setIsStatusModalOpen(true)}
+                className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-white hover:bg-stone-100"
+              >
+                <Calendar
+                  className="size-5 md:size-6 lg:size-7"
+                  strokeWidth={1.5}
+                />
+                Ver Estatus
               </button>
               {/*
               {!isSignedIn && (
@@ -593,6 +654,171 @@ export default function PaymentSuccessPage() {
                     </span>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Modal */}
+      {isStatusModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-end justify-center"
+          onClick={() => setIsStatusModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-t-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-black">Pedido creado</h2>
+                <button
+                  onClick={() => setIsStatusModalOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Estimated time */}
+              <div className="mb-8">
+                <p className="text-gray-600 text-lg mb-2 flex items-center gap-2">
+                  Entrega estimada:
+                  <span className="font-semibold text-black">
+                    {orderTime.toLocaleTimeString('es-MX', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })} - {new Date(orderTime.getTime() + 20 * 60 * 1000).toLocaleTimeString('es-MX', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
+                  </span>
+                  <span className="text-red-500 text-xl">⚡</span>
+                </p>
+              </div>
+
+              {/* Progress bar */}
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  {/* Step 1: Order received */}
+                  <div className="flex flex-col items-center">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
+                      getStepStatus(1) === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                      <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-xs text-gray-600">Recibido</span>
+                  </div>
+
+                  {/* Progress line */}
+                  <div className="flex-1 h-1 bg-gray-200 mx-4 relative">
+                    <div className="h-full bg-green-500 rounded transition-all duration-1000" style={{ width: `${getProgressLineWidth(1)}%` }}></div>
+                  </div>
+
+                  {/* Step 2: Cooking */}
+                  <div className="flex flex-col items-center">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
+                      getStepStatus(2) === 'active' ? 'bg-orange-400 animate-pulse' :
+                      getStepStatus(2) === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                      <Utensils className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-xs text-gray-600">Preparando</span>
+                  </div>
+
+                  {/* Progress line */}
+                  <div className="flex-1 h-1 bg-gray-200 mx-4 relative">
+                    <div className="h-full bg-green-500 rounded transition-all duration-1000" style={{ width: `${getProgressLineWidth(2)}%` }}></div>
+                  </div>
+
+                  {/* Step 3: Ready for pickup */}
+                  <div className="flex flex-col items-center">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
+                      getStepStatus(3) === 'active' ? 'bg-blue-400 animate-pulse' :
+                      getStepStatus(3) === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                      <div className="w-6 h-6 text-white font-bold text-sm flex items-center justify-center">
+                        📦
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-600">Listo</span>
+                  </div>
+
+                  {/* Progress line */}
+                  <div className="flex-1 h-1 bg-gray-200 mx-4 relative">
+                    <div className="h-full bg-green-500 rounded transition-all duration-1000" style={{ width: `${getProgressLineWidth(3)}%` }}></div>
+                  </div>
+
+                  {/* Step 4: Delivered */}
+                  <div className="flex flex-col items-center">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
+                      getStepStatus(4) === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                      <div className="w-6 h-6 text-white font-bold text-sm flex items-center justify-center">
+                        🏠
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-600">Entregado</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order details */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Detalles de la entrega</h3>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-gray-700 mb-2">
+                    <span className="font-medium">Método:</span> Pick & Go - Recoger en restaurante
+                  </p>
+                  <p className="text-gray-700 mb-2">
+                    <span className="font-medium">Cliente:</span> {paymentDetails?.userName || paymentDetails?.customerName || "Cliente"}
+                  </p>
+                  <p className="text-gray-700 mb-2">
+                    <span className="font-medium">Restaurante:</span> {restaurant?.name || restaurantData.name}
+                  </p>
+                  <p className="text-gray-700 mb-2">
+                    <span className="font-medium">Dirección:</span> {restaurant?.address || restaurantData.address}
+                  </p>
+                  <p className="text-gray-700">
+                    <span className="font-medium">Orden #:</span> {paymentDetails?.orderId || "N/A"}
+                  </p>
+                </div>
+
+                {/* Order items summary */}
+                {/* {dishOrders.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-3">Items del pedido</h4>
+                    <div className="space-y-2">
+                      {dishOrders.slice(0, 3).map((dish: any, index: number) => (
+                        <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-gray-700">{dish.quantity}x {dish.item}</span>
+                          <span className="text-gray-600">${dish.total_price?.toFixed(2) || "0.00"}</span>
+                        </div>
+                      ))}
+                      {dishOrders.length > 3 && (
+                        <p className="text-gray-500 text-sm pt-2">
+                          +{dishOrders.length - 3} items más...
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )} */}
+              </div>
+
+              {/* Action button */}
+              <div className="mt-8 pb-6">
+                <button
+                  onClick={() => setIsStatusModalOpen(false)}
+                  className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-4 rounded-full font-medium text-lg hover:opacity-90 transition-opacity"
+                >
+                  Entendido
+                </button>
               </div>
             </div>
           </div>
