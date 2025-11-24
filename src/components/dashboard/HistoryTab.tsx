@@ -179,15 +179,15 @@ export default function HistoryTab() {
                         order.orderType === "tap-order-and-pay"
                           ? "bg-purple-100 text-purple-700"
                           : order.orderType === "pick-and-go"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-blue-100 text-blue-700"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-blue-100 text-blue-700"
                       }`}
                     >
                       {order.orderType === "tap-order-and-pay"
                         ? "Tap Order & Pay"
                         : order.orderType === "pick-and-go"
-                        ? "Pick & Go"
-                        : "Flex Bill"}
+                          ? "Pick & Go"
+                          : "Flex Bill"}
                     </span>
                   </div>
                   <ChevronRight className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-400 flex-shrink-0" />
@@ -201,60 +201,65 @@ export default function HistoryTab() {
       {/* Modal */}
       {selectedOrderDetails && (
         <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs bg-opacity-50 z-999 flex items-center justify-center"
+          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-center justify-center"
           onClick={() => {
             setSelectedOrderDetails(null);
           }}
         >
           <div
-            className="bg-white w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl overflow-y-auto z-999"
+            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-full flex justify-end">
-              <button
-                onClick={() => {
-                  setSelectedOrderDetails(null);
-                }}
-                className="p-2 md:p-3 lg:p-4 hover:bg-gray-100 rounded-full cursor-pointer transition-colors justify-end flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
-              >
-                <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-gray-600" />
-              </button>
-            </div>
-            {/* Header */}
-            <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-4 md:mb-5 lg:mb-6">
-              <div className="flex flex-col justify-center items-center gap-3 md:gap-4 lg:gap-5">
-                {selectedOrderDetails.restaurantLogo ? (
-                  <img
-                    src={selectedOrderDetails.restaurantLogo}
-                    alt={selectedOrderDetails.restaurantName}
-                    className="size-20 md:size-24 lg:size-28 object-cover rounded-lg md:rounded-xl"
-                  />
-                ) : (
-                  <div className="size-20 md:size-24 lg:size-28 bg-teal-100 rounded-lg md:rounded-xl flex items-center justify-center">
-                    <span className="text-2xl md:text-3xl lg:text-4xl">🍽️</span>
+            {/* Header - Fixed */}
+            <div className="flex-shrink-0">
+              <div className="w-full flex justify-end">
+                <button
+                  onClick={() => {
+                    setSelectedOrderDetails(null);
+                  }}
+                  className="p-2 md:p-3 lg:p-4 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors justify-end flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
+                >
+                  <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
+                </button>
+              </div>
+              <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-4 md:mb-5 lg:mb-6">
+                <div className="flex flex-col justify-center items-center gap-3 md:gap-4 lg:gap-5">
+                  {selectedOrderDetails.restaurantLogo ? (
+                    <img
+                      src={selectedOrderDetails.restaurantLogo}
+                      alt={selectedOrderDetails.restaurantName}
+                      className="size-20 md:size-24 lg:size-28 object-cover rounded-lg md:rounded-xl"
+                    />
+                  ) : (
+                    <div className="size-20 md:size-24 lg:size-28 bg-teal-100 rounded-lg md:rounded-xl flex items-center justify-center">
+                      <span className="text-2xl md:text-3xl lg:text-4xl">
+                        🍽️
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex flex-col items-center justify-center">
+                    <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold">
+                      {selectedOrderDetails.restaurantName}
+                    </h2>
+                    {selectedOrderDetails.orderType !== "pick-and-go" && (
+                      <p className="text-sm md:text-base lg:text-lg text-white/80">
+                        Mesa {selectedOrderDetails.tableNumber}
+                      </p>
+                    )}
                   </div>
-                )}
-                <div className="flex flex-col items-center justify-center">
-                  <h2 className="text-xl md:text-2xl lg:text-3xl text-black">
-                    {selectedOrderDetails.restaurantName}
-                  </h2>
-                  <p className="text-sm md:text-base lg:text-lg text-gray-600">
-                    Mesa {selectedOrderDetails.tableNumber}
-                  </p>
                 </div>
               </div>
-            </div>
 
-            {/* Content */}
-            <div className="px-6 md:px-8 lg:px-10 space-y-4 md:space-y-5 lg:space-y-6">
-              {/* Order Info */}
-              <div className="border-t border-[#8e8e8e] pt-4 md:pt-5 lg:pt-6">
-                <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-black mb-3 md:mb-4 lg:mb-5">
+              {/* Order Info - Fixed */}
+              <div className="px-6 md:px-8 lg:px-10 border-t border-white/20 pt-4 md:pt-5 lg:pt-6 pb-4 md:pb-5 lg:pb-6">
+                <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white mb-3 md:mb-4 lg:mb-5">
                   Tu orden
                 </h3>
                 <div className="space-y-2 md:space-y-3 lg:space-y-4">
-                  <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-gray-700">
-                    <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-700" />
+                  <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
+                    <div className="bg-blue-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                      <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-blue-600" />
+                    </div>
                     <span className="text-sm md:text-base lg:text-lg">
                       {new Date(
                         selectedOrderDetails.tableOrderDate
@@ -268,20 +273,26 @@ export default function HistoryTab() {
                       })}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-gray-700">
-                    <Utensils className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-gray-700" />
-                    <span className="text-sm md:text-base lg:text-lg">
-                      Mesa {selectedOrderDetails.tableNumber}
-                    </span>
-                  </div>
+                  {selectedOrderDetails.orderType !== "pick-and-go" && (
+                    <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
+                      <div className="bg-orange-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                        <Utensils className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-orange-600" />
+                      </div>
+                      <span className="text-sm md:text-base lg:text-lg">
+                        Mesa {selectedOrderDetails.tableNumber}
+                      </span>
+                    </div>
+                  )}
                   {selectedOrderDetails.paymentCardBrand && (
-                    <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-gray-700">
-                      {getCardTypeIcon(
-                        selectedOrderDetails.paymentCardBrand,
-                        "small",
-                        45,
-                        28
-                      )}
+                    <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
+                      <div className="bg-green-100 px-1 py-1.5 md:py-2 md:px-1.5 lg:py-2.5 lg:px-2 rounded-xl flex items-center justify-center">
+                        {getCardTypeIcon(
+                          selectedOrderDetails.paymentCardBrand,
+                          "small",
+                          32,
+                          20
+                        )}
+                      </div>
                       <span className="text-sm md:text-base lg:text-lg">
                         •••• •••• ••••{" "}
                         {selectedOrderDetails.paymentCardLastFour}
@@ -290,56 +301,53 @@ export default function HistoryTab() {
                   )}
                 </div>
               </div>
+            </div>
 
-              {/* Lista de platillos */}
-              <div>
-                <h3 className="font-semibold text-black text-base md:text-lg lg:text-xl mb-3 md:mb-4 lg:mb-5 mt-6 md:mt-8 lg:mt-10 pt-4 md:pt-5 lg:pt-6 border-t border-[#8e8e8e]">
-                  Platillos Ordenados:
-                </h3>
-                <div className="space-y-3 md:space-y-4 lg:space-y-5 divide-y divide-[#8e8e8e]/50">
-                  {selectedOrderDetails.dishes?.map((dish: any) => (
-                    <div
-                      key={dish.dishOrderId}
-                      className="flex items-start gap-3 md:gap-4 lg:gap-5 pt-3 md:pt-4 lg:pt-5 first:pt-0 pb-3 md:pb-4 lg:pb-5"
-                    >
-                      {/* Dish Info */}
-                      <div className="flex-1">
-                        <h4 className="font-medium text-black text-base md:text-lg lg:text-xl capitalize">
-                          {dish.item}
-                        </h4>
-                        <p className="text-xs md:text-sm lg:text-base text-gray-600">
-                          Cantidad: {dish.quantity}
+            {/* Lista de platillos - Scrollable */}
+            <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 border-t border-white/20 pt-4 md:pt-5 lg:pt-6">
+              <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white mb-3 md:mb-4 lg:mb-5">
+                Items de la orden
+              </h3>
+              <div className="space-y-3 md:space-y-4 lg:space-y-5 pb-4 md:pb-5 lg:pb-6">
+                {selectedOrderDetails.dishes?.map((dish: any) => (
+                  <div
+                    key={dish.dishOrderId}
+                    className="flex justify-between items-start gap-3 md:gap-4 lg:gap-5"
+                  >
+                    {/* Dish Info */}
+                    <div className="flex-1">
+                      <p className="text-white font-medium text-base md:text-lg lg:text-xl capitalize">
+                        {dish.quantity}x {dish.item}
+                      </p>
+                      <p className="text-xs md:text-sm lg:text-base text-white/60">
+                        ${dish.price?.toFixed(2)} MXN c/u
+                      </p>
+                      {dish.extraPrice > 0 && (
+                        <p className="text-xs md:text-sm lg:text-base text-white/60">
+                          + Extras: ${dish.extraPrice?.toFixed(2)} MXN
                         </p>
-                        <p className="text-xs md:text-sm lg:text-base text-gray-600">
-                          ${dish.price?.toFixed(2)} MXN
-                        </p>
-                        {dish.extraPrice > 0 && (
-                          <p className="text-xs md:text-sm lg:text-base text-gray-600">
-                            + Extras: ${dish.extraPrice?.toFixed(2)} MXN
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Total Price */}
-                      <div className="text-right">
-                        <p className="font-semibold text-black text-base md:text-lg lg:text-xl">
-                          ${dish.totalPrice?.toFixed(2)} MXN
-                        </p>
-                      </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Total Summary */}
-              <div className="flex justify-between items-center border-t border-[#8e8e8e] pt-4 md:pt-5 lg:pt-6 mb-6 md:mb-8 lg:mb-10">
-                <span className="text-xl md:text-2xl lg:text-3xl font-medium text-black">
-                  Total
-                </span>
-                <span className="text-xl md:text-2xl lg:text-3xl font-medium text-black">
-                  ${selectedOrderDetails.totalAmount?.toFixed(2)} MXN
-                </span>
+                    {/* Total Price */}
+                    <div className="text-right">
+                      <p className="text-white font-medium text-base md:text-lg lg:text-xl">
+                        ${dish.totalPrice?.toFixed(2)} MXN
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
+            </div>
+
+            {/* Total Summary - Fixed */}
+            <div className="flex-shrink-0 px-6 md:px-8 lg:px-10 flex justify-between items-center border-t border-white/20 pt-4 md:pt-5 lg:pt-6 pb-6 md:pb-8 lg:pb-10">
+              <span className="text-lg md:text-xl lg:text-2xl font-medium text-white">
+                Total
+              </span>
+              <span className="text-lg md:text-xl lg:text-2xl font-medium text-white">
+                ${selectedOrderDetails.totalAmount?.toFixed(2)} MXN
+              </span>
             </div>
           </div>
         </div>
