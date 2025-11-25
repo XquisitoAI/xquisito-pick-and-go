@@ -6,7 +6,7 @@ import * as SignUp from "@clerk/elements/sign-up";
 import { useUser, useSignUp } from "@clerk/nextjs";
 import { useUserData } from "@/context/userDataContext";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
-import { Mail, KeyRound, User, ArrowLeft } from "lucide-react";
+import { Phone, User, ArrowLeft } from "lucide-react";
 import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
 
@@ -22,6 +22,8 @@ export default function SignUpPage() {
   const [hasRedirected, setHasRedirected] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendAttempts, setResendAttempts] = useState(0);
+  const [countryCode, setCountryCode] = useState("+52");
+  const [phoneNumber, setPhoneNumber] = useState("");
 
   const { user, isSignedIn, isLoaded: userLoaded } = useUser();
   const { signUp, isLoaded } = useSignUp();
@@ -55,7 +57,7 @@ export default function SignUpPage() {
 
     try {
       console.log("🔄 Resending verification code...");
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      await signUp.preparePhoneNumberVerification();
 
       setResendAttempts((prev) => prev + 1);
       setResendCooldown(30); // 30 second cooldown
@@ -129,31 +131,45 @@ export default function SignUpPage() {
                   </Clerk.Field>
                 </div>
 
-                <Clerk.Field name="emailAddress" className="space-y-1">
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
-                    <Clerk.Input
-                      required
-                      type="email"
-                      className="w-full pl-10 pr-3 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a8b9b] focus:border-transparent"
-                      placeholder="Email"
-                    />
+                <div className="space-y-1">
+                  <div className="relative flex gap-2">
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      className="w-24 px-2 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a8b9b] focus:border-transparent cursor-pointer"
+                    >
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+52">🇲🇽 +52</option>
+                      <option value="+34">🇪🇸 +34</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+49">🇩🇪 +49</option>
+                      <option value="+33">🇫🇷 +33</option>
+                      <option value="+39">🇮🇹 +39</option>
+                      <option value="+54">🇦🇷 +54</option>
+                      <option value="+56">🇨🇱 +56</option>
+                      <option value="+57">🇨🇴 +57</option>
+                    </select>
+                    <Clerk.Field name="phoneNumber" className="flex-1">
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                        <Clerk.Input
+                          required
+                          type="tel"
+                          value={countryCode + phoneNumber}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Remove country code if present
+                            const withoutCode = value.replace(countryCode, '');
+                            setPhoneNumber(withoutCode);
+                          }}
+                          className="w-full pl-10 pr-3 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a8b9b] focus:border-transparent"
+                          placeholder={`${countryCode} Número de teléfono`}
+                        />
+                      </div>
+                      <Clerk.FieldError className="text-rose-400 text-xs mt-1" />
+                    </Clerk.Field>
                   </div>
-                  <Clerk.FieldError className="text-rose-400 text-xs" />
-                </Clerk.Field>
-
-                <Clerk.Field name="password" className="space-y-1 relative">
-                  <div className="relative">
-                    <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
-                    <Clerk.Input
-                      required
-                      type="password"
-                      className="w-full pl-10 pr-3 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a8b9b] focus:border-transparent"
-                      placeholder="Contraseña"
-                    />
-                  </div>
-                  <Clerk.FieldError className="text-rose-400 text-xs" />
-                </Clerk.Field>
+                </div>
 
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
@@ -227,65 +243,6 @@ export default function SignUpPage() {
                 </SignUp.Action>
               </div>
 
-              {/* Social Login */}
-              <div className="flex items-center justify-center gap-12">
-                <Clerk.Connection
-                  name="google"
-                  className="p-3 border border-white rounded-full hover:bg-white/10 transition-colors font-medium cursor-pointer"
-                >
-                  <svg className="size-6" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    />
-                  </svg>
-                </Clerk.Connection>
-
-                <Clerk.Connection
-                  name="microsoft"
-                  className="p-3 border border-white rounded-full hover:bg-white/10 transition-colors font-medium cursor-pointer"
-                >
-                  <svg className="size-6" viewBox="0 0 24 24">
-                    <path fill="#f35325" d="M1 1h10v10H1z" />
-                    <path fill="#81bc06" d="M13 1h10v10H13z" />
-                    <path fill="#05a6f0" d="M1 13h10v10H1z" />
-                    <path fill="#ffba08" d="M13 13h10v10H13z" />
-                  </svg>
-                </Clerk.Connection>
-
-                <Clerk.Connection
-                  name="facebook"
-                  className="p-3 border border-white rounded-full hover:bg-white/10 transition-colors font-medium cursor-pointer"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="size-6"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      fill="#1877F2"
-                      d="M24 12c0-6.627-5.373-12-12-12S0 5.373 0 12c0 5.99 4.388 10.954 10.125 11.854V15.47H7.078V12h3.047V9.356c0-3.007 1.792-4.668 4.533-4.668 1.312 0 2.686.234 2.686.234v2.953H15.83c-1.491 0-1.956.925-1.956 1.874V12h3.328l-.532 3.47h-2.796v8.385C19.612 22.954 24 17.99 24 12z"
-                    />
-                    <path
-                      fill="#fff"
-                      d="M16.671 15.47L17.203 12h-3.328V9.749c0-.949.465-1.874 1.956-1.874h1.513V4.922s-1.374-.234-2.686-.234c-2.741 0-4.533 1.66-4.533 4.668V12H7.078v3.47h3.047v8.385a12.09 12.09 0 003.75 0V15.47h2.796z"
-                    />
-                  </svg>
-                </Clerk.Connection>
-              </div>
-
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center pr-5">
                   <div className="w-1/2 border-t border-white" />
@@ -332,32 +289,6 @@ export default function SignUpPage() {
                   <p className="text-gray-200">
                     Hemos enviado un código de verificación a tu teléfono
                   </p>
-                </div>
-
-                <Clerk.Field name="code" className="space-y-2">
-                  <Clerk.Input
-                    placeholder="Código"
-                    className="w-full px-3 py-2 border bg-white text-black border-[#d9d9d9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a8b9b] focus:border-transparent text-center tracking-widest"
-                  />
-                  <Clerk.FieldError className="text-rose-400 text-xs" />
-                </Clerk.Field>
-
-                <SignUp.Action
-                  submit
-                  className="bg-black hover:bg-stone-950 w-full text-white py-3 rounded-full font-normal cursor-pointer transition-colors mt-6"
-                >
-                  Verificar teléfono
-                </SignUp.Action>
-              </SignUp.Strategy>
-
-              <SignUp.Strategy name="email_code">
-                <div className="mb-6 text-center">
-                  <h1 className="text-2xl font-medium text-white mb-2">
-                    Revisa tu email
-                  </h1>
-                  <p className="text-gray-200">
-                    Hemos enviado un código de verficación a tu correo
-                  </p>
                   {resendAttempts > 0 && (
                     <p className="text-green-200 text-sm mt-2">
                       Código reenviado {resendAttempts}{" "}
@@ -378,7 +309,7 @@ export default function SignUpPage() {
                   submit
                   className="bg-black hover:bg-stone-950 w-full text-white py-3 rounded-full font-normal cursor-pointer transition-colors mt-6"
                 >
-                  Verificar Email
+                  Verificar teléfono
                 </SignUp.Action>
 
                 {/* Resend Code Button */}
@@ -405,9 +336,9 @@ export default function SignUpPage() {
                       ¿Problemas para recibir el código?
                     </summary>
                     <div className="mt-2 text-left space-y-1">
-                      <p>• Revisa tu carpeta de spam/correo no deseado</p>
-                      <p>• Verifica que la dirección de email sea correcta</p>
-                      <p>• Espera de 2-3 minutos para recibir el código</p>
+                      <p>• Verifica que el número de teléfono sea correcto</p>
+                      <p>• Espera de 1-2 minutos para recibir el SMS</p>
+                      <p>• Revisa que tu teléfono tenga señal</p>
                       <p>
                         • Intenta reenviar el código usando el botón de arriba
                       </p>

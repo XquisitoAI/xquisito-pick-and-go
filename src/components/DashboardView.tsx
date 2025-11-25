@@ -15,6 +15,12 @@ export default function DashboardView() {
     "profile" | "cards" | "history" | "support"
   >("profile");
 
+  // Estado del chat de soporte (persistente entre tabs)
+  const [supportMessages, setSupportMessages] = useState<
+    Array<{ role: "user" | "pepper"; content: string }>
+  >([]);
+  const [supportSessionId, setSupportSessionId] = useState<string | null>(null);
+
   const { user, isLoaded } = useUser();
   const { navigateWithRestaurantId } = useNavigation();
 
@@ -109,8 +115,8 @@ export default function DashboardView() {
           </div>
         </div>
 
-        <div className="flex-1 h-full flex flex-col overflow-hidden">
-          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-7 lg:px-8">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-7 lg:px-8 min-h-0">
             {/* Tabs */}
             <div className="relative grid grid-cols-4 gap-2 my-6 md:my-7 lg:my-8 w-full">
               {/* Animated Background Indicator */}
@@ -173,11 +179,30 @@ export default function DashboardView() {
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 flex flex-col overflow-y-auto pb-6">
-              {activeTab === "profile" && <ProfileTab />}
-              {activeTab === "cards" && <CardsTab />}
-              {activeTab === "history" && <HistoryTab />}
-              {activeTab === "support" && <SupportTab />}
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+              {activeTab === "profile" && (
+                <div className="flex-1 overflow-y-auto pb-6">
+                  <ProfileTab />
+                </div>
+              )}
+              {activeTab === "cards" && (
+                <div className="flex-1 overflow-y-auto pb-6">
+                  <CardsTab />
+                </div>
+              )}
+              {activeTab === "history" && (
+                <div className="flex-1 overflow-y-auto pb-6">
+                  <HistoryTab />
+                </div>
+              )}
+              {activeTab === "support" && (
+                <SupportTab
+                  messages={supportMessages}
+                  setMessages={setSupportMessages}
+                  sessionId={supportSessionId}
+                  setSessionId={setSupportSessionId}
+                />
+              )}
             </div>
           </div>
         </div>
