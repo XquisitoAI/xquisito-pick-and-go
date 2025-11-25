@@ -8,7 +8,7 @@ import { useRestaurant } from "../../../context/RestaurantContext";
 import { getRestaurantData } from "../../../utils/restaurantData";
 import { apiService } from "../../../utils/api";
 import { useUser } from "@clerk/nextjs";
-import { Receipt, X, Calendar, Utensils, CircleAlert } from "lucide-react";
+import { Receipt, X, Calendar, Utensils, CircleAlert, ChevronDown } from "lucide-react";
 import { getCardTypeIcon } from "../../../utils/cardIcons";
 
 export default function PaymentSuccessPage() {
@@ -44,6 +44,7 @@ export default function PaymentSuccessPage() {
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [hasRated, setHasRated] = useState(false); // Track if user has already rated
+  const [isDeliveryDetailsExpanded, setIsDeliveryDetailsExpanded] = useState(false); // Control para detalles de entrega
   const { restaurant } = useRestaurant();
 
   // Order progress simulation
@@ -663,30 +664,30 @@ export default function PaymentSuccessPage() {
       {/* Status Modal */}
       {isStatusModalOpen && (
         <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-end justify-center"
+          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-center justify-center"
           onClick={() => setIsStatusModalOpen(false)}
         >
           <div
-            className="bg-white rounded-t-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-6 pt-6 pb-4">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-black">Pedido creado</h2>
+            <div className="px-6 md:px-8 lg:px-10 pt-6 md:pt-8 lg:pt-10 pb-4 md:pb-5 lg:pb-6">
+              <div className="flex items-center justify-between mb-6 md:mb-8">
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white">Pedido creado</h2>
                 <button
                   onClick={() => setIsStatusModalOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-2 md:p-3 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors"
                 >
-                  <X className="w-6 h-6 text-gray-500" />
+                  <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
                 </button>
               </div>
 
               {/* Estimated time */}
-              <div className="mb-8">
-                <p className="text-gray-600 text-lg mb-2 flex items-center gap-2">
+              <div className="mb-8 md:mb-10">
+                <p className="text-white/80 text-base md:text-lg lg:text-xl mb-2 flex items-center justify-center gap-2 md:gap-3">
                   Entrega estimada:
-                  <span className="font-semibold text-black">
+                  <span className="font-semibold text-white">
                     {orderTime.toLocaleTimeString('es-MX', {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -697,112 +698,132 @@ export default function PaymentSuccessPage() {
                       hour12: true
                     })}
                   </span>
-                  <span className="text-red-500 text-xl">⚡</span>
                 </p>
               </div>
 
               {/* Progress bar */}
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-4">
+              <div className="mb-8 md:mb-10">
+                <div className="flex items-center justify-between">
                   {/* Step 1: Order received */}
-                  <div className="flex flex-col items-center">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
-                      getStepStatus(1) === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                  <div className="flex flex-col items-center gap-2">
+                    <div className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                      getStepStatus(1) === 'completed' ? 'bg-green-500 ring-4 ring-green-500/30' : 'bg-white/10'
                     }`}>
-                      <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </div>
-                    <span className="text-xs text-gray-600">Recibido</span>
+                    <span className="text-xs md:text-sm text-white/90 font-medium">Recibido</span>
                   </div>
 
                   {/* Progress line */}
-                  <div className="flex-1 h-1 bg-gray-200 mx-4 relative">
-                    <div className="h-full bg-green-500 rounded transition-all duration-1000" style={{ width: `${getProgressLineWidth(1)}%` }}></div>
+                  <div className="flex-1 h-1.5 bg-white/10 mx-2 md:mx-3 relative rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000" style={{ width: `${getProgressLineWidth(1)}%` }}></div>
                   </div>
 
                   {/* Step 2: Cooking */}
-                  <div className="flex flex-col items-center">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
-                      getStepStatus(2) === 'active' ? 'bg-orange-400 animate-pulse' :
-                      getStepStatus(2) === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                  <div className="flex flex-col items-center gap-2">
+                    <div className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                      getStepStatus(2) === 'active' ? 'bg-orange-500 ring-4 ring-orange-500/30 animate-pulse' :
+                      getStepStatus(2) === 'completed' ? 'bg-green-500 ring-4 ring-green-500/30' : 'bg-white/10'
                     }`}>
-                      <Utensils className="w-6 h-6 text-white" />
+                      <Utensils className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
                     </div>
-                    <span className="text-xs text-gray-600">Preparando</span>
+                    <span className="text-xs md:text-sm text-white/90 font-medium">Preparando</span>
                   </div>
 
                   {/* Progress line */}
-                  <div className="flex-1 h-1 bg-gray-200 mx-4 relative">
-                    <div className="h-full bg-green-500 rounded transition-all duration-1000" style={{ width: `${getProgressLineWidth(2)}%` }}></div>
+                  <div className="flex-1 h-1.5 bg-white/10 mx-2 md:mx-3 relative rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000" style={{ width: `${getProgressLineWidth(2)}%` }}></div>
                   </div>
 
                   {/* Step 3: Ready for pickup */}
-                  <div className="flex flex-col items-center">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
-                      getStepStatus(3) === 'active' ? 'bg-blue-400 animate-pulse' :
-                      getStepStatus(3) === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                  <div className="flex flex-col items-center gap-2">
+                    <div className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                      getStepStatus(3) === 'active' ? 'bg-blue-500 ring-4 ring-blue-500/30 animate-pulse' :
+                      getStepStatus(3) === 'completed' ? 'bg-green-500 ring-4 ring-green-500/30' : 'bg-white/10'
                     }`}>
-                      <div className="w-6 h-6 text-white font-bold text-sm flex items-center justify-center">
+                      <div className="text-2xl md:text-3xl">
                         📦
                       </div>
                     </div>
-                    <span className="text-xs text-gray-600">Listo</span>
+                    <span className="text-xs md:text-sm text-white/90 font-medium">Listo</span>
                   </div>
 
                   {/* Progress line */}
-                  <div className="flex-1 h-1 bg-gray-200 mx-4 relative">
-                    <div className="h-full bg-green-500 rounded transition-all duration-1000" style={{ width: `${getProgressLineWidth(3)}%` }}></div>
+                  <div className="flex-1 h-1.5 bg-white/10 mx-2 md:mx-3 relative rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000" style={{ width: `${getProgressLineWidth(3)}%` }}></div>
                   </div>
 
                   {/* Step 4: Delivered */}
-                  <div className="flex flex-col items-center">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
-                      getStepStatus(4) === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                  <div className="flex flex-col items-center gap-2">
+                    <div className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                      getStepStatus(4) === 'completed' ? 'bg-green-500 ring-4 ring-green-500/30' : 'bg-white/10'
                     }`}>
-                      <div className="w-6 h-6 text-white font-bold text-sm flex items-center justify-center">
+                      <div className="text-2xl md:text-3xl">
                         🏠
                       </div>
                     </div>
-                    <span className="text-xs text-gray-600">Entregado</span>
+                    <span className="text-xs md:text-sm text-white/90 font-medium">Entregado</span>
                   </div>
                 </div>
               </div>
 
-              {/* Order details */}
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Detalles de la entrega</h3>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-gray-700 mb-2">
-                    <span className="font-medium">Método:</span> Pick & Go - Recoger en restaurante
-                  </p>
-                  <p className="text-gray-700 mb-2">
-                    <span className="font-medium">Cliente:</span> {paymentDetails?.userName || paymentDetails?.customerName || "Cliente"}
-                  </p>
-                  <p className="text-gray-700 mb-2">
-                    <span className="font-medium">Restaurante:</span> {restaurant?.name || restaurantData.name}
-                  </p>
-                  <p className="text-gray-700 mb-2">
-                    <span className="font-medium">Dirección:</span> {restaurant?.address || restaurantData.address}
-                  </p>
-                  <p className="text-gray-700">
-                    <span className="font-medium">Orden #:</span> {paymentDetails?.orderId || "N/A"}
-                  </p>
+              {/* Order details - Collapsible */}
+              <div className="border-t border-white/20 pt-6 md:pt-8">
+                {/* Header clickeable */}
+                <button
+                  onClick={() => setIsDeliveryDetailsExpanded(!isDeliveryDetailsExpanded)}
+                  className="w-full flex items-center justify-between text-left hover:bg-white/5 rounded-lg md:rounded-xl p-3 md:p-4 -mx-3 md:-mx-4 transition-all duration-300"
+                >
+                  <h3 className="text-lg md:text-xl lg:text-2xl font-semibold text-white">
+                    Detalles de la entrega
+                  </h3>
+                  <ChevronDown
+                    className={`w-5 h-5 md:w-6 md:h-6 text-white transition-transform duration-300 ${
+                      isDeliveryDetailsExpanded ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Contenido expandible con animación */}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    isDeliveryDetailsExpanded ? 'max-h-96 opacity-100 mt-4 md:mt-5' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 space-y-2.5 md:space-y-3">
+                    <p className="text-white/90 text-sm md:text-base lg:text-lg">
+                      <span className="font-medium text-white">Método:</span> Pick & Go - Recoger en restaurante
+                    </p>
+                    <p className="text-white/90 text-sm md:text-base lg:text-lg">
+                      <span className="font-medium text-white">Cliente:</span> {paymentDetails?.userName || paymentDetails?.customerName || "Cliente"}
+                    </p>
+                    <p className="text-white/90 text-sm md:text-base lg:text-lg">
+                      <span className="font-medium text-white">Restaurante:</span> {restaurant?.name || restaurantData.name}
+                    </p>
+                    <p className="text-white/90 text-sm md:text-base lg:text-lg">
+                      <span className="font-medium text-white">Dirección:</span> {restaurant?.address || restaurantData.address}
+                    </p>
+                    <p className="text-white/90 text-sm md:text-base lg:text-lg">
+                      <span className="font-medium text-white">Orden #:</span> {paymentDetails?.orderId || "N/A"}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Order items summary */}
                 {/* {dishOrders.length > 0 && (
                   <div className="mt-6">
-                    <h4 className="text-lg font-semibold text-gray-800 mb-3">Items del pedido</h4>
+                    <h4 className="text-lg font-semibold text-white mb-3">Items del pedido</h4>
                     <div className="space-y-2">
                       {dishOrders.slice(0, 3).map((dish: any, index: number) => (
-                        <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
-                          <span className="text-gray-700">{dish.quantity}x {dish.item}</span>
-                          <span className="text-gray-600">${dish.total_price?.toFixed(2) || "0.00"}</span>
+                        <div key={index} className="flex justify-between items-center py-2 border-b border-white/10">
+                          <span className="text-white/90">{dish.quantity}x {dish.item}</span>
+                          <span className="text-white/80">${dish.total_price?.toFixed(2) || "0.00"}</span>
                         </div>
                       ))}
                       {dishOrders.length > 3 && (
-                        <p className="text-gray-500 text-sm pt-2">
+                        <p className="text-white/60 text-sm pt-2">
                           +{dishOrders.length - 3} items más...
                         </p>
                       )}
@@ -812,10 +833,10 @@ export default function PaymentSuccessPage() {
               </div>
 
               {/* Action button */}
-              <div className="mt-8 pb-6">
+              <div className="mt-8 md:mt-10 pb-6 md:pb-8">
                 <button
                   onClick={() => setIsStatusModalOpen(false)}
-                  className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-4 rounded-full font-medium text-lg hover:opacity-90 transition-opacity"
+                  className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-4 md:py-5 rounded-full font-medium text-base md:text-lg lg:text-xl hover:shadow-xl hover:scale-[1.02] transition-all duration-200"
                 >
                   Entendido
                 </button>
