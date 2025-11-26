@@ -8,7 +8,15 @@ import { useRestaurant } from "../../../context/RestaurantContext";
 import { getRestaurantData } from "../../../utils/restaurantData";
 import { apiService } from "../../../utils/api";
 import { useUser } from "@clerk/nextjs";
-import { Receipt, X, Calendar, Utensils, CircleAlert, ChevronDown } from "lucide-react";
+import {
+  Receipt,
+  X,
+  Calendar,
+  Utensils,
+  CircleAlert,
+  ChevronDown,
+  Check,
+} from "lucide-react";
 import { getCardTypeIcon } from "../../../utils/cardIcons";
 
 export default function PaymentSuccessPage() {
@@ -44,8 +52,23 @@ export default function PaymentSuccessPage() {
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [hasRated, setHasRated] = useState(false); // Track if user has already rated
-  const [isDeliveryDetailsExpanded, setIsDeliveryDetailsExpanded] = useState(false); // Control para detalles de entrega
+  const [isDeliveryDetailsExpanded, setIsDeliveryDetailsExpanded] =
+    useState(false); // Control para detalles de entrega
   const { restaurant } = useRestaurant();
+
+  // Block scroll when any modal is open
+  useEffect(() => {
+    if (isTicketModalOpen || isBreakdownModalOpen || isStatusModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isTicketModalOpen, isBreakdownModalOpen, isStatusModalOpen]);
 
   // Order progress simulation
   const [orderTime] = useState(new Date()); // Tiempo cuando se creó el pedido
@@ -103,10 +126,11 @@ export default function PaymentSuccessPage() {
           // If from localStorage (first time), save to sessionStorage for persistence
           if (!fromSession) {
             // Save with unique key based on payment/transaction ID
-            const paymentIdentifier = parsed.paymentId ||
-                                     parsed.transactionId ||
-                                     urlPaymentId ||
-                                     Date.now().toString();
+            const paymentIdentifier =
+              parsed.paymentId ||
+              parsed.transactionId ||
+              urlPaymentId ||
+              Date.now().toString();
             const uniqueKey = `xquisito-payment-success-${paymentIdentifier}`;
 
             sessionStorage.setItem(uniqueKey, storedPayment);
@@ -138,7 +162,9 @@ export default function PaymentSuccessPage() {
       setCurrentTime(now);
 
       // Calcular minutos transcurridos desde que se hizo el pedido
-      const minutesElapsed = Math.floor((now.getTime() - orderTime.getTime()) / (1000 * 60));
+      const minutesElapsed = Math.floor(
+        (now.getTime() - orderTime.getTime()) / (1000 * 60)
+      );
       const totalMinutes = 20; // 20 minutos total para completar el pedido
 
       // Calcular el progreso como porcentaje (0-100)
@@ -197,18 +223,25 @@ export default function PaymentSuccessPage() {
 
   // Función para determinar el estado de cada paso basado en el progreso
   const getStepStatus = (stepNumber: number) => {
-    if (stepNumber === 1) return 'completed'; // Siempre completado (Recibido)
-    if (stepNumber === 2) return orderProgress > 25 ? 'active' : 'pending';
-    if (stepNumber === 3) return orderProgress > 75 ? 'completed' : (orderProgress > 50 ? 'active' : 'pending');
-    if (stepNumber === 4) return orderProgress >= 100 ? 'completed' : 'pending';
-    return 'pending';
+    if (stepNumber === 1) return "completed"; // Siempre completado (Recibido)
+    if (stepNumber === 2) return orderProgress > 25 ? "active" : "pending";
+    if (stepNumber === 3)
+      return orderProgress > 75
+        ? "completed"
+        : orderProgress > 50
+          ? "active"
+          : "pending";
+    if (stepNumber === 4) return orderProgress >= 100 ? "completed" : "pending";
+    return "pending";
   };
 
   // Función para calcular el ancho de las líneas de progreso
   const getProgressLineWidth = (lineNumber: number) => {
     if (lineNumber === 1) return Math.min(orderProgress * 4, 100); // 0-25% del progreso total
-    if (lineNumber === 2) return Math.max(0, Math.min((orderProgress - 25) * 4, 100)); // 25-50%
-    if (lineNumber === 3) return Math.max(0, Math.min((orderProgress - 50) * 4, 100)); // 50-75%
+    if (lineNumber === 2)
+      return Math.max(0, Math.min((orderProgress - 25) * 4, 100)); // 25-50%
+    if (lineNumber === 3)
+      return Math.max(0, Math.min((orderProgress - 50) * 4, 100)); // 50-75%
     return 0;
   };
 
@@ -240,14 +273,20 @@ export default function PaymentSuccessPage() {
     navigateWithRestaurantId("/menu");
   };
 
-  // Handle rating submission
-  const handleRatingClick = async (starRating: number) => {
+  // Handle rating selection
+  const handleRatingClick = (starRating: number) => {
     if (hasRated) {
       console.log("⚠️ User has already rated");
       return;
     }
-
     setRating(starRating);
+  };
+
+  // Handle rating submission
+  const handleSubmitRating = async () => {
+    if (hasRated || rating === 0) {
+      return;
+    }
 
     if (!restaurantId) {
       console.error("❌ No restaurant ID available");
@@ -257,7 +296,7 @@ export default function PaymentSuccessPage() {
     try {
       console.log("🔍 Submitting restaurant review:", {
         restaurant_id: parseInt(restaurantId),
-        rating: starRating,
+        rating: rating,
       });
 
       const response = await fetch(
@@ -269,7 +308,7 @@ export default function PaymentSuccessPage() {
           },
           body: JSON.stringify({
             restaurant_id: parseInt(restaurantId),
-            rating: starRating,
+            rating: rating,
           }),
         }
       );
@@ -319,38 +358,54 @@ export default function PaymentSuccessPage() {
                   ? "¡Gracias por tu calificación!"
                   : "Califica tu experiencia en el restaurante"}
               </p>
-              <div className="flex justify-center gap-1 md:gap-1.5 lg:gap-2">
-                {[1, 2, 3, 4, 5].map((starIndex) => {
-                  const currentRating = hoveredRating || rating;
-                  const isFilled = currentRating >= starIndex;
+              <div className="flex flex-col items-center gap-3 md:gap-3.5 lg:gap-4">
+                {/* Stars container */}
+                <div className="flex gap-1 md:gap-1.5 lg:gap-2">
+                  {[1, 2, 3, 4, 5].map((starIndex) => {
+                    const currentRating = hoveredRating || rating;
+                    const isFilled = currentRating >= starIndex;
 
-                  return (
-                    <div
-                      key={starIndex}
-                      className={`relative ${
-                        hasRated ? "cursor-default" : "cursor-pointer"
-                      }`}
-                      onMouseEnter={() =>
-                        !hasRated && setHoveredRating(starIndex)
-                      }
-                      onMouseLeave={() => !hasRated && setHoveredRating(0)}
-                      onClick={() => !hasRated && handleRatingClick(starIndex)}
-                    >
-                      {/* Estrella */}
-                      <svg
-                        className={`size-8 md:size-10 lg:size-12 transition-all ${
-                          isFilled ? "text-yellow-400" : "text-white"
+                    return (
+                      <div
+                        key={starIndex}
+                        className={`relative ${
+                          hasRated ? "cursor-default" : "cursor-pointer"
                         }`}
-                        fill="currentColor"
-                        stroke={isFilled ? "#facc15" : "black"}
-                        strokeWidth="1"
-                        viewBox="0 0 24 24"
+                        onMouseEnter={() =>
+                          !hasRated && setHoveredRating(starIndex)
+                        }
+                        onMouseLeave={() => !hasRated && setHoveredRating(0)}
+                        onClick={() =>
+                          !hasRated && handleRatingClick(starIndex)
+                        }
                       >
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                      </svg>
-                    </div>
-                  );
-                })}
+                        {/* Estrella */}
+                        <svg
+                          className={`size-8 md:size-10 lg:size-12 transition-all ${
+                            isFilled ? "text-yellow-400" : "text-white"
+                          }`}
+                          fill="currentColor"
+                          stroke={isFilled ? "#facc15" : "black"}
+                          strokeWidth="1"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Submit button - appears when a rating is selected */}
+                {rating > 0 && !hasRated && (
+                  <button
+                    onClick={handleSubmitRating}
+                    className="px-5 md:px-6 py-1.5 md:py-2 bg-gradient-to-r from-[#34808C] to-[#173E44] hover:from-[#2a6d77] hover:to-[#12323a] text-white text-sm md:text-base font-medium rounded-full transition-all duration-300 hover:scale-105 hover:shadow-lg animate-fade-in"
+                    aria-label="Enviar calificación"
+                  >
+                    Enviar
+                  </button>
+                )}
               </div>
             </div>
 
@@ -416,10 +471,10 @@ export default function PaymentSuccessPage() {
           onClick={() => setIsTicketModalOpen(false)}
         >
           <div
-            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl overflow-y-auto z-999 max-h-[85vh]"
+            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-full flex justify-end">
+            <div className="w-full flex justify-end flex-shrink-0">
               <button
                 onClick={() => setIsTicketModalOpen(false)}
                 className="p-2 md:p-3 lg:p-4 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors justify-end flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
@@ -429,7 +484,7 @@ export default function PaymentSuccessPage() {
             </div>
 
             {/* Header */}
-            <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-4 md:mb-5 lg:mb-6">
+            <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-4 md:mb-5 lg:mb-6 flex-shrink-0">
               <div className="flex flex-col justify-center items-center gap-3 md:gap-4 lg:gap-5">
                 {restaurant?.logo_url ? (
                   <img
@@ -457,8 +512,8 @@ export default function PaymentSuccessPage() {
               </div>
             </div>
 
-            {/* Content */}
-            <div className="px-6 md:px-8 lg:px-10 space-y-4 md:space-y-5 lg:space-y-6">
+            {/* Scrollable Content */}
+            <div className="px-6 md:px-8 lg:px-10 space-y-4 md:space-y-5 lg:space-y-6 overflow-y-auto flex-1 min-h-0">
               {/* Order Info */}
               <div className="border-t border-white/20 pt-4 md:pt-5 lg:pt-6">
                 <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white mb-3 md:mb-4 lg:mb-5">
@@ -480,11 +535,13 @@ export default function PaymentSuccessPage() {
                       <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-blue-600" />
                     </div>
                     <span className="text-sm md:text-base lg:text-lg">
-                      {new Date().toLocaleDateString("es-MX", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "2-digit",
-                      }).replace(/\//g, "/")}
+                      {new Date()
+                        .toLocaleDateString("es-MX", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "2-digit",
+                        })
+                        .replace(/\//g, "/")}
                     </span>
                   </div>
 
@@ -554,8 +611,10 @@ export default function PaymentSuccessPage() {
                   </div>
                 </div>
               )}
+            </div>
 
-              {/* Total Summary with Info Button */}
+            {/* Total Summary with Info Button */}
+            <div className="px-6 md:px-8 lg:px-10 flex-shrink-0">
               <div className="flex justify-between items-center border-t border-white/20 pt-4 md:pt-5 lg:pt-6 mb-6 md:mb-8 lg:mb-10">
                 <div className="flex items-center gap-2 md:gap-3 lg:gap-4">
                   <span className="text-lg md:text-xl lg:text-2xl font-medium text-white">
@@ -674,7 +733,9 @@ export default function PaymentSuccessPage() {
             {/* Header */}
             <div className="px-6 md:px-8 lg:px-10 pt-6 md:pt-8 lg:pt-10 pb-4 md:pb-5 lg:pb-6">
               <div className="flex items-center justify-between mb-6 md:mb-8">
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white">Pedido creado</h2>
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white">
+                  Pedido creado
+                </h2>
                 <button
                   onClick={() => setIsStatusModalOpen(false)}
                   className="p-2 md:p-3 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors"
@@ -688,14 +749,18 @@ export default function PaymentSuccessPage() {
                 <p className="text-white/80 text-base md:text-lg lg:text-xl mb-2 flex items-center justify-center gap-2 md:gap-3">
                   Entrega estimada:
                   <span className="font-semibold text-white">
-                    {orderTime.toLocaleTimeString('es-MX', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: true
-                    })} - {new Date(orderTime.getTime() + 20 * 60 * 1000).toLocaleTimeString('es-MX', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: true
+                    {orderTime.toLocaleTimeString("es-MX", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}{" "}
+                    -{" "}
+                    {new Date(
+                      orderTime.getTime() + 20 * 60 * 1000
+                    ).toLocaleTimeString("es-MX", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
                     })}
                   </span>
                 </p>
@@ -706,65 +771,104 @@ export default function PaymentSuccessPage() {
                 <div className="flex items-center justify-between">
                   {/* Step 1: Order received */}
                   <div className="flex flex-col items-center gap-2">
-                    <div className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
-                      getStepStatus(1) === 'completed' ? 'bg-green-500 ring-4 ring-green-500/30' : 'bg-white/10'
-                    }`}>
-                      <svg className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <div
+                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                        getStepStatus(1) === "completed"
+                          ? "bg-green-500 ring-4 ring-green-500/30"
+                          : "bg-white/10"
+                      }`}
+                    >
+                      <svg
+                        className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </div>
-                    <span className="text-xs md:text-sm text-white/90 font-medium">Recibido</span>
+                    <span className="text-xs md:text-sm text-white/90 font-medium">
+                      Recibido
+                    </span>
                   </div>
 
                   {/* Progress line */}
                   <div className="flex-1 h-1.5 bg-white/10 mx-2 md:mx-3 relative rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000" style={{ width: `${getProgressLineWidth(1)}%` }}></div>
+                    <div
+                      className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000"
+                      style={{ width: `${getProgressLineWidth(1)}%` }}
+                    ></div>
                   </div>
 
                   {/* Step 2: Cooking */}
                   <div className="flex flex-col items-center gap-2">
-                    <div className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
-                      getStepStatus(2) === 'active' ? 'bg-orange-500 ring-4 ring-orange-500/30 animate-pulse' :
-                      getStepStatus(2) === 'completed' ? 'bg-green-500 ring-4 ring-green-500/30' : 'bg-white/10'
-                    }`}>
+                    <div
+                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                        getStepStatus(2) === "active"
+                          ? "bg-orange-500 ring-4 ring-orange-500/30 animate-pulse"
+                          : getStepStatus(2) === "completed"
+                            ? "bg-green-500 ring-4 ring-green-500/30"
+                            : "bg-white/10"
+                      }`}
+                    >
                       <Utensils className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
                     </div>
-                    <span className="text-xs md:text-sm text-white/90 font-medium">Preparando</span>
+                    <span className="text-xs md:text-sm text-white/90 font-medium">
+                      Preparando
+                    </span>
                   </div>
 
                   {/* Progress line */}
                   <div className="flex-1 h-1.5 bg-white/10 mx-2 md:mx-3 relative rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000" style={{ width: `${getProgressLineWidth(2)}%` }}></div>
+                    <div
+                      className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000"
+                      style={{ width: `${getProgressLineWidth(2)}%` }}
+                    ></div>
                   </div>
 
                   {/* Step 3: Ready for pickup */}
                   <div className="flex flex-col items-center gap-2">
-                    <div className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
-                      getStepStatus(3) === 'active' ? 'bg-blue-500 ring-4 ring-blue-500/30 animate-pulse' :
-                      getStepStatus(3) === 'completed' ? 'bg-green-500 ring-4 ring-green-500/30' : 'bg-white/10'
-                    }`}>
-                      <div className="text-2xl md:text-3xl">
-                        📦
-                      </div>
+                    <div
+                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                        getStepStatus(3) === "active"
+                          ? "bg-blue-500 ring-4 ring-blue-500/30 animate-pulse"
+                          : getStepStatus(3) === "completed"
+                            ? "bg-green-500 ring-4 ring-green-500/30"
+                            : "bg-white/10"
+                      }`}
+                    >
+                      <div className="text-2xl md:text-3xl">📦</div>
                     </div>
-                    <span className="text-xs md:text-sm text-white/90 font-medium">Listo</span>
+                    <span className="text-xs md:text-sm text-white/90 font-medium">
+                      Listo
+                    </span>
                   </div>
 
                   {/* Progress line */}
                   <div className="flex-1 h-1.5 bg-white/10 mx-2 md:mx-3 relative rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000" style={{ width: `${getProgressLineWidth(3)}%` }}></div>
+                    <div
+                      className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000"
+                      style={{ width: `${getProgressLineWidth(3)}%` }}
+                    ></div>
                   </div>
 
                   {/* Step 4: Delivered */}
                   <div className="flex flex-col items-center gap-2">
-                    <div className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
-                      getStepStatus(4) === 'completed' ? 'bg-green-500 ring-4 ring-green-500/30' : 'bg-white/10'
-                    }`}>
-                      <div className="text-2xl md:text-3xl">
-                        🏠
-                      </div>
+                    <div
+                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                        getStepStatus(4) === "completed"
+                          ? "bg-green-500 ring-4 ring-green-500/30"
+                          : "bg-white/10"
+                      }`}
+                    >
+                      <div className="text-2xl md:text-3xl">🏠</div>
                     </div>
-                    <span className="text-xs md:text-sm text-white/90 font-medium">Entregado</span>
+                    <span className="text-xs md:text-sm text-white/90 font-medium">
+                      Entregado
+                    </span>
                   </div>
                 </div>
               </div>
@@ -773,7 +877,9 @@ export default function PaymentSuccessPage() {
               <div className="border-t border-white/20 pt-6 md:pt-8">
                 {/* Header clickeable */}
                 <button
-                  onClick={() => setIsDeliveryDetailsExpanded(!isDeliveryDetailsExpanded)}
+                  onClick={() =>
+                    setIsDeliveryDetailsExpanded(!isDeliveryDetailsExpanded)
+                  }
                   className="w-full flex items-center justify-between text-left hover:bg-white/5 rounded-lg md:rounded-xl p-3 md:p-4 -mx-3 md:-mx-4 transition-all duration-300"
                 >
                   <h3 className="text-lg md:text-xl lg:text-2xl font-semibold text-white">
@@ -781,7 +887,7 @@ export default function PaymentSuccessPage() {
                   </h3>
                   <ChevronDown
                     className={`w-5 h-5 md:w-6 md:h-6 text-white transition-transform duration-300 ${
-                      isDeliveryDetailsExpanded ? 'rotate-180' : ''
+                      isDeliveryDetailsExpanded ? "rotate-180" : ""
                     }`}
                   />
                 </button>
@@ -789,24 +895,35 @@ export default function PaymentSuccessPage() {
                 {/* Contenido expandible con animación */}
                 <div
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    isDeliveryDetailsExpanded ? 'max-h-96 opacity-100 mt-4 md:mt-5' : 'max-h-0 opacity-0'
+                    isDeliveryDetailsExpanded
+                      ? "max-h-96 opacity-100 mt-4 md:mt-5"
+                      : "max-h-0 opacity-0"
                   }`}
                 >
                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 space-y-2.5 md:space-y-3">
                     <p className="text-white/90 text-sm md:text-base lg:text-lg">
-                      <span className="font-medium text-white">Método:</span> Pick & Go - Recoger en restaurante
+                      <span className="font-medium text-white">Método:</span>{" "}
+                      Pick & Go - Recoger en restaurante
                     </p>
                     <p className="text-white/90 text-sm md:text-base lg:text-lg">
-                      <span className="font-medium text-white">Cliente:</span> {paymentDetails?.userName || paymentDetails?.customerName || "Cliente"}
+                      <span className="font-medium text-white">Cliente:</span>{" "}
+                      {paymentDetails?.userName ||
+                        paymentDetails?.customerName ||
+                        "Cliente"}
                     </p>
                     <p className="text-white/90 text-sm md:text-base lg:text-lg">
-                      <span className="font-medium text-white">Restaurante:</span> {restaurant?.name || restaurantData.name}
+                      <span className="font-medium text-white">
+                        Restaurante:
+                      </span>{" "}
+                      {restaurant?.name || restaurantData.name}
                     </p>
                     <p className="text-white/90 text-sm md:text-base lg:text-lg">
-                      <span className="font-medium text-white">Dirección:</span> {restaurant?.address || restaurantData.address}
+                      <span className="font-medium text-white">Dirección:</span>{" "}
+                      {restaurant?.address || restaurantData.address}
                     </p>
                     <p className="text-white/90 text-sm md:text-base lg:text-lg">
-                      <span className="font-medium text-white">Orden #:</span> {paymentDetails?.orderId || "N/A"}
+                      <span className="font-medium text-white">Orden #:</span>{" "}
+                      {paymentDetails?.orderId || "N/A"}
                     </p>
                   </div>
                 </div>
