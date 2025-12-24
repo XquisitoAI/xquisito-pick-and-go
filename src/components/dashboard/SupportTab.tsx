@@ -1,4 +1,4 @@
-import { Mic, Plus, SendHorizontal } from "lucide-react";
+import { Bot, Mic, Plus, SendHorizontal } from "lucide-react";
 import {
   useState,
   useRef,
@@ -9,7 +9,7 @@ import {
   SetStateAction,
 } from "react";
 import { useRestaurant } from "@/context/RestaurantContext";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/context/AuthContext";
 
 // Función para comunicarse con el agente a través del backend
 async function chatWithAgent(message: string, sessionId: string | null = null) {
@@ -95,7 +95,7 @@ export default function SupportTab({
 
   // Obtener contextos
   const { restaurantId, restaurant } = useRestaurant();
-  const { user } = useUser();
+  const { user, profile } = useAuth();
 
   // Auto-scroll cuando cambian los mensajes (solo cuando hay nuevos mensajes)
   useEffect(() => {
@@ -121,9 +121,12 @@ export default function SupportTab({
       try {
         // Construir el mensaje con el contexto completo
         const userId = user?.id || null;
-        const userName = user?.fullName || user?.firstName || null;
+        const userName =
+          profile?.firstName && profile?.lastName
+            ? `${profile.firstName} ${profile.lastName}`
+            : profile?.firstName || null;
 
-        const contextualMessage = `[CONTEXT: support_dashboard, restaurant_id=${restaurantId || "null"}, restaurant_name="${restaurant?.name || "unknown"}", user_id=${userId || "null"}, user_name="${userName || "unknown"}"]
+        const contextualMessage = `[CONTEXT: support_dashboard, user_id=${userId || "null"}, user_name="${userName || "unknown"}"]
 [USER_MESSAGE: ${userMessage}]`;
 
         const result = await chatWithAgent(contextualMessage, sessionId);
@@ -161,73 +164,64 @@ export default function SupportTab({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 pb-6">
+    <div className="absolute inset-0 flex flex-col">
       {/* Mensajes con scroll */}
-      <div className="flex-1 overflow-y-auto px-1 min-h-0" style={{ maxHeight: '100%' }}>
-        <div className="space-y-3 md:space-y-4 lg:space-y-5 py-2">
-          {messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full min-h-[200px] text-gray-400">
-              <div className="text-center max-w-md px-8">
-                <div className="mb-6 flex justify-center">
-                  <div className="rounded-full h-20 w-20 md:h-24 md:w-24 overflow-hidden flex items-center justify-center">
-                    <video
-                      src="/videos/video-icon-pepper.webm"
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      disablePictureInPicture
-                      controls={false}
-                      controlsList="nodownload nofullscreen noremoteplayback"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+      <div className="flex-1 overflow-y-auto flex flex-col px-1 scrollbar-hide">
+        {messages.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center max-w-md px-8">
+              <div className="mb-6 flex justify-center">
+                <div className="rounded-full h-20 w-20 md:h-24 md:w-24 bg-gray-100 flex items-center justify-center">
+                  <Bot
+                    className="w-12 h-12 md:w-14 md:h-14 text-black"
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <h3 className="text-2xl md:text-3xl font-semibold text-black mb-4">
-                  Pepper
-                </h3>
-                <p className="text-gray-600 text-base md:text-lg">
-                  ¿En qué te puedo ayudar hoy?
-                </p>
               </div>
+              <h2 className="text-2xl md:text-3xl font-medium text-gray-800 mb-3">
+                Bienvenido
+              </h2>
+              <p className="text-gray-600 text-base md:text-lg mb-8">
+                ¿En qué te puedo ayudar hoy?
+              </p>
             </div>
-          ) : (
-            <>
-              {messages.map((msg, index) => (
+          </div>
+        ) : (
+          <div className="space-y-3 md:space-y-4 lg:space-y-5">
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`flex ${
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
                 <div
-                  key={index}
-                  className={`flex ${
-                    msg.role === "user" ? "justify-end" : "justify-start"
+                  className={`max-w-[80%] rounded-xl px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-black text-base md:text-lg lg:text-xl ${
+                    msg.role === "user" ? "bg-[#ebb2f4]" : "bg-gray-100"
                   }`}
                 >
-                  <div
-                    className={`max-w-[80%] rounded-xl px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-black text-base md:text-lg lg:text-xl ${
-                      msg.role === "user" ? "bg-[#ebb2f4]" : "bg-gray-100"
-                    }`}
-                  >
-                    <MessageContent content={msg.content} />
-                  </div>
+                  <MessageContent content={msg.content} />
                 </div>
-              ))}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="max-w-[80%] rounded-xl px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-black text-base md:text-lg lg:text-xl bg-gray-100">
-                    <p className="flex items-center gap-1">
-                      <span className="animate-bounce">.</span>
-                      <span className="animate-bounce delay-100">.</span>
-                      <span className="animate-bounce delay-200">.</span>
-                    </p>
-                  </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] rounded-xl px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-black text-base md:text-lg lg:text-xl bg-gray-100">
+                  <p className="flex items-center gap-1">
+                    <span className="animate-bounce">.</span>
+                    <span className="animate-bounce delay-100">.</span>
+                    <span className="animate-bounce delay-200">.</span>
+                  </p>
                 </div>
-              )}
-              <div ref={messagesEndRef} />
-            </>
-          )}
-        </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </div>
 
       {/* Input fijado en la parte inferior */}
-      <div className="flex-shrink-0 pt-4">
+      <div className="flex-shrink-0 pt-4 pb-6">
         <div className="flex items-center gap-2 md:gap-3 lg:gap-4 bg-gray-100 rounded-full px-6 md:px-8 lg:px-10 py-4 md:py-5 lg:py-6 border border-gray-200">
           <button className="text-gray-400 hover:text-gray-600 cursor-pointer">
             <Plus className="size-6 md:size-7 lg:size-8" />
@@ -238,7 +232,10 @@ export default function SupportTab({
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             placeholder="Pregunta lo que necesites..."
-            className="flex-1 bg-transparent text-black text-base md:text-lg lg:text-xl placeholder-gray-500 focus:outline-none"
+            className="flex-1 min-w-0 bg-transparent text-black text-base md:text-lg lg:text-xl placeholder-gray-500 focus:outline-none"
+            style={{
+              textOverflow: "ellipsis",
+            }}
           />
           <button className="text-gray-400 hover:text-gray-600 cursor-pointer">
             <Mic className="size-6 md:size-7 lg:size-8" />

@@ -27,7 +27,7 @@ export default function AuthSelectionPage() {
           <div className="space-y-3 md:space-y-4 lg:space-y-5">
             {/* Sign In Option */}
             <button
-              onClick={() => navigateWithRestaurantId("/sign-in")}
+              onClick={() => navigateWithRestaurantId("/auth")}
               className="w-full bg-white hover:bg-gray-50 text-black py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6 rounded-xl md:rounded-2xl transition-all duration-200 flex items-center gap-3 md:gap-4 lg:gap-5 active:scale-95"
             >
               <div className="bg-gradient-to-r from-[#34808C] to-[#173E44] p-2 md:p-2.5 lg:p-3 rounded-full group-hover:scale-110 transition-transform">
@@ -60,19 +60,6 @@ export default function AuthSelectionPage() {
                 </p>
               </div>
             </button>
-          </div>
-
-          {/* Additional Info */}
-          <div className="mt-6 md:mt-7 lg:mt-8 text-center">
-            <p className="text-white/70 text-xs md:text-sm lg:text-base">
-              ¿No tienes cuenta?{" "}
-              <span
-                onClick={() => navigateWithRestaurantId("/sign-up")}
-                className="text-white font-medium underline cursor-pointer hover:text-white/90"
-              >
-                Regístrate aquí
-              </span>
-            </p>
           </div>
         </div>
       </div>

@@ -1,18 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { usePayment } from "@/context/PaymentContext";
-import { useNavigation } from "@/hooks/useNavigation";
-import { Plus, Trash2, Star, StarOff, Loader2 } from "lucide-react";
+import { useTableNavigation } from "@/hooks/useTableNavigation";
+import {
+  Plus,
+  CreditCard,
+  Trash2,
+  Star,
+  StarOff,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
 
 export default function CardsTab() {
   const router = useRouter();
-  const { navigateWithRestaurantId } = useNavigation();
+  const { navigateWithTable } = useTableNavigation();
   const {
     paymentMethods,
     isLoading,
+    hasPaymentMethods,
     setDefaultPaymentMethod,
     deletePaymentMethod,
   } = usePayment();
@@ -21,7 +30,7 @@ export default function CardsTab() {
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
   const handleAddNewCard = () => {
-    navigateWithRestaurantId("/add-card");
+    navigateWithTable("/add-card");
   };
 
   const handleSetDefault = async (paymentMethodId: string) => {
@@ -65,7 +74,7 @@ export default function CardsTab() {
               {paymentMethods.map((method) => (
                 <div
                   key={method.id}
-                  className={`relative border rounded-full py-1.5 md:py-2 lg:py-2.5 px-5 md:px-6 lg:px-7 ${
+                  className={`relative border rounded-full py-1.5 md:py-2 lg:py-2.5 px-5 md:px-6 lg:px-8 ${
                     method.isDefault
                       ? "border-teal-300 bg-teal-50"
                       : "border-black/50 bg-[#f9f9f9]"
@@ -102,21 +111,18 @@ export default function CardsTab() {
                     </div>
 
                     <div className="flex items-center">
-                      {/* Set Default Button */}
-                      {!method.isDefault && (
-                        <button
-                          onClick={() => handleSetDefault(method.id)}
-                          disabled={settingDefaultId === method.id}
-                          className="text-gray-400 hover:text-teal-600 transition-colors disabled:opacity-50 cursor-pointer"
-                          title="Establecer como predeterminada"
-                        >
-                          {settingDefaultId === method.id ? (
-                            <Loader2 className="size-5 md:size-6 lg:size-7 animate-spin" />
-                          ) : (
-                            <StarOff className="size-5 md:size-6 lg:size-7" />
-                          )}
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleSetDefault(method.id)}
+                        disabled={settingDefaultId === method.id}
+                        className="text-gray-400 hover:text-teal-600 transition-colors disabled:opacity-50 cursor-pointer"
+                        title="Establecer como predeterminada"
+                      >
+                        {settingDefaultId === method.id ? (
+                          <Loader2 className="size-5 md:size-6 lg:size-7 animate-spin" />
+                        ) : (
+                          <StarOff className="size-5 md:size-6 lg:size-7" />
+                        )}
+                      </button>
 
                       {method.isDefault && (
                         <div
@@ -127,7 +133,6 @@ export default function CardsTab() {
                         </div>
                       )}
 
-                      {/* Delete Button */}
                       <button
                         onClick={() => handleDeleteCard(method.id)}
                         disabled={deletingCardId === method.id}

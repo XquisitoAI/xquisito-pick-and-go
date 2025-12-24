@@ -35,9 +35,9 @@ export interface CommissionBreakdown {
 }
 
 /**
- * Obtiene las tasas de comisión según el monto de la transacción
+ * Tasas de comisión según el monto de la transacción:
  *
- * - $20-$30: Xquisito 10.0% (Cliente 8.0%, Restaurante 2.0%)
+ * - $20-$30: Xquisito 11.0% (Cliente 9.0%, Restaurante 2.0%)
  * - $31-$49: Xquisito 8.0% (Cliente 6.0%, Restaurante 2.0%)
  * - $50-$100: Xquisito 5.8% (Cliente 3.8%, Restaurante 2.0%)
  * - $100-$150: Xquisito 4.2% (Cliente 2.2%, Restaurante 2.0%)
@@ -46,8 +46,8 @@ export interface CommissionBreakdown {
 export function getCommissionRates(amount: number): CommissionRates {
   if (amount >= 20 && amount <= 30) {
     return {
-      xquisitoTotal: 10.0,
-      clientPays: 8.0,
+      xquisitoTotal: 11.0,
+      clientPays: 9.0,
       restaurantPays: 2.0,
     };
   } else if (amount >= 31 && amount <= 49) {
@@ -56,29 +56,33 @@ export function getCommissionRates(amount: number): CommissionRates {
       clientPays: 6.0,
       restaurantPays: 2.0,
     };
-  } else if (amount >= 50 && amount < 100) {
+  } else if (amount >= 50 && amount <= 100) {
     return {
       xquisitoTotal: 5.8,
       clientPays: 3.8,
       restaurantPays: 2.0,
     };
-  } else if (amount >= 100 && amount <= 150) {
+  } else if (amount >= 101 && amount <= 150) {
     return {
       xquisitoTotal: 4.2,
       clientPays: 2.2,
       restaurantPays: 2.0,
     };
-  } else {
-    // amount > 150
+  } else if (amount > 150) {
     return {
       xquisitoTotal: 4.0,
       clientPays: 2.0,
       restaurantPays: 2.0,
     };
+  } else {
+    return {
+      xquisitoTotal: 11.0,
+      clientPays: 9.0,
+      restaurantPays: 2.0,
+    };
   }
 }
 
-// Calcula el desglose completo de comisiones
 export function calculateCommissions(
   baseAmount: number,
   tipAmount: number

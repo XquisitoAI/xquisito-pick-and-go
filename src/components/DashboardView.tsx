@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/context/AuthContext";
 import { useNavigation } from "../hooks/useNavigation";
 import Loader from "./UI/Loader";
 import ProfileTab from "./dashboard/ProfileTab";
@@ -21,11 +21,11 @@ export default function DashboardView() {
   >([]);
   const [supportSessionId, setSupportSessionId] = useState<string | null>(null);
 
-  const { user, isLoaded } = useUser();
+  const { user, profile, isLoading } = useAuth();
   const { navigateWithRestaurantId } = useNavigation();
 
   // Loading state
-  if (!isLoaded) {
+  if (isLoading) {
     return <Loader />;
   }
 
@@ -110,7 +110,7 @@ export default function DashboardView() {
         <div className="left-4 right-4 bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
           <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center pb-12 md:pb-14 lg:pb-16">
             <h1 className="text-white text-2xl md:text-3xl lg:text-4xl font-medium">
-              ¡Bienvenido{user?.firstName ? ` ${user.firstName}` : ""}!
+              ¡Bienvenido{profile?.firstName ? ` ${profile.firstName}` : ""}!
             </h1>
           </div>
         </div>

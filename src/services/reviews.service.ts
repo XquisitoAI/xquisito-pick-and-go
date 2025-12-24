@@ -1,4 +1,4 @@
-import { apiService, ApiResponse } from "../utils/api";
+import { requestWithAuth, type ApiResponse } from "./request-helper";
 
 export interface Review {
   id: number;
@@ -21,13 +21,14 @@ export interface ReviewStats {
   last_review_date: string;
 }
 
-// Wrapper type para respuestas del backend que tienen estructura anidada { data: { data: T } }
-export interface NestedApiResponse<T> {
-  data: T;
-}
+class ReviewsService {
+  private async request<T>(
+    endpoint: string,
+    options?: RequestInit
+  ): Promise<ApiResponse<T>> {
+    return requestWithAuth<T>(endpoint, options);
+  }
 
-// Acceso al método privado makeRequest a través de casting
-export const reviewsApi = {
   // Crear una review
   async createReview(data: {
     menu_item_id: number;
@@ -35,43 +36,42 @@ export const reviewsApi = {
     user_id?: string | null;
     guest_id?: string | null;
   }): Promise<ApiResponse<Review>> {
-    return (apiService as any).makeRequest("/restaurants/reviews", {
+    return this.request<Review>("/restaurants/reviews", {
       method: "POST",
       body: JSON.stringify(data),
     });
-  },
+  }
 
   // Obtener reviews de un platillo
   async getReviewsByMenuItem(
     menuItemId: number
   ): Promise<ApiResponse<Review[]>> {
-    return (apiService as any).makeRequest(
+    return this.request<Review[]>(
       `/restaurants/reviews/menu-item/${menuItemId}`
     );
-  },
+  }
 
   // Obtener estadísticas de un platillo
   async getMenuItemStats(
     menuItemId: number
-  ): Promise<ApiResponse<NestedApiResponse<ReviewStats>>> {
-    return (apiService as any).makeRequest(
+  ): Promise<ApiResponse<ReviewStats>> {
+    return this.request<ReviewStats>(
       `/restaurants/reviews/menu-item/${menuItemId}/stats`
     );
-  },
+  }
 
   // Obtener review del usuario actual para un platillo
   async getMyReview(
     menuItemId: number,
     userId: string | null,
     guestId: string | null
-  ): Promise<ApiResponse<NestedApiResponse<Review | null>>> {
-    // Agregar guest_id como query param si existe
+  ): Promise<ApiResponse<Review | null>> {
     const queryParam = userId || guestId;
 
-    return (apiService as any).makeRequest(
+    return this.request<Review | null>(
       `/restaurants/reviews/menu-item/${menuItemId}/my-review/${queryParam}`
     );
-  },
+  }
 
   // Actualizar una review
   async updateReview(
@@ -80,18 +80,23 @@ export const reviewsApi = {
     user_id: string | null,
     guest_id: string | null
   ): Promise<ApiResponse<Review>> {
-    return (apiService as any).makeRequest(`/restaurants/reviews/${reviewId}`, {
+    return this.request<Review>(`/restaurants/reviews/${reviewId}`, {
       method: "PATCH",
       body: JSON.stringify({ rating, user_id, guest_id }),
     });
-  },
+  }
 
   // Eliminar una review
   async deleteReview(
     reviewId: number
   ): Promise<ApiResponse<{ message: string }>> {
-    return (apiService as any).makeRequest(`/restaurants/reviews/${reviewId}`, {
-      method: "DELETE",
-    });
-  },
-};
+    return this.request<{ message: string }>(
+      `/restaurants/reviews/${reviewId}`,
+      {
+        method: "DELETE",
+      }
+    );
+  }
+}
+
+export const reviewsService = new ReviewsService();

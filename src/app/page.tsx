@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
@@ -10,10 +10,10 @@ const DEFAULT_RESTAURANT_ID = 5;
 export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isSignedIn, isLoaded } = useUser();
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (isLoading) return;
 
     // Check if user just signed in/up and has context
     const storedRestaurant = sessionStorage.getItem("pendingRestaurantId");
@@ -25,8 +25,8 @@ export default function Home() {
     const isFromCart = sessionStorage.getItem("signupFromCart");
 
     console.log("🔍 Root page debugging:", {
-      isLoaded,
-      isSignedIn,
+      isLoading,
+      user,
       storedRestaurant,
       isFromPaymentFlow,
       isFromPaymentSuccess,
@@ -40,7 +40,7 @@ export default function Home() {
     const restaurantId =
       restaurantParam || storedRestaurant || DEFAULT_RESTAURANT_ID;
 
-    if (isSignedIn && isFromCart) {
+    if (user && isFromCart) {
       // User signed in/up from cart (CartView), redirect to card-selection
       sessionStorage.removeItem("signupFromCart");
       sessionStorage.removeItem("pendingTableRedirect");
@@ -49,7 +49,7 @@ export default function Home() {
       return;
     }
 
-    if (isSignedIn && isFromMenu) {
+    if (user && isFromMenu) {
       // User signed in from MenuView settings, redirect to dashboard (Pick & Go - no table)
       sessionStorage.removeItem("signInFromMenu");
       sessionStorage.removeItem("pendingTableRedirect");
@@ -58,7 +58,7 @@ export default function Home() {
       return;
     }
 
-    if (isSignedIn && isFromPaymentFlow) {
+    if (user && isFromPaymentFlow) {
       // User signed up during payment flow, redirect to payment-options with table
       sessionStorage.removeItem("pendingTableRedirect");
       sessionStorage.removeItem("signupFromPaymentFlow");
@@ -67,7 +67,7 @@ export default function Home() {
       return;
     }
 
-    if (isSignedIn && isFromPaymentSuccess) {
+    if (user && isFromPaymentSuccess) {
       // User signed up from payment-success, redirect to dashboard
       sessionStorage.removeItem("signupFromPaymentSuccess");
       sessionStorage.removeItem("pendingRestaurantId");
@@ -87,7 +87,7 @@ export default function Home() {
       `✅ Default redirect to /${DEFAULT_RESTAURANT_ID}/menu (Pick & Go)`
     );
     router.replace(`/${DEFAULT_RESTAURANT_ID}/menu`);
-  }, [router, searchParams, isSignedIn, isLoaded]);
+  }, [router, searchParams, user, isLoading]);
 
   return (
     <div className="h-[100dvh] bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">

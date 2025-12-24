@@ -2,29 +2,48 @@
 
 import MenuHeader from "../headers/MenuHeader";
 import MenuCategory from "./MenuCategory";
-import { Search, ShoppingCart, Settings } from "lucide-react";
+import { Search, ShoppingCart, Settings, MapPin } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/context/AuthContext";
 import { useUserData } from "../../context/userDataContext";
 import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
+import { useBranch } from "../../context/BranchContext";
 import { useRouter } from "next/navigation";
 import { useNavigation } from "../../hooks/useNavigation";
 import Loader from "../UI/Loader";
+import BranchSelectionModal from "../modals/BranchSelectionModal";
 
 export default function MenuView() {
   const [filter, setFilter] = useState("Todo");
   const [searchQuery, setSearchQuery] = useState("");
-  const { user, isLoaded } = useUser();
+  const [showBranchModal, setShowBranchModal] = useState(false);
+  const { user, isLoading, profile } = useAuth();
   const { signUpData } = useUserData();
   const { state, refreshCart } = useCart();
   const { restaurant, menu, loading, error } = useRestaurant();
+  const { branches, selectedBranchId, fetchBranches } = useBranch();
   const router = useRouter();
-  const { navigateWithRestaurantId } = useNavigation();
+  const { navigateWithRestaurantId, branchId } = useNavigation();
 
   useEffect(() => {
     refreshCart();
   }, []);
+
+  // Cargar branches cuando el restaurante esté disponible
+  useEffect(() => {
+    if (restaurant?.id) {
+      fetchBranches(restaurant.id);
+    }
+  }, [restaurant?.id, fetchBranches]);
+
+  // Sincronizar branchId de la URL con el contexto
+  useEffect(() => {
+    if (branchId && branchId !== selectedBranchId) {
+      // Si hay un branchId en la URL diferente al seleccionado, actualizarlo
+      // El contexto ya maneja esto, solo lo documentamos
+    }
+  }, [branchId, selectedBranchId]);
 
   // Obtener categorías únicas del menú de la BD
   const categorias = useMemo(() => {
@@ -40,7 +59,7 @@ export default function MenuView() {
   }, [menu]);
 
   // Get gender Clerk
-  const gender = signUpData?.gender || user?.unsafeMetadata?.gender;
+  const gender = profile?.gender;
   const welcomeMessage = user
     ? gender === "female"
       ? "Bienvenida"
@@ -123,23 +142,41 @@ export default function MenuView() {
       <main className="mt-48 md:mt-64 lg:mt-80 relative z-10">
         <div className="bg-white rounded-t-4xl flex flex-col items-center px-6 md:px-8 lg:px-10">
           <div className="mt-6 md:mt-8 flex items-start justify-between w-full">
-            {/* Settings Icon */}
-            <div
-              onClick={() => {
-                if (user && isLoaded) {
-                  navigateWithRestaurantId("/dashboard");
-                } else {
-                  sessionStorage.setItem("signInFromMenu", "true");
-                  navigateWithRestaurantId("/sign-in");
-                }
-              }}
-              className="bg-white rounded-full p-1.5 md:p-2 lg:p-2.5 border border-gray-400 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
-            >
-              <Settings
-                className="size-5 md:size-6 lg:size-7 text-stone-800"
-                strokeWidth={1.5}
-              />
+            {/* Left side icons */}
+            <div className="flex items-center gap-2 md:gap-3">
+              {/* Settings Icon */}
+              <div
+                onClick={() => {
+                  if (user && !isLoading) {
+                    navigateWithRestaurantId("/dashboard");
+                  } else {
+                    sessionStorage.setItem("signInFromMenu", "true");
+                    navigateWithRestaurantId("/auth");
+                  }
+                }}
+                className="bg-white rounded-full p-1.5 md:p-2 lg:p-2.5 border border-gray-400 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <Settings
+                  className="size-5 md:size-6 lg:size-7 text-stone-800"
+                  strokeWidth={1.5}
+                />
+              </div>
+
+              {/* Branch Selection Icon - Solo mostrar si hay múltiples sucursales */}
+              {branches.length > 1 && (
+                <div
+                  onClick={() => setShowBranchModal(true)}
+                  className="bg-white rounded-full p-1.5 md:p-2 lg:p-2.5 border border-gray-400 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+                  title="Seleccionar sucursal"
+                >
+                  <MapPin
+                    className="size-5 md:size-6 lg:size-7 text-stone-800"
+                    strokeWidth={1.5}
+                  />
+                </div>
+              )}
             </div>
+
             {/* Assistent Icon */}
             <div
               onClick={() => navigateWithRestaurantId("/pepper")}
@@ -170,7 +207,7 @@ export default function MenuView() {
             </div>
             <h1 className="text-black text-3xl md:text-4xl lg:text-5xl font-medium mt-3 md:mt-5 mb-6 md:mb-8">
               ¡{welcomeMessage}
-              {user?.firstName ? ` ${user.firstName}` : ""}!
+              {profile?.firstName ? ` ${profile.firstName}` : ""}!
             </h1>
           </div>
 

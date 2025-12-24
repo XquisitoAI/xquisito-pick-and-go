@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/context/AuthContext";
 import { Loader2, ChevronRight, X, Calendar, Utensils } from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
 
@@ -33,23 +33,34 @@ interface OrderHistoryItem {
 }
 
 export default function HistoryTab() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const [orders, setOrders] = useState<OrderHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
+  const [displayCount, setDisplayCount] = useState(5);
 
   // Bloquear scroll cuando el modal está abierto
   useEffect(() => {
     if (selectedOrderDetails) {
+      // Bloquear scroll en body y html para móviles
+      const scrollY = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
       document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
+      document.documentElement.style.overflow = "hidden";
 
-    return () => {
-      document.body.style.overflow = "unset";
-    };
+      return () => {
+        // Restaurar scroll
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.width = "";
+        document.body.style.overflow = "";
+        document.documentElement.style.overflow = "";
+        window.scrollTo(0, scrollY);
+      };
+    }
   }, [selectedOrderDetails]);
 
   useEffect(() => {
@@ -115,13 +126,21 @@ export default function HistoryTab() {
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
+  // Órdenes visibles según displayCount
+  const visibleOrders = groupedOrders.slice(0, displayCount);
+  const hasMore = displayCount < groupedOrders.length;
+
+  const handleLoadMore = () => {
+    setDisplayCount((prev) => prev + 5);
+  };
+
   return (
     <>
       <h1 className="text-gray-700 text-xl md:text-2xl lg:text-3xl mb-3 md:mb-4 lg:mb-5">
         Ordenes previas
       </h1>
       <div className="space-y-3 md:space-y-4 lg:space-y-5">
-        {groupedOrders.map((order: any) => {
+        {visibleOrders.map((order: any) => {
           return (
             <div
               key={order.transactionId}
@@ -197,6 +216,16 @@ export default function HistoryTab() {
           );
         })}
       </div>
+
+      {/* Botón "Ver más" */}
+      {hasMore && (
+        <button
+          onClick={handleLoadMore}
+          className="mt-4 md:mt-5 lg:mt-6 border border-black/50 flex justify-center items-center gap-1 md:gap-1.5 lg:gap-2 w-full text-black text-base md:text-lg lg:text-xl py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-[#f9f9f9] hover:bg-gray-100"
+        >
+          Ver más órdenes
+        </button>
+      )}
 
       {/* Modal */}
       {selectedOrderDetails && (
@@ -309,8 +338,15 @@ export default function HistoryTab() {
                 {selectedOrderDetails.dishes?.map((dish: any) => (
                   <div
                     key={dish.dishOrderId}
-                    className="flex justify-between items-start gap-3 md:gap-4 lg:gap-5"
+                    className="flex justify-between items-center gap-3 md:gap-4 lg:gap-5"
                   >
+                    <div className="size-14 md:size-16 lg:size-20 bg-gray-300 rounded-sm md:rounded-md flex items-center justify-center hover:scale-105 transition-transform duration-200">
+                      <img
+                        src={dish.images[0]}
+                        alt="Dish preview"
+                        className="w-full h-full object-cover rounded-sm md:rounded-md"
+                      />
+                    </div>
                     {/* Dish Info */}
                     <div className="flex-1">
                       <p className="text-white font-medium text-base md:text-lg lg:text-xl capitalize">

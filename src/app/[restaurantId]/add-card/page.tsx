@@ -10,11 +10,11 @@ import { useGuest, useIsGuest } from "@/context/GuestContext";
 import { usePayment } from "@/context/PaymentContext";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { useEffect, useState } from "react";
-import { apiService } from "@/utils/api2";
+import { paymentService } from "@/services/payment.service";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 import CardScanner from "@/components/CardScanner";
 import Loader from "@/components/UI/Loader";
-import { useUser, useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/context/AuthContext";
 import { Camera } from "lucide-react";
 
 function AddCardContent() {
@@ -32,11 +32,10 @@ function AddCardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isGuest = useIsGuest();
-  const { guestId, tableNumber } = useGuest();
+  const { guestId } = useGuest();
   const { addPaymentMethod, refreshPaymentMethods, paymentMethods } =
     usePayment();
-  const { user, isLoaded } = useUser();
-  const { getToken } = useAuth();
+  const { user } = useAuth();
 
   // Refresh payment methods on mount to ensure we have the latest data
   useEffect(() => {
@@ -127,21 +126,15 @@ function AddCardContent() {
     setIsLoading(true);
 
     try {
-      // Configure API service based on user type
+      // Log user type for debugging
       if (user) {
-        // For registered users, set auth token
         console.log("💳 Adding card for registered user:", user.id);
-        const token = await getToken();
-        if (token) {
-          apiService.setAuthToken(token);
-        }
-      } else if (isGuest && guestId && tableNumber) {
-        // For guests only (when no registered user)
+      } else if (isGuest && guestId) {
         console.log("💳 Adding card for guest:", guestId);
-        apiService.setGuestInfo(guestId, tableNumber.toString());
       }
 
-      const result = await apiService.addPaymentMethod({
+      // paymentService uses requestWithAuth which automatically handles auth tokens and guest IDs
+      const result = await paymentService.addPaymentMethod({
         fullName,
         email,
         cardNumber,
@@ -181,7 +174,7 @@ function AddCardContent() {
           router.back();
         }
       } else {
-        alert(result.error?.message || "Failed to add card. Please try again.");
+        alert(result.error || "Failed to add card. Please try again.");
       }
     } catch (error) {
       console.error("Error saving card:", error);

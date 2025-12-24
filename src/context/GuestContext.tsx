@@ -8,19 +8,20 @@ import React, {
   ReactNode,
   Suspense,
 } from "react";
-import { apiService } from "../utils/api2";
 import { useSearchParams } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "./AuthContext";
 
 interface GuestContextType {
   isGuest: boolean;
   guestId: string | null;
-  tableNumber: string | null;
+  restaurantId: number | null;
+  branchNumber: number | null;
   guestName: string | null;
-  setAsGuest: (tableNumber?: string) => void;
+  setAsGuest: (restaurantId?: number, branchNumber?: number) => void;
   setAsAuthenticated: (userId: string) => void;
   clearGuestSession: () => void;
   setGuestName: (name: string) => void;
+  setRestaurantAndBranch: (restaurantId: number, branchNumber: number) => void;
 }
 
 const GuestContext = createContext<GuestContextType | undefined>(undefined);
@@ -32,54 +33,22 @@ interface GuestProviderProps {
 function GuestProviderInternal({ children }: GuestProviderProps) {
   const [isGuest, setIsGuest] = useState<boolean>(false);
   const [guestId, setGuestId] = useState<string | null>(null);
-  const [tableNumber, setTableNumber] = useState<string | null>(null);
+  const [restaurantId, setRestaurantId] = useState<number | null>(null);
+  const [branchNumber, setBranchNumber] = useState<number | null>(null);
   const [guestName, setGuestName] = useState<string | null>(null);
-  const [hasLinkedOrders, setHasLinkedOrders] = useState<boolean>(false);
   const searchParams = useSearchParams();
-  const { user, isLoaded } = useUser();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
-  // Link guest orders when user authenticates
-  useEffect(() => {
-    if (!isLoaded || !user || hasLinkedOrders) return;
-
-    const storedGuestId = localStorage.getItem("xquisito-guest-id");
-    const storedTableNumber = localStorage.getItem("xquisito-table-number");
-    const storedRestaurantId = localStorage.getItem("xquisito-restaurant-id");
-
-    if (storedGuestId && user.id) {
-      console.log("🔗 Linking guest orders to authenticated user:", {
-        guestId: storedGuestId,
-        userId: user.id,
-        tableNumber: storedTableNumber,
-        restaurantId: storedRestaurantId,
-      });
-
-      apiService
-        .linkGuestOrdersToUser(
-          storedGuestId,
-          user.id,
-          storedTableNumber || undefined,
-          storedRestaurantId || undefined
-        )
-        .then((response) => {
-          if (response.success) {
-            console.log("✅ Guest orders linked successfully:", response.data);
-            setHasLinkedOrders(true);
-          } else {
-            console.error("❌ Failed to link guest orders:", response.error);
-          }
-        })
-        .catch((error) => {
-          console.error("❌ Error linking guest orders:", error);
-        });
-    }
-  }, [isLoaded, user, hasLinkedOrders]);
+  // Note: Guest orders/cart migration is handled by CartContext
+  // using cartService.migrateGuestCart() which properly migrates the cart
+  // when user authenticates
 
   // Smart initialization: Auto-detect guest vs registered user context
   useEffect(() => {
-    if (!isLoaded) return; // Wait for Clerk to load
+    if (isLoading) return; // Wait for auth to load
 
-    const tableParam = searchParams?.get("table");
+    const restaurantParam = searchParams?.get("restaurant");
+    const branchParam = searchParams?.get("branch");
 
     if (user) {
       // User is registered - clear any guest session
@@ -91,30 +60,54 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
       // No registered user - check if we should be guest
 
       const storedGuestId = localStorage.getItem("xquisito-guest-id");
-      const storedTableNumber = localStorage.getItem("xquisito-table-number");
+      const storedRestaurantId = localStorage.getItem("xquisito-restaurant-id");
+      const storedBranchNumber = localStorage.getItem("xquisito-branch-number");
 
-      // Priority 1: If URL has table parameter, use it (even if restoring session)
-      if (tableParam) {
+      // Priority 1: If URL has restaurant/branch parameters, use them
+      if (restaurantParam || storedRestaurantId) {
         console.log(
-          "👤 Table parameter detected:",
-          tableParam,
-          "- Setting up guest session"
+          "🏪 Restaurant/branch detected - Setting up guest session"
         );
 
         // Use existing guest ID if available, or create new one
         const guestIdToUse = storedGuestId || generateGuestId();
 
+        const restaurantIdToUse = restaurantParam
+          ? parseInt(restaurantParam)
+          : storedRestaurantId
+            ? parseInt(storedRestaurantId)
+            : null;
+
+        const branchNumberToUse = branchParam
+          ? parseInt(branchParam)
+          : storedBranchNumber
+            ? parseInt(storedBranchNumber)
+            : null;
+
         // Store to localStorage FIRST to ensure persistence
-        localStorage.setItem("xquisito-table-number", tableParam);
         localStorage.setItem("xquisito-guest-id", guestIdToUse);
+        if (restaurantIdToUse) {
+          localStorage.setItem(
+            "xquisito-restaurant-id",
+            restaurantIdToUse.toString()
+          );
+        }
+        if (branchNumberToUse) {
+          localStorage.setItem(
+            "xquisito-branch-number",
+            branchNumberToUse.toString()
+          );
+        }
 
         setIsGuest(true);
         setGuestId(guestIdToUse);
-        setTableNumber(tableParam);
-        apiService.setTableNumber(tableParam);
+        setRestaurantId(restaurantIdToUse);
+        setBranchNumber(branchNumberToUse);
+
         console.log("👤 Guest session configured:", {
           guestId: guestIdToUse,
-          tableNumber: tableParam,
+          restaurantId: restaurantIdToUse,
+          branchNumber: branchNumberToUse,
           wasRestored: !!storedGuestId,
         });
         return;
@@ -125,44 +118,41 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
         const storedGuestName = localStorage.getItem("xquisito-guest-name");
         setIsGuest(true);
         setGuestId(storedGuestId);
-
-        // For Pick & Go, tableNumber might be null/undefined
-        if (storedTableNumber) {
-          setTableNumber(storedTableNumber);
-          apiService.setTableNumber(storedTableNumber);
-        } else {
-          // Pick & Go mode - no table number needed
-          setTableNumber(null);
-        }
-
+        setRestaurantId(
+          storedRestaurantId ? parseInt(storedRestaurantId) : null
+        );
+        setBranchNumber(
+          storedBranchNumber ? parseInt(storedBranchNumber) : null
+        );
         setGuestName(storedGuestName);
         console.log("🔄 Restored guest session:", {
           guestId: storedGuestId,
-          tableNumber: storedTableNumber || "Pick & Go (no table)",
+          restaurantId: storedRestaurantId,
+          branchNumber: storedBranchNumber,
           guestName: storedGuestName,
-          isPickAndGo: !storedTableNumber
         });
         return;
       }
 
-      // Priority 3: No guest session found - create one for Pick & Go
+      // Priority 3: No params and no valid stored session - create guest session
       const newGuestId = generateGuestId();
       localStorage.setItem("xquisito-guest-id", newGuestId);
 
       setIsGuest(true);
       setGuestId(newGuestId);
-      setTableNumber(null); // Pick & Go doesn't need table number
+      setRestaurantId(null);
+      setBranchNumber(null);
 
       console.log("👤 Created new Pick & Go guest session:", {
         guestId: newGuestId,
-        tableNumber: null,
-        isPickAndGo: true
+        restaurantId: null,
+        branchNumber: null,
       });
     }
-  }, [isLoaded, user, searchParams]);
+  }, [isLoading, user, searchParams]);
 
-  const setAsGuest = (newTableNumber?: string) => {
-    // Generate guest ID through apiService (which handles localStorage)
+  const setAsGuest = (newRestaurantId?: number, newBranchNumber?: number) => {
+    // Generate guest ID (which handles localStorage)
     const generatedGuestId = generateGuestId();
 
     // Ensure localStorage is updated immediately
@@ -171,15 +161,20 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
     setIsGuest(true);
     setGuestId(generatedGuestId);
 
-    if (newTableNumber) {
-      localStorage.setItem("xquisito-table-number", newTableNumber);
-      apiService.setTableNumber(newTableNumber);
-      setTableNumber(newTableNumber);
+    if (newRestaurantId !== undefined) {
+      localStorage.setItem("xquisito-restaurant-id", newRestaurantId.toString());
+      setRestaurantId(newRestaurantId);
+    }
+
+    if (newBranchNumber !== undefined) {
+      localStorage.setItem("xquisito-branch-number", newBranchNumber.toString());
+      setBranchNumber(newBranchNumber);
     }
 
     console.log("👤 Set as guest user:", {
       guestId: generatedGuestId,
-      tableNumber: newTableNumber,
+      restaurantId: newRestaurantId,
+      branchNumber: newBranchNumber,
     });
   };
 
@@ -190,19 +185,41 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
   };
 
   const clearGuestSession = () => {
-    apiService.clearGuestSession();
+    // NO eliminar el guest_id porque lo necesitamos para la migración del carrito
+    // El guest_id debe preservarse para la migración del carrito en CartContext
     setIsGuest(false);
     setGuestId(null);
-    setTableNumber(null);
+    setRestaurantId(null);
+    setBranchNumber(null);
     setGuestName(null);
     localStorage.removeItem("xquisito-guest-name");
-    console.log("🗑️ Guest session cleared");
+    localStorage.removeItem("xquisito-restaurant-id");
+    localStorage.removeItem("xquisito-branch-number");
+    // NO eliminar xquisito-guest-id aquí - lo necesitamos para migrar el carrito
+    // El CartContext lo eliminará después de la migración exitosa
+    console.log(
+      "🗑️ Guest session cleared (guest_id preserved for cart migration)"
+    );
   };
 
   const setGuestNameHandler = (name: string) => {
     setGuestName(name);
     localStorage.setItem("xquisito-guest-name", name);
     console.log("👤 Guest name set:", name);
+  };
+
+  const setRestaurantAndBranch = (
+    newRestaurantId: number,
+    newBranchNumber: number
+  ) => {
+    setRestaurantId(newRestaurantId);
+    setBranchNumber(newBranchNumber);
+    localStorage.setItem("xquisito-restaurant-id", newRestaurantId.toString());
+    localStorage.setItem("xquisito-branch-number", newBranchNumber.toString());
+    console.log("🏪 Restaurant and branch set:", {
+      restaurantId: newRestaurantId,
+      branchNumber: newBranchNumber,
+    });
   };
 
   // Helper function to generate guest ID
@@ -223,12 +240,14 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
   const value: GuestContextType = {
     isGuest,
     guestId,
-    tableNumber,
+    restaurantId,
+    branchNumber,
     guestName,
     setAsGuest,
     setAsAuthenticated,
     clearGuestSession,
     setGuestName: setGuestNameHandler,
+    setRestaurantAndBranch,
   };
 
   return (
@@ -262,8 +281,9 @@ export function useIsGuest(): boolean {
 // Helper hook to get guest info
 export function useGuestInfo(): {
   guestId: string | null;
-  tableNumber: string | null;
+  restaurantId: number | null;
+  branchNumber: number | null;
 } {
-  const { guestId, tableNumber } = useGuest();
-  return { guestId, tableNumber };
+  const { guestId, restaurantId, branchNumber } = useGuest();
+  return { guestId, restaurantId, branchNumber };
 }

@@ -8,8 +8,9 @@ import React, {
   ReactNode,
 } from "react";
 import { MenuItemData } from "../interfaces/menuItemData";
-import { cartApi, CartItem as ApiCartItem } from "../services/cartApi";
-import { useUser } from "@clerk/nextjs";
+import { cartService, CartItem as ApiCartItem } from "../services/cart.service";
+import { useAuth } from "./AuthContext";
+import { useGuest } from "./GuestContext";
 import { useRestaurant } from "./RestaurantContext";
 
 // Interfaz para un item del carrito (frontend)
@@ -132,47 +133,64 @@ const CartContext = createContext<CartContextType | null>(null);
 // Provider del carrito
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
-  const { user, isLoaded } = useUser();
+  const { user, isLoading: authLoading } = useAuth();
+  const { guestId, restaurantId: guestRestaurantId, branchNumber: guestBranchNumber } = useGuest();
   const { restaurantId } = useRestaurant();
 
-  // Establecer clerk_user_id y restaurant_id en cartApi cuando cambien
+  // Establecer user_id y restaurant_id en cartService cuando cambien
   useEffect(() => {
-    if (isLoaded) {
-      cartApi.setClerkUserId(user?.id || null);
+    if (!authLoading) {
+      cartService.setSupabaseUserId(user?.id || null);
     }
-  }, [user, isLoaded]);
+  }, [user, authLoading]);
 
   useEffect(() => {
-    cartApi.setRestaurantId(restaurantId);
-  }, [restaurantId]);
+    const effectiveRestaurantId = restaurantId || guestRestaurantId;
+    if (effectiveRestaurantId) {
+      cartService.setRestaurantId(effectiveRestaurantId);
+    }
+  }, [restaurantId, guestRestaurantId]);
+
+  useEffect(() => {
+    if (guestBranchNumber) {
+      cartService.setBranchNumber(guestBranchNumber);
+    }
+  }, [guestBranchNumber]);
 
   // Migrar carrito cuando el usuario inicia sesión
   useEffect(() => {
     const migrateCartIfNeeded = async () => {
-      if (isLoaded && user?.id && restaurantId) {
-        const guestId = cartApi.getGuestIdForUser();
+      const effectiveRestaurantId = restaurantId || guestRestaurantId;
+
+      if (!authLoading && user?.id && effectiveRestaurantId) {
+        const storedGuestId = localStorage.getItem("xquisito-guest-id");
 
         console.log("🔍 Migration check:", {
-          isLoaded,
+          authLoading,
           userId: user.id,
-          restaurantId,
-          guestId,
-          hasGuestId: !!guestId,
+          restaurantId: effectiveRestaurantId,
+          branchNumber: guestBranchNumber,
+          storedGuestId,
+          hasGuestId: !!storedGuestId,
         });
 
-        if (guestId) {
+        if (storedGuestId) {
           console.log("🔄 Attempting to migrate guest cart to user...", {
-            from_guest: guestId,
+            from_guest: storedGuestId,
             to_user: user.id,
-            restaurant: restaurantId,
+            restaurant: effectiveRestaurantId,
+            branch: guestBranchNumber,
           });
           try {
-            const response = await cartApi.migrateGuestCart(guestId, user.id);
+            const response = await cartService.migrateGuestCart(
+              storedGuestId,
+              user.id
+            );
             console.log("📦 Migration response:", response);
 
             if (response.success && response.data) {
               console.log(
-                `✅ Cart migrated successfully: ${response.data.items_migrated} items`
+                `✅ Cart migrated successfully: ${response.data.items_migrated || 0} items`
               );
 
               // Limpiar el guest_id del localStorage después de la migración exitosa
@@ -202,13 +220,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     migrateCartIfNeeded();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, isLoaded, restaurantId]);
+  }, [user?.id, authLoading, restaurantId, guestRestaurantId, guestBranchNumber]);
 
   // Función para refrescar el carrito desde el backend
   const refreshCart = async () => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
-      const response = await cartApi.getCart();
+      const response = await cartService.getCart();
 
       if (response.success && response.data) {
         const items = response.data.items.map(convertApiItemToCartItem);
@@ -235,11 +253,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
 
-      const response = await cartApi.addToCart(
+      const response = await cartService.addToCart(
         item.id,
         1,
         item.customFields || [],
-        item.extraPrice || 0
+        item.extraPrice || 0,
+        item.price // Pasar el precio base (ya con descuento aplicado si lo hay)
       );
 
       if (response.success) {
@@ -268,7 +287,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await cartApi.removeFromCart(item.cartItemId);
+      const response = await cartService.removeFromCart(item.cartItemId);
 
       if (response.success) {
         await refreshCart();
@@ -295,7 +314,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await cartApi.updateCartItemQuantity(
+      const response = await cartService.updateCartItemQuantity(
         item.cartItemId,
         quantity
       );
@@ -317,7 +336,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
 
-      const response = await cartApi.clearCart();
+      const response = await cartService.clearCart();
 
       if (response.success) {
         dispatch({ type: "CLEAR_CART" });
@@ -348,11 +367,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Cargar carrito al montar el componente o cuando cambie el restaurante
   useEffect(() => {
-    if (restaurantId) {
+    const effectiveRestaurantId = restaurantId || guestRestaurantId;
+    if (effectiveRestaurantId) {
       refreshCart();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restaurantId]);
+  }, [restaurantId, guestRestaurantId]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

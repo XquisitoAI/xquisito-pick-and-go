@@ -1,16 +1,4 @@
-// ===============================================
-// CART API SERVICE
-// ===============================================
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-}
+import { requestWithAuth, type ApiResponse } from "./request-helper";
 
 export interface CartItem {
   id: string; // cart_item_id
@@ -48,85 +36,56 @@ export interface CartTotals {
   total_amount: number;
 }
 
-class CartApiService {
-  private clerkUserId: string | null = null;
+class CartService {
+  private supabaseUserId: string | null = null;
   private restaurantId: number | null = null;
+  private branchNumber: number | null = null;
 
   /**
-   * Establecer el clerk_user_id manualmente (llamar desde el componente con useUser)
+   * Establecer el supabase_user_id manualmente (cambio de Clerk a Supabase)
    */
-  public setClerkUserId(userId: string | null) {
-    this.clerkUserId = userId;
+  public setSupabaseUserId(userId: string | null) {
+    this.supabaseUserId = userId;
   }
 
   /**
-   * Establecer el restaurant_id manualmente (llamar desde el componente)
+   * Establecer el restaurant_id manualmente
    */
   public setRestaurantId(restaurantId: number | null) {
     this.restaurantId = restaurantId;
+  }
+
+  /**
+   * Establecer el branch_number manualmente
+   */
+  public setBranchNumber(branchNumber: number | null) {
+    this.branchNumber = branchNumber;
   }
 
   private async request<T>(
     endpoint: string,
     options?: RequestInit
   ): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: {
-          "Content-Type": "application/json",
-          ...options?.headers,
-        },
-        ...options,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || data.error || "API request failed");
-      }
-
-      return data;
-    } catch (error) {
-      console.error("Cart API Error:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Unknown error occurred",
-      };
-    }
+    return requestWithAuth<T>(endpoint, options);
   }
 
   /**
-   * Obtener guest_id desde GuestContext/localStorage
-   * Usa el mismo formato que GuestContext: 'xquisito-guest-id'
+   * Obtener guest_id desde localStorage
+   * Solo lee el guest_id existente - NO genera uno nuevo
    */
   private getGuestId(): string {
     if (typeof window === "undefined") return "";
-
-    // Usar el mismo key que GuestContext
-    let guestId = localStorage.getItem("xquisito-guest-id");
-    if (!guestId) {
-      // Generar guest ID en el mismo formato que GuestContext
-      guestId = `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem("xquisito-guest-id", guestId);
-    }
-    return guestId;
+    return localStorage.getItem("xquisito-guest-id") || "";
   }
 
   /**
-   * Obtener identificador de usuario (clerk_user_id o guest_id)
-   * Prioriza clerk_user_id si existe
+   * Obtener identificador de usuario (user_id o guest_id)
    */
-  private getUserIdentifier(): { clerk_user_id?: string; guest_id?: string } {
-    // Primero intentar usar el clerkUserId establecido manualmente
-    if (this.clerkUserId) {
-      return { clerk_user_id: this.clerkUserId };
+  private getUserIdentifier(): { user_id?: string; guest_id?: string } {
+    if (this.supabaseUserId) {
+      return { user_id: this.supabaseUserId };
     }
-
-    // Si no hay usuario de Clerk, usar guest_id
-    const guestId = this.getGuestId();
-    console.log(" Using guest_id:", guestId);
-    return { guest_id: guestId };
+    return { guest_id: this.getGuestId() };
   }
 
   /**
@@ -136,20 +95,29 @@ class CartApiService {
     menuItemId: number,
     quantity: number = 1,
     customFields: CartItem["customFields"] = [],
-    extraPrice: number = 0
+    extraPrice: number = 0,
+    price?: number
   ): Promise<ApiResponse<{ cart_item_id: string }>> {
     const userId = this.getUserIdentifier();
 
+    const body: any = {
+      ...userId,
+      menu_item_id: menuItemId,
+      quantity,
+      custom_fields: customFields,
+      extra_price: extraPrice,
+      restaurant_id: this.restaurantId,
+      branch_number: this.branchNumber,
+    };
+
+    // Si se proporciona un precio específico, incluirlo en el request
+    if (price !== undefined) {
+      body.price = price;
+    }
+
     return this.request<{ cart_item_id: string }>("/cart", {
       method: "POST",
-      body: JSON.stringify({
-        ...userId,
-        menu_item_id: menuItemId,
-        quantity,
-        custom_fields: customFields,
-        extra_price: extraPrice,
-        restaurant_id: this.restaurantId,
-      }),
+      body: JSON.stringify(body),
     });
   }
 
@@ -164,6 +132,10 @@ class CartApiService {
       params.append("restaurant_id", this.restaurantId.toString());
     }
 
+    if (this.branchNumber) {
+      params.append("branch_number", this.branchNumber.toString());
+    }
+
     return this.request<Cart>(`/cart?${params.toString()}`);
   }
 
@@ -176,6 +148,10 @@ class CartApiService {
 
     if (this.restaurantId) {
       params.append("restaurant_id", this.restaurantId.toString());
+    }
+
+    if (this.branchNumber) {
+      params.append("branch_number", this.branchNumber.toString());
     }
 
     return this.request<CartTotals>(`/cart/totals?${params.toString()}`);
@@ -216,28 +192,9 @@ class CartApiService {
       body: JSON.stringify({
         ...userId,
         restaurant_id: this.restaurantId,
+        branch_number: this.branchNumber,
       }),
     });
-  }
-
-  /**
-   * Migrar carrito de invitado a usuario autenticado
-   */
-  async migrateGuestCart(
-    guestId: string,
-    clerkUserId: string
-  ): Promise<ApiResponse<{ message: string; items_migrated: number }>> {
-    return this.request<{ message: string; items_migrated: number }>(
-      "/cart/migrate",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          guest_id: guestId,
-          clerk_user_id: clerkUserId,
-          restaurant_id: this.restaurantId,
-        }),
-      }
-    );
   }
 
   /**
@@ -246,6 +203,30 @@ class CartApiService {
   getGuestIdForUser(): string {
     return this.getGuestId();
   }
+
+  /**
+   * Migrar carrito de invitado a usuario autenticado
+   */
+  async migrateGuestCart(
+    guestId: string,
+    userId: string
+  ): Promise<
+    ApiResponse<{ items_migrated: number; cart_id: string; message: string }>
+  > {
+    return this.request<{
+      items_migrated: number;
+      cart_id: string;
+      message: string;
+    }>("/cart/migrate", {
+      method: "POST",
+      body: JSON.stringify({
+        guest_id: guestId,
+        user_id: userId, // Cambiado de clerk_user_id a user_id
+        restaurant_id: this.restaurantId,
+        branch_number: this.branchNumber,
+      }),
+    });
+  }
 }
 
-export const cartApi = new CartApiService();
+export const cartService = new CartService();

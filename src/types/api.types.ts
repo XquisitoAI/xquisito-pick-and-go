@@ -5,7 +5,8 @@
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
-  error?: {
+  message?: string;
+  error?: string | {
     type: string;
     message: string;
     details?: any;
@@ -21,4 +22,12 @@ export interface ApiConfig {
   baseURL: string;
   timeout?: number;
   retries?: number;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
 }

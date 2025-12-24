@@ -7,9 +7,10 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { apiService, PaymentMethod } from "../utils/api2";
+import { paymentService } from "@/services/payment.service";
+import { PaymentMethod } from "@/types/payment.types";
 import { useGuest } from "./GuestContext";
-import { useUser, useAuth } from "@clerk/nextjs";
+import { useAuth } from "./AuthContext";
 
 interface PaymentContextType {
   paymentMethods: PaymentMethod[];
@@ -32,9 +33,9 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { isGuest, guestId, setAsAuthenticated } = useGuest();
-  const { user, isLoaded } = useUser();
-  const { getToken } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
 
+  const isLoaded = !authLoading;
   const hasPaymentMethods = paymentMethods.length > 0;
 
   const refreshPaymentMethods = async () => {
@@ -65,15 +66,8 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       console.log("  isGuest state:", isGuest);
       setIsLoading(true);
       try {
-        // Get Clerk auth token
-        const token = await getToken();
-        if (token) {
-          apiService.setAuthToken(token);
-        } else {
-          console.warn("  ⚠️ No Clerk token available!");
-        }
-
-        const response = await apiService.getPaymentMethods();
+        // Auth token is automatically managed by requestWithAuth
+        const response = await paymentService.getPaymentMethods();
         console.log("🔍 GetPaymentMethods response for registered user:", response);
 
         // Handle response structure
@@ -106,7 +100,7 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       console.log("👥 Fetching payment methods for guest:", guestId);
       setIsLoading(true);
       try {
-        const response = await apiService.getPaymentMethods();
+        const response = await paymentService.getPaymentMethods();
         console.log("🔍 GetPaymentMethods response for guest:", response);
 
         // Handle response structure
@@ -138,7 +132,7 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
         console.log("🔍 Pick & Go: Found stored guestId, fetching payment methods:", storedGuestId);
         setIsLoading(true);
         try {
-          const response = await apiService.getPaymentMethods();
+          const response = await paymentService.getPaymentMethods();
           console.log("🔍 GetPaymentMethods response for stored guest:", response);
 
           const paymentMethods = response.data?.paymentMethods || [];
@@ -193,14 +187,9 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       paymentMethodId
     );
     try {
-      // Get Clerk auth token
-      const token = await getToken();
-      if (token) {
-        apiService.setAuthToken(token);
-      }
-
+      // Auth token is automatically managed by requestWithAuth
       const response =
-        await apiService.setDefaultPaymentMethod(paymentMethodId);
+        await paymentService.setDefaultPaymentMethod(paymentMethodId);
       if (response.success) {
         // Update local state to reflect the new default
         setPaymentMethods((prev) =>
@@ -215,7 +204,7 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
         );
       } else {
         throw new Error(
-          response.error?.message || "Failed to set default payment method"
+          response.error || "Failed to set default payment method"
         );
       }
     } catch (error) {
@@ -238,19 +227,14 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       paymentMethodId
     );
     try {
-      // Get Clerk auth token
-      const token = await getToken();
-      if (token) {
-        apiService.setAuthToken(token);
-      }
-
-      const response = await apiService.deletePaymentMethod(paymentMethodId);
+      // Auth token is automatically managed by requestWithAuth
+      const response = await paymentService.deletePaymentMethod(paymentMethodId);
       if (response.success) {
         removePaymentMethod(paymentMethodId);
         console.log("✅ Payment method deleted successfully:", paymentMethodId);
       } else {
         throw new Error(
-          response.error?.message || "Failed to delete payment method"
+          response.error || "Failed to delete payment method"
         );
       }
     } catch (error) {

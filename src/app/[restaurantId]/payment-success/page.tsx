@@ -5,9 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useNavigation } from "../../../hooks/useNavigation";
 import { useGuest, useIsGuest } from "../../../context/GuestContext";
 import { useRestaurant } from "../../../context/RestaurantContext";
-import { getRestaurantData } from "../../../utils/restaurantData";
-import { apiService } from "../../../utils/api";
-import { useUser } from "@clerk/nextjs";
+import { authService } from "../../../services/auth.service";
 import {
   Receipt,
   X,
@@ -15,7 +13,6 @@ import {
   Utensils,
   CircleAlert,
   ChevronDown,
-  Check,
 } from "lucide-react";
 import { getCardTypeIcon } from "../../../utils/cardIcons";
 
@@ -33,10 +30,8 @@ export default function PaymentSuccessPage() {
   const { navigateWithRestaurantId } = useNavigation();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const restaurantData = getRestaurantData();
   const isGuest = useIsGuest();
-  const { guestId, tableNumber } = useGuest();
-  const { isSignedIn } = useUser();
+  const { guestId } = useGuest();
 
   // Get payment details from URL or localStorage
   const paymentId =
@@ -185,8 +180,8 @@ export default function PaymentSuccessPage() {
 
   const clearGuestSession = async () => {
     if (typeof window !== "undefined") {
-      // Use apiService method for consistent cleanup
-      apiService.clearGuestSession();
+      // Use authService to clear all session data (auth + guest)
+      authService.clearAllSessionData();
 
       // Also clear any additional payment-related data
       localStorage.removeItem("xquisito-pending-payment");
@@ -497,7 +492,7 @@ export default function PaymentSuccessPage() {
                 )}
                 <div className="flex flex-col items-center justify-center">
                   <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold">
-                    {restaurant?.name || restaurantData.name}
+                    {restaurant?.name}
                   </h2>
                   <p className="text-sm md:text-base lg:text-lg text-white/80">
                     Pick & Go
@@ -915,11 +910,11 @@ export default function PaymentSuccessPage() {
                       <span className="font-medium text-white">
                         Restaurante:
                       </span>{" "}
-                      {restaurant?.name || restaurantData.name}
+                      {restaurant?.name}
                     </p>
                     <p className="text-white/90 text-sm md:text-base lg:text-lg">
                       <span className="font-medium text-white">Dirección:</span>{" "}
-                      {restaurant?.address || restaurantData.address}
+                      {restaurant?.address}
                     </p>
                     <p className="text-white/90 text-sm md:text-base lg:text-lg">
                       <span className="font-medium text-white">Orden #:</span>{" "}

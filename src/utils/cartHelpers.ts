@@ -170,15 +170,15 @@ export const clearCart = (): CartItem[] => {
  * Determine user authentication status and info
  * Based on TableContext authentication logic [lines 814-826]
  */
-export const getUserAuthInfo = (isLoaded: boolean, user: any) => {
+export const getUserAuthInfo = (isLoaded: boolean, user: any, profile?: any) => {
   const isAuthenticated = isLoaded && user;
 
   if (isAuthenticated) {
     return {
       isAuthenticated: true,
       userId: user.id,
-      displayName: user.fullName || user.firstName || 'User',
-      email: user.primaryEmailAddress?.emailAddress,
+      displayName: profile?.fullName || profile?.firstName || user.email || 'User',
+      email: user.email,
       guestId: null,
     };
   } else {

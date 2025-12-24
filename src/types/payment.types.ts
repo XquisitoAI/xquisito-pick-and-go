@@ -6,6 +6,7 @@ export interface PaymentMethod {
   id: string;
   lastFourDigits: string;
   cardType: string;
+  cardBrand: string;
   expiryMonth: number;
   expiryYear: number;
   cardholderName: string;

@@ -11,6 +11,7 @@ export interface CustomField {
   type: string;
   options?: CustomFieldOption[];
   required?: boolean;
+  maxSelections?: number;
 }
 
 // Interface que coincide con la estructura de la base de datos

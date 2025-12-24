@@ -1,8 +1,16 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useEffect, useCallback, ReactNode } from "react";
-import { useUser } from "@clerk/nextjs";
-import { PickAndGoOrder, PickAndGoItem } from "@/services/api";
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useGuest } from "@/context/GuestContext";
+import { PickAndGoOrder } from "@/services/pickandgo.service";
 import { usePickAndGo } from "@/hooks/usePickAndGo";
 import { useRestaurant } from "@/context/RestaurantContext";
 
@@ -19,12 +27,11 @@ import {
   saveGuestInfo,
   generateGuestId,
   validateCartItem,
-  validateCustomFields
+  validateCustomFields,
 } from "@/utils/cartHelpers";
 
-// Import robust API services from TableContext
-import { apiService } from "../utils/api";
-import { orderService } from "@/services/api";
+// Import dedicated services
+import { pickAndGoService } from "@/services/pickandgo.service";
 
 // ===============================================
 // ENHANCED TYPES AND INTERFACES
@@ -56,7 +63,13 @@ interface PickAndGoState {
   } | null;
 
   // Estado del flujo
-  currentStep: 'menu' | 'cart' | 'checkout' | 'payment' | 'confirmation' | 'tracking';
+  currentStep:
+    | "menu"
+    | "cart"
+    | "checkout"
+    | "payment"
+    | "confirmation"
+    | "tracking";
 
   // Metadatos de la sesión
   sessionData: Record<string, any>;
@@ -70,11 +83,17 @@ type PickAndGoAction =
   | { type: "SET_ERROR"; payload: string | null }
   | { type: "SET_CURRENT_ORDER"; payload: PickAndGoOrder | null }
   | { type: "ADD_TO_CART"; payload: CartItem }
-  | { type: "REMOVE_FROM_CART"; payload: { id: string; customFields?: CustomField[] } }
-  | { type: "UPDATE_CART_QUANTITY"; payload: { id: string; quantity: number; customFields?: CustomField[] } }
+  | {
+      type: "REMOVE_FROM_CART";
+      payload: { id: string; customFields?: CustomField[] };
+    }
+  | {
+      type: "UPDATE_CART_QUANTITY";
+      payload: { id: string; quantity: number; customFields?: CustomField[] };
+    }
   | { type: "CLEAR_CART" }
-  | { type: "SET_CUSTOMER_INFO"; payload: PickAndGoState['customerInfo'] }
-  | { type: "SET_CURRENT_STEP"; payload: PickAndGoState['currentStep'] }
+  | { type: "SET_CUSTOMER_INFO"; payload: PickAndGoState["customerInfo"] }
+  | { type: "SET_CURRENT_STEP"; payload: PickAndGoState["currentStep"] }
   | { type: "UPDATE_SESSION_DATA"; payload: Record<string, any> }
   | { type: "SET_RESTAURANT_ID"; payload: string }
   | { type: "SYNC_TOTALS" };
@@ -91,12 +110,15 @@ const initialState: PickAndGoState = {
   loading: false,
   error: null,
   customerInfo: null,
-  currentStep: 'menu',
+  currentStep: "menu",
   sessionData: {},
-  restaurantId: undefined
+  restaurantId: undefined,
 };
 
-function pickAndGoReducer(state: PickAndGoState, action: PickAndGoAction): PickAndGoState {
+function pickAndGoReducer(
+  state: PickAndGoState,
+  action: PickAndGoAction
+): PickAndGoState {
   switch (action.type) {
     case "SET_LOADING":
       return { ...state, loading: action.payload };
@@ -116,7 +138,7 @@ function pickAndGoReducer(state: PickAndGoState, action: PickAndGoAction): PickA
         ...state,
         cartItems: updatedItems,
         cartTotal: totalPrice,
-        cartItemCount: totalItems
+        cartItemCount: totalItems,
       };
     }
 
@@ -133,7 +155,7 @@ function pickAndGoReducer(state: PickAndGoState, action: PickAndGoAction): PickA
         ...state,
         cartItems: updatedItems,
         cartTotal: totalPrice,
-        cartItemCount: totalItems
+        cartItemCount: totalItems,
       };
     }
 
@@ -151,7 +173,7 @@ function pickAndGoReducer(state: PickAndGoState, action: PickAndGoAction): PickA
         ...state,
         cartItems: updatedItems,
         cartTotal: totalPrice,
-        cartItemCount: totalItems
+        cartItemCount: totalItems,
       };
     }
 
@@ -163,7 +185,7 @@ function pickAndGoReducer(state: PickAndGoState, action: PickAndGoAction): PickA
         ...state,
         cartItems: emptyCart,
         cartTotal: totalPrice,
-        cartItemCount: totalItems
+        cartItemCount: totalItems,
       };
     }
 
@@ -173,14 +195,14 @@ function pickAndGoReducer(state: PickAndGoState, action: PickAndGoAction): PickA
       return {
         ...state,
         cartTotal: totalPrice,
-        cartItemCount: totalItems
+        cartItemCount: totalItems,
       };
     }
 
     case "SET_RESTAURANT_ID":
       return {
         ...state,
-        restaurantId: action.payload
+        restaurantId: action.payload,
       };
 
     case "SET_CUSTOMER_INFO":
@@ -192,7 +214,7 @@ function pickAndGoReducer(state: PickAndGoState, action: PickAndGoAction): PickA
     case "UPDATE_SESSION_DATA":
       return {
         ...state,
-        sessionData: { ...state.sessionData, ...action.payload }
+        sessionData: { ...state.sessionData, ...action.payload },
       };
 
     default:
@@ -209,9 +231,13 @@ interface PickAndGoContextType {
   dispatch: React.Dispatch<PickAndGoAction>;
 
   // Enhanced cart actions with custom fields support
-  addToCart: (item: Omit<CartItem, 'id'>) => void;
+  addToCart: (item: Omit<CartItem, "id">) => void;
   removeFromCart: (itemId: string, customFields?: CustomField[]) => void;
-  updateCartQuantity: (itemId: string, quantity: number, customFields?: CustomField[]) => void;
+  updateCartQuantity: (
+    itemId: string,
+    quantity: number,
+    customFields?: CustomField[]
+  ) => void;
   clearCart: () => void;
   syncCartTotals: () => void;
 
@@ -221,12 +247,12 @@ interface PickAndGoContextType {
   trackOrder: (orderId: string) => Promise<void>;
 
   // Enhanced customer management
-  setCustomerInfo: (info: PickAndGoState['customerInfo']) => void;
+  setCustomerInfo: (info: PickAndGoState["customerInfo"]) => void;
   initializeCustomerFromAuth: () => void;
   saveGuestInfo: (name: string) => void;
 
   // Flow management
-  setCurrentStep: (step: PickAndGoState['currentStep']) => void;
+  setCurrentStep: (step: PickAndGoState["currentStep"]) => void;
   updateSessionData: (data: Record<string, any>) => void;
   setRestaurantId: (restaurantId: string) => void;
 
@@ -235,7 +261,9 @@ interface PickAndGoContextType {
   validateItem: (item: Partial<CartItem>) => boolean;
 }
 
-const PickAndGoContext = createContext<PickAndGoContextType | undefined>(undefined);
+const PickAndGoContext = createContext<PickAndGoContextType | undefined>(
+  undefined
+);
 
 // ===============================================
 // PROVIDER
@@ -247,40 +275,42 @@ interface PickAndGoProviderProps {
 
 export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
   const [state, dispatch] = useReducer(pickAndGoReducer, initialState);
-  const { user, isLoaded } = useUser();
+  const { user, profile, isLoading } = useAuth();
+  const { guestId } = useGuest();
   const pickAndGoHook = usePickAndGo();
 
   // Get restaurant context - needed for robust order creation
   const { restaurantId } = useRestaurant();
 
+  const isLoaded = !isLoading;
+
   // ===============================================
   // UTILITY FUNCTIONS (defined early)
   // ===============================================
 
-  const setCustomerInfo = useCallback((info: PickAndGoState['customerInfo']) => {
-    dispatch({ type: "SET_CUSTOMER_INFO", payload: info });
-  }, []);
-
-  // ===============================================
-  // AUTHENTICATION & CUSTOMER MANAGEMENT
-  // ===============================================
+  const setCustomerInfo = useCallback(
+    (info: PickAndGoState["customerInfo"]) => {
+      dispatch({ type: "SET_CUSTOMER_INFO", payload: info });
+    },
+    []
+  );
 
   const initializeCustomerFromAuth = useCallback(() => {
-    const authInfo = getUserAuthInfo(isLoaded, user);
+    const authInfo = getUserAuthInfo(isLoaded, user, profile);
 
     setCustomerInfo({
       name: authInfo.displayName,
       email: authInfo.email || undefined,
       isAuthenticated: authInfo.isAuthenticated,
       userId: authInfo.userId || undefined,
-      guestId: authInfo.guestId || undefined
+      guestId: authInfo.guestId || guestId || undefined,
     });
 
-    console.log('👤 Customer initialized:', {
+    console.log("👤 Customer initialized:", {
       authenticated: authInfo.isAuthenticated,
-      name: authInfo.displayName
+      name: authInfo.displayName,
     });
-  }, [isLoaded, user, setCustomerInfo]);
+  }, [isLoaded, user, profile, guestId, setCustomerInfo]);
 
   // Initialize customer info when user authentication changes
   useEffect(() => {
@@ -299,7 +329,10 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
   }, [pickAndGoHook.error]);
 
   useEffect(() => {
-    dispatch({ type: "SET_CURRENT_ORDER", payload: pickAndGoHook.currentOrder });
+    dispatch({
+      type: "SET_CURRENT_ORDER",
+      payload: pickAndGoHook.currentOrder,
+    });
   }, [pickAndGoHook.currentOrder]);
 
   // ===============================================
@@ -310,36 +343,59 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
   // ENHANCED CART ACTIONS
   // ===============================================
 
-  const addToCart = (item: Omit<CartItem, 'id'>) => {
+  const addToCart = (item: Omit<CartItem, "id">) => {
     // Validate item before adding
     if (!validateItem(item)) {
-      console.error('❌ Invalid item data:', item);
+      console.error("❌ Invalid item data:", item);
       dispatch({ type: "SET_ERROR", payload: "Invalid item data" });
       return;
     }
 
     const cartItem: CartItem = {
       ...item,
-      id: `${item.name}-${Date.now()}-${Math.random()}`
+      id: `${item.name}-${Date.now()}-${Math.random()}`,
     };
 
     dispatch({ type: "ADD_TO_CART", payload: cartItem });
-    console.log('🛒 Item added to cart:', cartItem.name, cartItem.customFields ? 'with custom fields' : '');
+    console.log(
+      "🛒 Item added to cart:",
+      cartItem.name,
+      cartItem.customFields ? "with custom fields" : ""
+    );
   };
 
   const removeFromCart = (itemId: string, customFields?: CustomField[]) => {
-    dispatch({ type: "REMOVE_FROM_CART", payload: { id: itemId, customFields } });
-    console.log('🗑️ Item removed from cart:', itemId, customFields ? 'with custom fields' : '');
+    dispatch({
+      type: "REMOVE_FROM_CART",
+      payload: { id: itemId, customFields },
+    });
+    console.log(
+      "🗑️ Item removed from cart:",
+      itemId,
+      customFields ? "with custom fields" : ""
+    );
   };
 
-  const updateCartQuantity = (itemId: string, quantity: number, customFields?: CustomField[]) => {
-    dispatch({ type: "UPDATE_CART_QUANTITY", payload: { id: itemId, quantity, customFields } });
-    console.log('🔄 Cart quantity updated:', itemId, quantity, customFields ? 'with custom fields' : '');
+  const updateCartQuantity = (
+    itemId: string,
+    quantity: number,
+    customFields?: CustomField[]
+  ) => {
+    dispatch({
+      type: "UPDATE_CART_QUANTITY",
+      payload: { id: itemId, quantity, customFields },
+    });
+    console.log(
+      "🔄 Cart quantity updated:",
+      itemId,
+      quantity,
+      customFields ? "with custom fields" : ""
+    );
   };
 
   const clearCart = () => {
     dispatch({ type: "CLEAR_CART" });
-    console.log('🧹 Cart cleared');
+    console.log("🧹 Cart cleared");
   };
 
   const syncCartTotals = () => {
@@ -357,10 +413,10 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
     setCustomerInfo({
       name,
       isAuthenticated: false,
-      guestId
+      guestId,
     });
 
-    console.log('👤 Guest info saved:', { name, guestId });
+    console.log("👤 Guest info saved:", { name, guestId });
   };
 
   // ===============================================
@@ -376,20 +432,20 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
     // The actual dish order creation happens in confirmOrder() using TableContext logic
 
     if (state.cartItems.length === 0) {
-      console.error('❌ Cannot create order: empty cart');
+      console.error("❌ Cannot create order: empty cart");
       dispatch({ type: "SET_ERROR", payload: "Cart is empty" });
       return null;
     }
 
     // Initialize customer info if not set
     if (!state.customerInfo?.name) {
-      const authInfo = getUserAuthInfo(isLoaded, user);
+      const authInfo = getUserAuthInfo(isLoaded, user, profile);
       setCustomerInfo({
         name: authInfo.displayName,
         email: authInfo.email || undefined,
         isAuthenticated: authInfo.isAuthenticated,
         userId: authInfo.userId || undefined,
-        guestId: authInfo.guestId || undefined
+        guestId: authInfo.guestId || guestId || undefined,
       });
     }
 
@@ -398,33 +454,38 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
       const mockOrder: PickAndGoOrder = {
         id: `mock_${Date.now()}`,
         clerk_user_id: state.customerInfo?.userId || null,
-        customer_name: state.customerInfo?.name || 'Customer',
+        customer_name: state.customerInfo?.name || "Customer",
         customer_phone: state.customerInfo?.phone,
         customer_email: state.customerInfo?.email,
         total_amount: state.cartTotal,
-        payment_status: 'pending',
-        order_status: 'active',
+        restaurant_id: parseInt(restaurantId?.toString() || "1"),
+        branch_number: 1,
+        payment_status: "pending",
+        order_status: "active",
         session_data: {
           ...state.sessionData,
           cartItemCount: state.cartItemCount,
-          pickupPreference: 'asap'
+          pickupPreference: "asap",
         },
         prep_metadata: {
           estimatedItems: state.cartItems.length,
-          cartTotal: state.cartTotal
+          cartTotal: state.cartTotal,
         },
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       dispatch({ type: "SET_CURRENT_ORDER", payload: mockOrder });
-      setCurrentStep('checkout');
-      console.log('✅ Order prepared for checkout:', mockOrder.id);
+      setCurrentStep("checkout");
+      console.log("✅ Order prepared for checkout:", mockOrder.id);
 
       return mockOrder;
     } catch (error) {
-      console.error('💥 Error preparing order:', error);
-      dispatch({ type: "SET_ERROR", payload: error instanceof Error ? error.message : 'Unknown error' });
+      console.error("💥 Error preparing order:", error);
+      dispatch({
+        type: "SET_ERROR",
+        payload: error instanceof Error ? error.message : "Unknown error",
+      });
       return null;
     }
   };
@@ -436,13 +497,13 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
   const confirmOrder = async () => {
     // Enhanced validation - similar to TableContext submitOrder
     if (state.cartItems.length === 0) {
-      console.error('❌ Cannot confirm order: empty cart');
+      console.error("❌ Cannot confirm order: empty cart");
       dispatch({ type: "SET_ERROR", payload: "Cart is empty" });
       return;
     }
 
     if (!state.customerInfo?.name) {
-      console.error('❌ Cannot confirm order: missing customer info');
+      console.error("❌ Cannot confirm order: missing customer info");
       dispatch({ type: "SET_ERROR", payload: "Customer information required" });
       return;
     }
@@ -450,56 +511,103 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
     dispatch({ type: "SET_LOADING", payload: true });
 
     try {
-      // Use robust authentication logic from TableContext
-      const authInfo = getUserAuthInfo(isLoaded, user);
-
-      // Save guest info if not authenticated (TableContext pattern)
-      if (!authInfo.isAuthenticated && typeof window !== "undefined") {
+      // Save guest info BEFORE getting authInfo if not authenticated
+      if (!user && typeof window !== "undefined" && state.customerInfo?.name) {
         localStorage.setItem("xquisito-guest-name", state.customerInfo.name);
         if (!localStorage.getItem("xquisito-guest-id")) {
-          const guestId = generateGuestId();
-          localStorage.setItem("xquisito-guest-id", guestId);
+          const newGuestId = generateGuestId();
+          localStorage.setItem("xquisito-guest-id", newGuestId);
         }
       }
 
-      // Create individual dish orders for each cart item (TableContext pattern)
-      console.log('🍽️ Creating dish orders for', state.cartItems.length, 'items');
+      // Use robust authentication logic
+      const authInfo = getUserAuthInfo(isLoaded, user, profile);
+
+      // Log authentication info for debugging
+      console.log("🔐 Auth info:", {
+        isAuthenticated: authInfo.isAuthenticated,
+        userId: authInfo.userId,
+        guestId: authInfo.guestId,
+        displayName: authInfo.displayName,
+      });
+
+      // Ensure we have at least userId or guestName
+      if (!authInfo.userId && !authInfo.displayName) {
+        throw new Error("Missing user identification. Please provide customer name.");
+      }
+
+      // STEP 1: Create Pick & Go order first
+      console.log("🆕 Creating Pick & Go order...");
+      const orderResponse = await pickAndGoHook.createOrder({
+        clerk_user_id: authInfo.userId,
+        customer_name: state.customerInfo?.name || authInfo.displayName || "Guest",
+        customer_phone: state.customerInfo?.phone,
+        customer_email: state.customerInfo?.email,
+        restaurant_id: parseInt(restaurantId?.toString() || "1"),
+        branch_number: 1,
+        total_amount: state.cartTotal,
+        session_data: {
+          ...state.sessionData,
+          cartItemCount: state.cartItemCount,
+          pickupPreference: "asap",
+        },
+        prep_metadata: {
+          estimatedItems: state.cartItems.length,
+          cartTotal: state.cartTotal,
+        },
+      });
+
+      if (!orderResponse) {
+        throw new Error("Failed to create Pick & Go order");
+      }
+
+      console.log("✅ Pick & Go order created:", orderResponse.id);
+      dispatch({ type: "SET_CURRENT_ORDER", payload: orderResponse });
+
+      // STEP 2: Create individual dish orders for each cart item
+      console.log(
+        "🍽️ Creating dish orders for",
+        state.cartItems.length,
+        "items"
+      );
 
       for (const item of state.cartItems) {
-        const response = await apiService.createDishOrder(
-          restaurantId?.toString() || "1", // restaurantId from context
-          "PICKUP", // Special tableNumber for Pick & Go orders
-          authInfo.userId, // userId from Clerk if authenticated, null if guest
-          authInfo.displayName, // Real name or guest name
-          item.name, // item name
-          item.quantity, // quantity from cart
-          item.price, // price (already includes discounts)
-          authInfo.guestId, // guestId only if guest user
-          item.images || (item.image ? [item.image] : []), // images array
-          item.customFields, // custom fields selected
-          item.extraPrice || 0 // extra price from custom fields
+        const response = await pickAndGoService.createDishOrder(
+          orderResponse.id, // pickAndGoOrderId from the order we just created
+          {
+            item: item.name, // item name
+            quantity: item.quantity, // quantity from cart
+            price: item.price, // price (already includes discounts)
+            userId: authInfo.userId, // userId from Supabase if authenticated, null if guest
+            guestId: authInfo.guestId, // guestId only if guest user
+            guestName: authInfo.displayName, // Real name or guest name
+            images: item.images || (item.image ? [item.image] : []), // images array
+            customFields: item.customFields, // custom fields selected
+            extraPrice: item.extraPrice || 0, // extra price from custom fields
+          }
         );
 
         if (!response.success) {
           throw new Error(
-            response.error?.message || `Failed to create dish order for ${item.name}`
+            response.error || `Failed to create dish order for ${item.name}`
           );
         }
 
-        console.log('✅ Dish order created:', item.name, 'x', item.quantity);
+        console.log("✅ Dish order created:", item.name, "x", item.quantity);
       }
 
       // Clear cart and update state
       clearCart();
-      setCurrentStep('confirmation');
+      setCurrentStep("confirmation");
       dispatch({ type: "SET_LOADING", payload: false });
 
-      console.log('🎉 All dish orders created successfully for Pick & Go!');
+      console.log("🎉 All dish orders created successfully for Pick & Go!");
     } catch (error) {
-      console.error('💥 Error confirming Pick & Go order:', error);
+      console.error("💥 Error confirming Pick & Go order:", error);
       dispatch({
         type: "SET_ERROR",
-        payload: error instanceof Error ? error.message : 'Failed to confirm order'
+        payload:
+          error instanceof Error ? error.message : "Failed to confirm order",
       });
       dispatch({ type: "SET_LOADING", payload: false });
     }
@@ -508,10 +616,10 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
   const trackOrder = async (orderId: string) => {
     try {
       await pickAndGoHook.getOrder(orderId);
-      setCurrentStep('tracking');
-      console.log('✅ Now tracking order:', orderId);
+      setCurrentStep("tracking");
+      console.log("✅ Now tracking order:", orderId);
     } catch (error) {
-      console.error('💥 Error tracking order:', error);
+      console.error("💥 Error tracking order:", error);
     }
   };
 
@@ -519,7 +627,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
   // UTILITY FUNCTIONS
   // ===============================================
 
-  const setCurrentStep = (step: PickAndGoState['currentStep']) => {
+  const setCurrentStep = (step: PickAndGoState["currentStep"]) => {
     dispatch({ type: "SET_CURRENT_STEP", payload: step });
   };
 
@@ -567,7 +675,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
     setRestaurantId,
     // Utilities
     clearError,
-    validateItem
+    validateItem,
   };
 
   return (
@@ -584,7 +692,9 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
 export function usePickAndGoContext() {
   const context = useContext(PickAndGoContext);
   if (!context) {
-    throw new Error('usePickAndGoContext must be used within a PickAndGoProvider');
+    throw new Error(
+      "usePickAndGoContext must be used within a PickAndGoProvider"
+    );
   }
   return context;
 }

@@ -7,7 +7,7 @@ import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 import { Loader2, RefreshCw } from "lucide-react";
-import { apiService, PickOrder } from "@/utils/api2";
+import { pickAndGoService, PickAndGoOrder } from "@/services/pickandgo.service";
 
 export default function OrderViewPage() {
   const params = useParams();
@@ -17,7 +17,7 @@ export default function OrderViewPage() {
   const success = searchParams.get("success") === "true";
   const orderId = searchParams.get("orderId");
 
-  const [order, setOrder] = useState<PickOrder | null>(null);
+  const [order, setOrder] = useState<PickAndGoOrder | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,14 +43,16 @@ export default function OrderViewPage() {
     setError(null);
 
     try {
-      const result = await apiService.getOrderById(orderId);
+      const result = await pickAndGoService.getOrder(orderId);
 
       if (result.success && result.data) {
-        const orderData = result.data?.data || result.data;
-        setOrder(orderData);
-        console.log("Order loaded:", orderData);
+        setOrder(result.data);
+        console.log("Order loaded:", result.data);
       } else {
-        setError(result.error?.message || "Error al cargar la orden");
+        const errorMessage = typeof result.error === 'string'
+          ? result.error
+          : (result.error as any)?.message || "Error al cargar la orden";
+        setError(errorMessage);
       }
     } catch (err) {
       setError("Error de red al cargar la orden");

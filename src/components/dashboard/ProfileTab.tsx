@@ -1,131 +1,108 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUser, useClerk } from "@clerk/nextjs";
-import { useNavigation } from "../../hooks/useNavigation";
-import {
-  User,
-  Mail,
-  Camera,
-  Loader2,
-  Lock,
-  Eye,
-  EyeOff,
-  Phone,
-  X,
-  LogOut,
-} from "lucide-react";
+import { authService } from "@/services/auth.service";
+import { useTableNavigation } from "@/hooks/useTableNavigation";
+import { useAuth } from "@/context/AuthContext";
+import { User, Camera, Loader2, Phone, X, LogOut, LogIn } from "lucide-react";
 
 export default function ProfileTab() {
-  const { user, isLoaded } = useUser();
-  const { signOut } = useClerk();
-  const { navigateWithRestaurantId } = useNavigation();
+  const { navigateWithTable } = useTableNavigation();
+  const { logout: contextLogout } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [phone, setPhone] = useState("");
-  const [age, setAge] = useState<number | null>(null);
+  const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState("");
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Formatear número de teléfono
+  const formatPhoneNumber = (phoneNumber: string) => {
+    if (!phoneNumber) return "";
+
+    const cleaned = phoneNumber.replace(/\D/g, "");
+
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+
+    // Código de país (ej: +52)
+    if (cleaned.length > 10) {
+      const countryCode = cleaned.slice(0, cleaned.length - 10);
+      const areaCode = cleaned.slice(-10, -7);
+      const firstPart = cleaned.slice(-7, -4);
+      const lastPart = cleaned.slice(-4);
+      return `+${countryCode} ${areaCode} ${firstPart} ${lastPart}`;
+    }
+
+    return phoneNumber;
+  };
+
+  // Load profile data from AuthContext
   useEffect(() => {
     const loadUserData = async () => {
-      if (!user || !isLoaded) return;
+      setIsLoadingData(true);
+
+      const currentUser = authService.getCurrentUser();
+
+      if (!currentUser) {
+        setIsAuthenticated(false);
+        setIsLoadingData(false);
+        return;
+      }
+
+      setIsAuthenticated(true);
 
       try {
-        setIsLoadingData(true);
+        const response = await authService.getMyProfile();
+        console.log("📊 getMyProfile response:", response);
 
-        // Actualizar clerk
-        setFirstName(user.firstName || "");
-        setLastName(user.lastName || "");
-        setPhone(user.phoneNumbers?.[0]?.phoneNumber || "");
-        setAge((user.unsafeMetadata?.age as number) || null);
-        setGender((user.unsafeMetadata?.gender as string) || "");
+        // El backend puede devolver data.data.profile o data.profile
+        const responseData = (response as any).data;
+        const profileData =
+          responseData?.data?.profile || responseData?.profile;
 
-        // Traer la info de backend mas actualizada
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/users/${user.id}`
-        );
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.user) {
-            // Actualizar datos a backend
-            setAge(result.user.age || null);
-            setGender(result.user.gender || "");
-            setPhone(
-              result.user.phone || user.phoneNumbers?.[0]?.phoneNumber || ""
-            );
-          }
+        if (response.success && profileData) {
+          console.log("✅ Profile data loaded:", profileData);
+          setFirstName(profileData.firstName || "");
+          setLastName(profileData.lastName || "");
+          setPhone(profileData.phone || "");
+          setBirthDate(profileData.birthDate || "");
+          setGender(profileData.gender || "");
+          setPhotoUrl(profileData.photoUrl || "");
+        } else {
+          console.warn("⚠️ No profile data in response:", response);
         }
       } catch (error) {
-        console.error("Error loading user data:", error);
+        console.error("❌ Error loading user data:", error);
       } finally {
         setIsLoadingData(false);
       }
     };
 
     loadUserData();
-  }, [user, isLoaded]);
+  }, []);
 
   const handleUpdateProfile = async () => {
-    if (!user) return;
+    if (!isAuthenticated) return;
 
     setIsUpdating(true);
     try {
-      // Actualizar datos de clerk
-      await user.update({
-        firstName: firstName,
-        lastName: lastName,
-        unsafeMetadata: {
-          ...user.unsafeMetadata,
-          age: age,
-          gender: gender,
-        },
+      const response = await authService.updateMyProfile({
+        firstName,
+        lastName,
+        birthDate: birthDate || undefined,
+        gender: gender as "male" | "female" | "other" | undefined,
       });
 
-      // Actualizar datos a base de datos
-      const userData = {
-        clerkUserId: user.id,
-        email: user.primaryEmailAddress?.emailAddress,
-        firstName: firstName,
-        lastName: lastName,
-        age: age,
-        gender: gender,
-        phone: phone,
-      };
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        await user.reload();
-
-        setFirstName(firstName);
-        setLastName(lastName);
-        setAge(age);
-        setGender(gender);
-        setPhone(phone);
-
+      if (response.success) {
         alert("Perfil actualizado correctamente");
       } else {
-        throw new Error("Error al actualizar en el backend");
+        throw new Error(response.error || "Error al actualizar");
       }
     } catch (error) {
       console.error("Error al actualizar el perfil:", error);
@@ -136,14 +113,53 @@ export default function ProfileTab() {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!user || !e.target.files || !e.target.files[0]) return;
+    if (!isAuthenticated || !e.target.files || !e.target.files[0]) return;
 
     const file = e.target.files[0];
+
+    // Validar tamaño (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("La imagen no puede superar los 5MB");
+      return;
+    }
+
+    // Validar tipo
+    if (!file.type.startsWith("image/")) {
+      alert("Solo se permiten archivos de imagen");
+      return;
+    }
+
     setIsUpdating(true);
 
     try {
-      await user.setProfileImage({ file });
-      alert("Foto actualizada correctamente");
+      const token = localStorage.getItem("xquisito_access_token");
+      if (!token) {
+        alert("No estás autenticado");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("photo", file);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/profiles/upload-photo`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success && data.data?.photoUrl) {
+        setPhotoUrl(data.data.photoUrl);
+        alert("Foto de perfil actualizada correctamente");
+      } else {
+        throw new Error(data.error || "Error al subir la foto");
+      }
     } catch (error) {
       console.error("Error al actualizar la foto:", error);
       alert("Error al actualizar la foto");
@@ -152,114 +168,20 @@ export default function ProfileTab() {
     }
   };
 
-  const handleUpdatePassword = async () => {
-    if (!user) return;
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      alert("Por favor completa todos los campos de contraseña");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      alert("Las contraseñas nuevas no coinciden");
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      alert("La contraseña debe tener al menos 8 caracteres");
-      return;
-    }
-
-    setIsUpdatingPassword(true);
+  const handleLogout = async () => {
     try {
-      if (!user.passwordEnabled) {
-        alert(
-          "No puedes cambiar la contraseña porque tu cuenta fue creada con un proveedor social (Google, Facebook, etc.)"
-        );
-        setIsUpdatingPassword(false);
-        return;
-      }
-
-      try {
-        const emailAddress = user.primaryEmailAddress?.emailAddress;
-
-        if (!emailAddress) {
-          alert("No se pudo verificar tu email. Por favor intenta nuevamente.");
-          return;
-        }
-
-        await fetch("/api/verify-password", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: emailAddress,
-            password: currentPassword,
-          }),
-        });
-      } catch (verifyError) {
-        console.log("Re-authentication attempt:", verifyError);
-      }
-
-      // Actualizar password
-      await user.updatePassword({
-        currentPassword: currentPassword,
-        newPassword: newPassword,
-        signOutOfOtherSessions: false,
-      });
-
-      alert("Contraseña actualizada correctamente");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setIsPasswordModalOpen(false);
-    } catch (error: any) {
-      console.error("Error al actualizar la contraseña:", error);
-
-      // Error messages
-      if (error.errors && error.errors[0]?.message) {
-        const errorMessage = error.errors[0].message;
-        const errorCode = error.errors[0]?.code;
-
-        if (
-          errorMessage.includes("verification") ||
-          errorCode === "form_password_incorrect"
-        ) {
-          alert(
-            "La contraseña actual es incorrecta. Por favor verifica e intenta nuevamente."
-          );
-        } else if (
-          errorMessage.includes("current_password_invalid") ||
-          errorMessage.includes("incorrect")
-        ) {
-          alert(
-            "La contraseña actual es incorrecta. Por favor verifica e intenta nuevamente."
-          );
-        } else if (errorMessage.includes("password_pwned")) {
-          alert(
-            "Esta contraseña ha sido encontrada en filtraciones de datos y no es segura. Por favor elige otra contraseña."
-          );
-        } else if (errorMessage.includes("password_too_common")) {
-          alert(
-            "Esta contraseña es muy común. Por favor elige una contraseña más segura."
-          );
-        } else {
-          alert(errorMessage);
-        }
-      } else if (error.message) {
-        alert(error.message);
-      } else {
-        alert(
-          "Error al actualizar la contraseña. Verifica tu contraseña actual e intenta nuevamente."
-        );
-      }
-    } finally {
-      setIsUpdatingPassword(false);
+      // Use context logout which will update the auth state
+      await contextLogout();
+      setIsLogoutModalOpen(false);
+      // Redirect to menu with table navigation
+      navigateWithTable("/menu");
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+      alert("Error al cerrar sesión");
     }
   };
 
-  if (!isLoaded || !user || isLoadingData) {
+  if (isLoadingData) {
     return (
       <div className="flex items-center justify-center py-12 md:py-16 lg:py-20">
         <Loader2 className="size-8 md:size-10 lg:size-12 animate-spin text-teal-600" />
@@ -272,38 +194,50 @@ export default function ProfileTab() {
       {/* Profile Image */}
       <div className="flex flex-col items-center">
         <div className="relative group mb-4">
-          <div className="size-28 md:size-32 lg:size-36 rounded-full bg-gray-200 overflow-hidden border-2 md:border-4 border-teal-600">
-            <img
-              src={user.imageUrl}
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+          <div className="size-28 md:size-32 lg:size-36 rounded-full bg-gray-200 overflow-hidden border-2 md:border-4 border-teal-600 flex items-center justify-center">
+            {isAuthenticated && photoUrl ? (
+              <img
+                src={photoUrl}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div>
+                <img
+                  src="https://t4.ftcdn.net/jpg/02/15/84/43/360_F_215844325_ttX9YiIIyeaR7Ne6EaLLjMAmy4GvPC69.jpg"
+                  alt="Profile Pic"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
           </div>
-          <label
-            htmlFor="profile-image"
-            className="absolute bottom-0 right-0 bg-teal-600 text-white p-2 md:p-2.5 lg:p-3 rounded-full cursor-pointer hover:bg-teal-700 transition-colors"
-          >
-            <Camera className="size-4 md:size-5 lg:size-6" />
-            <input
-              id="profile-image"
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-              disabled={isUpdating}
-            />
-          </label>
+          {isAuthenticated && (
+            <label
+              htmlFor="profile-image"
+              className="absolute bottom-0 right-0 bg-teal-600 text-white p-2 md:p-2.5 lg:p-3 rounded-full cursor-pointer hover:bg-teal-700 transition-colors"
+            >
+              <Camera className="size-4 md:size-5 lg:size-6" />
+              <input
+                id="profile-image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                disabled={isUpdating}
+              />
+            </label>
+          )}
         </div>
       </div>
 
-      {/* Email */}
+      {/* Email or Phone */}
       <div className="space-y-2 mb-4 md:mb-5 lg:mb-6">
         <label className="gap-1.5 md:gap-2 flex items-center text-sm md:text-base lg:text-lg text-gray-700">
-          <Mail className="size-3.5 md:size-4 lg:size-5" />
-          Correo electrónico
+          <Phone className="size-3.5 md:size-4 lg:size-5" />
+          Teléfono
         </label>
         <div className="w-full px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 bg-gray-100 border border-gray-300 rounded-lg text-gray-600 text-base md:text-lg lg:text-xl">
-          {user.primaryEmailAddress?.emailAddress}
+          {formatPhoneNumber(phone)}
         </div>
       </div>
 
@@ -319,8 +253,8 @@ export default function ProfileTab() {
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             placeholder="Tu nombre"
-            className="w-full px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 border text-black text-base md:text-lg lg:text-xl border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent"
-            disabled={isUpdating}
+            className="w-full px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 border text-black text-base md:text-lg lg:text-xl border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={isUpdating || !isAuthenticated}
           />
         </div>
 
@@ -335,236 +269,113 @@ export default function ProfileTab() {
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             placeholder="Tu apellido"
-            className="w-full px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 border text-black text-base md:text-lg lg:text-xl border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent"
-            disabled={isUpdating}
+            className="w-full px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 border text-black text-base md:text-lg lg:text-xl border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={isUpdating || !isAuthenticated}
           />
         </div>
       </div>
 
-      {/* Telefono */}
-      <div className="space-y-2 mb-4 md:mb-5 lg:mb-6">
-        <label className="gap-1.5 md:gap-2 flex items-center text-sm md:text-base lg:text-lg text-gray-700">
-          <Phone className="size-3.5 md:size-4 lg:size-5" />
-          Telefono
-        </label>
-        <input
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="123 456 7890"
-          className="w-full px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 border text-black text-base md:text-lg lg:text-xl border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent"
-          disabled={isUpdating}
-        />
-      </div>
-
-      <div className="flex gap-3 md:gap-4 lg:gap-5 mb-6 md:mb-8 lg:mb-10">
-        {/* Edad */}
-        <div className="space-y-2 flex-1">
+      <div className="flex gap-2 md:gap-4 lg:gap-5 mb-6 md:mb-8 lg:mb-10">
+        {/* Fecha de nacimiento */}
+        <div className="space-y-2 flex-1 min-w-0">
           <label className="gap-1.5 md:gap-2 flex items-center text-sm md:text-base lg:text-lg text-gray-700">
-            Edad
+            Fecha de nacimiento
           </label>
-          <select
-            value={age || ""}
-            onChange={(e) =>
-              setAge(e.target.value ? parseInt(e.target.value) : null)
-            }
-            className="cursor-pointer w-full px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 border text-black text-base md:text-lg lg:text-xl border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent"
-            disabled={isUpdating}
-          >
-            <option value="">Tu edad</option>
-            {Array.from({ length: 83 }, (_, i) => 18 + i).map((ageOption) => (
-              <option key={ageOption} value={ageOption}>
-                {ageOption}
-              </option>
-            ))}
-          </select>
+          <input
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            max={new Date().toISOString().split("T")[0]}
+            placeholder="dd/mm/aaaa"
+            className="cursor-pointer w-full px-2 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 border text-black text-base md:text-lg lg:text-xl border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed [&::-webkit-calendar-picker-indicator]:cursor-pointer appearance-none bg-white"
+            style={{
+              WebkitAppearance: "none",
+              MozAppearance: "textfield",
+            }}
+            disabled={isUpdating || !isAuthenticated}
+            lang="es-MX"
+          />
         </div>
 
         {/* Genero */}
-        <div className="space-y-2 flex-1">
+        <div className="space-y-2 flex-1 min-w-0">
           <label className="gap-1.5 md:gap-2 flex items-center text-sm md:text-base lg:text-lg text-gray-700">
             Género
           </label>
-          <select
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-            className="cursor-pointer w-full px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 border text-black text-base md:text-lg lg:text-xl border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent"
-            disabled={isUpdating}
-          >
-            <option value="">Tu género</option>
-            <option value="male">Masculino</option>
-            <option value="female">Femenino</option>
-          </select>
+          <div className="relative">
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="cursor-pointer w-full px-2 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 border text-black text-base md:text-lg lg:text-xl border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed appearance-none bg-white pr-10"
+              style={{
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+              }}
+              disabled={isUpdating || !isAuthenticated}
+            >
+              <option value="male">Masculino</option>
+              <option value="female">Femenino</option>
+              <option value="other">Otro</option>
+            </select>
+            {/* Custom dropdown arrow */}
+            <div className="pointer-events-none absolute inset-y-0 right-2 md:right-5 lg:right-6 flex items-center">
+              <svg
+                className="h-5 w-5 text-gray-400"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Password Change Link and Logout */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => setIsPasswordModalOpen(true)}
-          className="text-teal-600 hover:text-teal-700 font-medium text-sm md:text-base lg:text-lg flex items-center gap-1.5 md:gap-2 cursor-pointer"
-        >
-          <Lock className="size-4 md:size-5 lg:size-6" />
-          Cambiar contraseña
-        </button>
+      {/* Logout/Login */}
+      <div className="flex items-center justify-end">
         <button
           onClick={() => setIsLogoutModalOpen(true)}
-          className="text-red-600 hover:text-red-700 font-medium text-sm md:text-base lg:text-lg flex items-center gap-1.5 md:gap-2 cursor-pointer"
+          className={`font-medium text-sm md:text-base lg:text-lg flex items-center gap-2 cursor-pointer ${
+            isAuthenticated
+              ? "text-red-600 hover:text-red-700"
+              : "text-teal-600 hover:text-teal-700"
+          }`}
         >
-          <LogOut className="size-4 md:size-5 lg:size-6" />
-          Cerrar sesión
+          {isAuthenticated ? (
+            <>
+              <LogOut className="size-4 md:size-5 lg:size-6" />
+              Cerrar sesión
+            </>
+          ) : (
+            <>
+              <LogIn className="size-4 md:size-5 lg:size-6" />
+              Iniciar sesión
+            </>
+          )}
         </button>
       </div>
 
       {/* Update Button */}
-      <button
-        onClick={handleUpdateProfile}
-        disabled={isUpdating}
-        className="mt-6 md:mt-8 lg:mt-10 bg-black hover:bg-stone-950 w-full text-white py-3 md:py-4 lg:py-5 text-base md:text-lg lg:text-xl rounded-full cursor-pointer transition-colors disabled:bg-stone-600 disabled:cursor-not-allowed"
-      >
-        {isUpdating ? (
-          <div className="flex items-center justify-center gap-1 md:gap-1.5">
-            <Loader2 className="size-5 md:size-6 lg:size-7 animate-spin" />
-            Actualizando...
-          </div>
-        ) : (
-          "Guardar cambios"
-        )}
-      </button>
-
-      {/* Password Modal */}
-      {isPasswordModalOpen && (
-        <div
-          className="fixed inset-0 flex items-end justify-center"
-          style={{ zIndex: 99999 }}
+      {isAuthenticated && (
+        <button
+          onClick={handleUpdateProfile}
+          disabled={isUpdating}
+          className="mt-6 md:mt-8 lg:mt-10 bg-black hover:bg-stone-950 w-full text-white py-3 md:py-4 lg:py-5 text-base md:text-lg lg:text-xl rounded-full cursor-pointer transition-colors disabled:bg-stone-600 disabled:cursor-not-allowed"
         >
-          {/* Fondo */}
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setIsPasswordModalOpen(false)}
-          ></div>
-
-          <div className="relative bg-white rounded-t-4xl w-full mx-4 p-6 md:p-7 lg:p-8">
-            {/* Close Button */}
-            <button
-              onClick={() => setIsPasswordModalOpen(false)}
-              className="absolute top-4 md:top-5 lg:top-6 right-4 md:right-5 lg:right-6 text-gray-400 hover:text-gray-600"
-            >
-              <X className="size-5 md:size-6 lg:size-7" />
-            </button>
-
-            {/* Modal Title */}
-            <h3 className="text-xl md:text-2xl lg:text-3xl font-semibold text-gray-800 mb-6 md:mb-7 lg:mb-8">
-              Cambiar contraseña
-            </h3>
-
-            {/* Current Password */}
-            <div className="space-y-2 mb-4 md:mb-5">
-              <label className="gap-1.5 flex items-center text-sm md:text-base text-gray-700">
-                <Lock className="size-3.5 md:size-4" />
-                Contraseña actual
-              </label>
-              <div className="relative">
-                <input
-                  type={showCurrentPassword ? "text" : "password"}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Ingresa tu contraseña actual"
-                  className="w-full px-4 md:px-5 py-3 md:py-3.5 border text-black text-base md:text-lg border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent"
-                  disabled={isUpdatingPassword}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showCurrentPassword ? (
-                    <EyeOff className="size-5 md:size-6" />
-                  ) : (
-                    <Eye className="size-5 md:size-6" />
-                  )}
-                </button>
-              </div>
+          {isUpdating ? (
+            <div className="flex items-center justify-center gap-1 md:gap-2">
+              <Loader2 className="size-5 md:size-6 lg:size-7 animate-spin" />
+              Actualizando...
             </div>
-
-            {/* New Password */}
-            <div className="space-y-2 mb-4 md:mb-5">
-              <label className="gap-1.5 flex items-center text-sm md:text-base text-gray-700">
-                <Lock className="size-3.5 md:size-4" />
-                Nueva contraseña
-              </label>
-              <div className="relative">
-                <input
-                  type={showNewPassword ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Ingresa tu nueva contraseña"
-                  className="w-full px-4 md:px-5 py-3 md:py-3.5 border text-black text-base md:text-lg border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent"
-                  disabled={isUpdatingPassword}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showNewPassword ? (
-                    <EyeOff className="size-5 md:size-6" />
-                  ) : (
-                    <Eye className="size-5 md:size-6" />
-                  )}
-                </button>
-              </div>
-              <p className="text-xs md:text-sm text-gray-500 -translate-y-1">
-                Debe tener al menos 8 caracteres
-              </p>
-            </div>
-
-            {/* Confirm Password */}
-            <div className="space-y-2">
-              <label className="gap-1.5 flex items-center text-sm md:text-base text-gray-700">
-                <Lock className="size-3.5 md:size-4" />
-                Confirmar nueva contraseña
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirma tu nueva contraseña"
-                  className="w-full px-4 md:px-5 py-3 md:py-3.5 border text-black text-base md:text-lg border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent"
-                  disabled={isUpdatingPassword}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="size-5 md:size-6" />
-                  ) : (
-                    <Eye className="size-5 md:size-6" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Update Password Button */}
-            <button
-              onClick={handleUpdatePassword}
-              disabled={isUpdatingPassword}
-              className="mt-6 md:mt-8 bg-black hover:bg-stone-950 w-full text-white py-3 md:py-4 lg:py-5 text-base md:text-lg lg:text-xl rounded-full cursor-pointer transition-colors disabled:bg-stone-600 disabled:cursor-not-allowed"
-            >
-              {isUpdatingPassword ? (
-                <div className="flex items-center justify-center gap-1">
-                  <Loader2 className="size-5 md:size-6 lg:size-7 animate-spin" />
-                  Actualizando contraseña...
-                </div>
-              ) : (
-                "Cambiar contraseña"
-              )}
-            </button>
-          </div>
-        </div>
+          ) : (
+            "Guardar cambios"
+          )}
+        </button>
       )}
 
       {/* Logout Confirmation Modal */}
@@ -607,7 +418,7 @@ export default function ProfileTab() {
                 Cancelar
               </button>
               <button
-                onClick={() => signOut(() => navigateWithRestaurantId("/menu"))}
+                onClick={handleLogout}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 md:py-3 text-base md:text-lg rounded-full cursor-pointer transition-colors"
               >
                 Cerrar sesión

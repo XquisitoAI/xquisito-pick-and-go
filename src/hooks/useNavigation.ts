@@ -1,29 +1,41 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import { useRestaurant } from "../context/RestaurantContext";
 
 /**
  * Hook de navegación para Pick & Go
- * Simplifica la navegación eliminando la complejidad de table parameters
- * y enfocándose solo en restaurantId
+ * Maneja navegación con restaurantId y branchId (query param)
  */
 export function useNavigation() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const { restaurantId } = useRestaurant();
 
   // Obtener restaurantId de params o del contexto
   const currentRestaurantId = params?.restaurantId || restaurantId;
 
+  // Obtener branchId actual de los query params
+  const currentBranchId = searchParams.get("branch");
+
   /**
-   * Navegar manteniendo el contexto del restaurante
+   * Navegar manteniendo el contexto del restaurante y branch
    * @param path - Ruta a navegar (ej: "/menu", "/cart", "/dish/123")
-   * @param replace - Si usar replace en lugar de push (default: false)
+   * @param options - Opciones de navegación
    */
   const navigateWithRestaurantId = useCallback(
-    (path: string, replace: boolean = false) => {
+    (
+      path: string,
+      options?: {
+        replace?: boolean;
+        branchId?: number | string | null;
+        preserveBranch?: boolean;
+      }
+    ) => {
+      const { replace = false, branchId, preserveBranch = true } = options || {};
+
       if (!currentRestaurantId) {
         console.warn(
           "No restaurant ID found, navigating without restaurant context"
@@ -44,13 +56,21 @@ export function useNavigation() {
         fullPath = `/${currentRestaurantId}/${cleanPath}`;
       }
 
+      // Agregar branchId como query param si está disponible
+      const finalBranchId = branchId !== undefined ? branchId : (preserveBranch ? currentBranchId : null);
+
+      if (finalBranchId) {
+        const separator = fullPath.includes("?") ? "&" : "?";
+        fullPath = `${fullPath}${separator}branch=${finalBranchId}`;
+      }
+
       if (replace) {
         router.replace(fullPath);
       } else {
         router.push(fullPath);
       }
     },
-    [router, currentRestaurantId]
+    [router, currentRestaurantId, currentBranchId]
   );
 
   /**
@@ -60,7 +80,7 @@ export function useNavigation() {
    */
   const navigateToDish = useCallback(
     (dishId: string | number, replace: boolean = false) => {
-      navigateWithRestaurantId(`/dish/${dishId}`, replace);
+      navigateWithRestaurantId(`/dish/${dishId}`, { replace });
     },
     [navigateWithRestaurantId]
   );
@@ -124,15 +144,42 @@ export function useNavigation() {
     navigateWithRestaurantId("/order-confirmation");
   }, [navigateWithRestaurantId]);
 
+  /**
+   * Cambiar de sucursal (actualiza el query param en la URL actual)
+   */
+  const changeBranch = useCallback(
+    (branchId: number | null) => {
+      if (typeof window === "undefined") return;
+
+      const currentPath = window.location.pathname;
+      const currentSearch = window.location.search;
+      const searchParams = new URLSearchParams(currentSearch);
+
+      if (branchId) {
+        searchParams.set("branch", branchId.toString());
+      } else {
+        searchParams.delete("branch");
+      }
+
+      const newSearch = searchParams.toString();
+      const newUrl = newSearch ? `${currentPath}?${newSearch}` : currentPath;
+
+      router.push(newUrl);
+    },
+    [router]
+  );
+
   return {
     // Estado
     restaurantId: currentRestaurantId,
     hasRestaurant: !!currentRestaurantId,
+    branchId: currentBranchId ? parseInt(currentBranchId) : null,
 
     // Navegación general
     navigateWithRestaurantId,
     goBack,
     getUrlWithRestaurantId,
+    changeBranch,
 
     // Navegación específica para Pick & Go
     navigateToDish,

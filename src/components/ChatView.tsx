@@ -4,7 +4,7 @@ import { ChevronLeft, Mic, Plus, SendHorizontal } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { useGuest } from "@/context/GuestContext";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/context/AuthContext";
 
 interface ChatViewProps {
   onBack: () => void;
@@ -86,7 +86,7 @@ export default function ChatView({ onBack }: ChatViewProps) {
   // Obtener contextos
   const { restaurantId } = useRestaurant();
   const { guestId, isGuest } = useGuest();
-  const { user } = useUser();
+  const { user } = useAuth();
 
   // Auto-scroll cuando cambian los mensajes (solo cuando hay nuevos mensajes)
   useEffect(() => {

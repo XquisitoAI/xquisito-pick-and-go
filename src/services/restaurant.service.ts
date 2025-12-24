@@ -1,14 +1,6 @@
 import { Restaurant } from "../interfaces/restaurant";
 import { MenuSection } from "../interfaces/category";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  error?: string;
-  message?: string;
-}
+import { requestWithAuth, type ApiResponse } from "./request-helper";
 
 interface RestaurantWithMenu {
   restaurant: Restaurant;
@@ -19,60 +11,48 @@ interface RestaurantWithMenu {
  * Servicio para interactuar con la API de restaurantes
  */
 class RestaurantService {
+  private async request<T>(
+    endpoint: string,
+    options?: RequestInit
+  ): Promise<ApiResponse<T>> {
+    return requestWithAuth<T>(endpoint, options);
+  }
   /**
    * Obtener información de un restaurante por ID
    */
   async getRestaurantById(restaurantId: number): Promise<Restaurant> {
-    try {
-      const response = await fetch(`${API_URL}/restaurants/${restaurantId}`);
+    const result = await this.request<Restaurant>(
+      `/restaurants/${restaurantId}`
+    );
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Restaurant not found");
-        }
-        throw new Error("Failed to fetch restaurant");
-      }
-
-      const result: ApiResponse<Restaurant> = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.message || "Failed to fetch restaurant");
-      }
-
-      return result.data;
-    } catch (error) {
-      console.error("Error fetching restaurant:", error);
-      throw error;
+    if (!result.success || !result.data) {
+      throw new Error(
+        typeof result.error === "string"
+          ? result.error
+          : result.error?.message || "Failed to fetch restaurant"
+      );
     }
+
+    return result.data;
   }
 
   /**
    * Obtener menú completo de un restaurante
    */
   async getRestaurantMenu(restaurantId: number): Promise<MenuSection[]> {
-    try {
-      const response = await fetch(
-        `${API_URL}/restaurants/${restaurantId}/menu`
+    const result = await this.request<MenuSection[]>(
+      `/restaurants/${restaurantId}/menu`
+    );
+
+    if (!result.success || !result.data) {
+      throw new Error(
+        typeof result.error === "string"
+          ? result.error
+          : result.error?.message || "Failed to fetch restaurant menu"
       );
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Restaurant not found");
-        }
-        throw new Error("Failed to fetch restaurant menu");
-      }
-
-      const result: ApiResponse<MenuSection[]> = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.message || "Failed to fetch restaurant menu");
-      }
-
-      return result.data;
-    } catch (error) {
-      console.error("Error fetching restaurant menu:", error);
-      throw error;
     }
+
+    return result.data;
   }
 
   /**
@@ -81,53 +61,36 @@ class RestaurantService {
   async getRestaurantWithMenu(
     restaurantId: number
   ): Promise<RestaurantWithMenu> {
-    try {
-      const response = await fetch(
-        `${API_URL}/restaurants/${restaurantId}/complete`
+    const result = await this.request<RestaurantWithMenu>(
+      `/restaurants/${restaurantId}/complete`
+    );
+
+    if (!result.success || !result.data) {
+      throw new Error(
+        typeof result.error === "string"
+          ? result.error
+          : result.error?.message || "Failed to fetch restaurant data"
       );
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Restaurant not found");
-        }
-        throw new Error("Failed to fetch restaurant data");
-      }
-
-      const result: ApiResponse<RestaurantWithMenu> = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.message || "Failed to fetch restaurant data");
-      }
-
-      return result.data;
-    } catch (error) {
-      console.error("Error fetching restaurant with menu:", error);
-      throw error;
     }
+
+    return result.data;
   }
 
   /**
    * Obtener todos los restaurantes activos
    */
   async getAllRestaurants(): Promise<Restaurant[]> {
-    try {
-      const response = await fetch(`${API_URL}/restaurants`);
+    const result = await this.request<Restaurant[]>("/restaurants");
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch restaurants");
-      }
-
-      const result: ApiResponse<Restaurant[]> = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.message || "Failed to fetch restaurants");
-      }
-
-      return result.data;
-    } catch (error) {
-      console.error("Error fetching restaurants:", error);
-      throw error;
+    if (!result.success || !result.data) {
+      throw new Error(
+        typeof result.error === "string"
+          ? result.error
+          : result.error?.message || "Failed to fetch restaurants"
+      );
     }
+
+    return result.data;
   }
 }
 

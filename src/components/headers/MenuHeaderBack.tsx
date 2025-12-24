@@ -2,11 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
 
 export default function MenuHeaderBack() {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
 
   const handleBack = () => {
     router.back();

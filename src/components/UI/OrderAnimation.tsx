@@ -3,38 +3,55 @@
 import React, { useState, useEffect } from "react";
 import { CartItem } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
+import { useParams, useRouter } from "next/navigation";
 import Loader from "@/components/UI/Loader";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/context/AuthContext";
 
 interface OrderAnimationProps {
   userName?: string;
   orderedItems?: CartItem[];
   onContinue?: () => void;
+  onCancel?: () => void;
+  onConfirm?: () => void;
 }
 
 const OrderAnimation = ({
   userName,
   orderedItems,
   onContinue,
+  onCancel,
+  onConfirm,
 }: OrderAnimationProps) => {
+  const router = useRouter();
+  const params = useParams();
+  const restaurantId = params?.restaurantId as string;
   const { restaurant, loading } = useRestaurant();
-  const { user } = useUser();
+  const { user, profile } = useAuth();
   const [animationState, setAnimationState] = useState<
     "circle" | "content" | "greenCircle" | "success"
   >("circle");
   const [logoColorful, setLogoColorful] = useState(false);
+  const [showCancelButton, setShowCancelButton] = useState(true);
 
-  const displayName = userName || "Usuario";
+  const displayName = userName || profile?.firstName || "Usuario";
   const displayItems = orderedItems || [];
-  const displayRestaurant = restaurant?.name || "Xquisito Pick & Go";
+  const displayRestaurant = restaurant?.name || "Restaurante";
 
-  const userImage = user?.imageUrl;
+  const userImage = profile?.photoUrl;
   const hasUserImage = !!userImage;
 
   useEffect(() => {
     const contentTimer = setTimeout(() => {
       setAnimationState("content");
     }, 1500);
+
+    const cancelButtonTimer = setTimeout(() => {
+      setShowCancelButton(false);
+      // Confirmar la orden después de que expire el tiempo de cancelación
+      if (onConfirm) {
+        onConfirm();
+      }
+    }, 4000);
 
     const logoTimer = setTimeout(() => {
       setLogoColorful(true);
@@ -54,6 +71,7 @@ const OrderAnimation = ({
 
     return () => {
       clearTimeout(contentTimer);
+      clearTimeout(cancelButtonTimer);
       clearTimeout(logoTimer);
       clearTimeout(greenCircleTimer);
       clearTimeout(successTimer);
@@ -64,8 +82,16 @@ const OrderAnimation = ({
   const handleContinue = () => {
     if (onContinue) {
       onContinue();
+    } else {
+      // Navegar a la página de tracking o confirmación
+      router.push(`/${restaurantId}/order-tracking`);
     }
-    // For Pick & Go, just call onContinue - no navigation needed
+  };
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    }
   };
 
   // Mostrar loader mientras carga
@@ -88,7 +114,7 @@ const OrderAnimation = ({
           <div className="h-[100dvh] bg-white p-8 animate-fade-in flex flex-col overflow-y-auto">
             <div className="flex flex-col flex-1">
               {/* Logo animado */}
-              <div className="mb-8 mt-12 w-fit relative">
+              <div className="mb-6 md:mb-8 lg:mb-10 mt-8 md:mt-12 lg:mt-14 w-fit relative">
                 {/* Pulsing rings */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="pulse-ring"></div>
@@ -96,79 +122,85 @@ const OrderAnimation = ({
                   <div className="pulse-ring pulse-ring-delay-2"></div>
                 </div>
                 {/* Logo container */}
-                <div className="size-24 flex items-center justify-center rounded-full relative z-10">
+                <div className="size-20 md:size-24 lg:size-28 flex items-center justify-center rounded-full relative z-10">
                   <img
                     src="/logos/logo-short-green.webp"
                     alt="Xquisito Logo"
-                    className="size-16 grayscale opacity-50"
+                    className="size-14 md:size-16 lg:size-20 grayscale opacity-50"
                   />
                 </div>
               </div>
 
               {/* Título */}
-              <div className="text-black text-5xl font-medium mb-12 mr-20">
-                Estamos creando tu pedido
+              <div className="text-black text-3xl md:text-5xl lg:text-6xl font-medium mb-8 md:mb-12 lg:mb-14 mr-12 md:mr-20 lg:mr-24">
+                Estamos creando tu pedido Pick & Go
               </div>
 
               {/* Información del pedido */}
               <div className="flex flex-col w-full divide-y divide-[#8e8e8e]/50">
                 {/* Restaurante */}
-                <div className="pb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="size-12 rounded-full border border-gray-400 bg-gray-100 overflow-hidden flex-shrink-0">
+                <div className="pb-4 md:pb-6 lg:pb-7">
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <div className="size-10 md:size-12 lg:size-14 rounded-full border border-gray-400 bg-gray-100 overflow-hidden flex-shrink-0">
                       <img
-                        src={restaurant?.logo_url || "/logos/logo-short-green.webp"}
+                        src={
+                          restaurant?.logo_url || "/logos/logo-short-green.webp"
+                        }
                         alt={displayRestaurant}
                         className="object-cover w-full h-full"
                       />
                     </div>
                     <div>
-                      <span className="text-black text-lg font-medium">
+                      <span className="text-black text-base md:text-lg lg:text-xl font-medium">
                         {displayRestaurant}
                       </span>
-                      <p className="text-sm text-gray-500">Restaurante</p>
+                      <p className="text-xs md:text-sm lg:text-base text-gray-500">
+                        Restaurante
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Usuario */}
-                <div className="py-6">
-                  <div className="flex items-center gap-3">
+                <div className="py-4 md:py-6 lg:py-7">
+                  <div className="flex items-center gap-3 md:gap-4">
                     {hasUserImage ? (
                       <img
                         src={userImage}
                         alt={displayName}
-                        className="size-12 rounded-full object-cover border border-gray-400 flex-shrink-0"
+                        className="size-10 md:size-12 lg:size-14 rounded-full object-cover border border-gray-400 flex-shrink-0"
                       />
                     ) : (
-                      <div className="size-12 rounded-full border border-gray-400 bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex items-center justify-center flex-shrink-0">
-                        <span className="text-white text-lg font-bold">
+                      <div className="size-10 md:size-12 lg:size-14 rounded-full border border-gray-400 bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-base md:text-lg lg:text-xl font-bold">
                           {displayName.charAt(0).toUpperCase()}
                         </span>
                       </div>
                     )}
                     <div>
-                      <span className="text-black text-lg font-medium">
+                      <span className="text-black text-base md:text-lg lg:text-xl font-medium">
                         {displayName}
                       </span>
-                      <p className="text-sm text-gray-500">Nombre</p>
+                      <p className="text-xs md:text-sm lg:text-base text-gray-500">
+                        Nombre
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Platillos ordenados */}
                 {displayItems.length > 0 && (
-                  <div className="pt-6">
-                    <p className="text-sm text-gray-500 mb-4">
+                  <div className="pt-4 md:pt-6 lg:pt-7">
+                    <p className="text-xs md:text-sm lg:text-base text-gray-500 mb-3 md:mb-4">
                       Platillos ordenados
                     </p>
-                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                    <div className="space-y-2 md:space-y-3 lg:space-y-4 max-h-48 md:max-h-64 lg:max-h-80 overflow-y-auto">
                       {displayItems.map((item, index) => (
                         <div
                           key={`${item.id}-${index}`}
-                          className="flex items-center gap-3"
+                          className="flex items-center gap-3 md:gap-4"
                         >
-                          <div className="size-12 bg-gray-300 rounded-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+                          <div className="size-10 md:size-12 lg:size-14 bg-gray-300 rounded-sm md:rounded-md flex items-center justify-center overflow-hidden flex-shrink-0">
                             {item.images && item.images[0] ? (
                               <img
                                 src={item.images[0]}
@@ -177,22 +209,22 @@ const OrderAnimation = ({
                               />
                             ) : (
                               <img
-                                src={restaurant?.logo_url || "/logos/logo-short-green.webp"}
+                                src="/logos/logo-short-green.webp"
                                 alt="Logo Xquisito"
-                                className="size-8 object-contain"
+                                className="size-6 md:size-8 lg:size-10 object-contain"
                               />
                             )}
                           </div>
                           <div className="flex-1">
-                            <p className="text-black text-base capitalize">
+                            <p className="text-black text-sm md:text-base lg:text-lg capitalize">
                               {item.name}
                             </p>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-xs md:text-sm lg:text-base text-gray-500">
                               Cantidad: {item.quantity}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-black text-base font-medium">
+                            <p className="text-black text-sm md:text-base lg:text-lg font-medium">
                               $
                               {(
                                 (item.price + (item.extraPrice || 0)) *
@@ -206,6 +238,24 @@ const OrderAnimation = ({
                   </div>
                 )}
               </div>
+
+              {/* Botón de cancelar */}
+              {onCancel && (
+                <div
+                  className={`mt-auto pt-6 md:pt-8 pb-4 md:pb-6 transition-opacity duration-500 ${
+                    showCancelButton
+                      ? "opacity-100"
+                      : "opacity-0 pointer-events-none"
+                  }`}
+                >
+                  <button
+                    onClick={handleCancel}
+                    className="py-1 md:py-1.5 px-6 md:px-8 text-black rounded-full active:scale-95 transition-all font-medium text-sm md:text-base bg-[#f9f9f9] lg:py-2 border border-[#8e8e8e]/40 cursor-pointer"
+                  >
+                    Deshacer pedido
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -214,8 +264,8 @@ const OrderAnimation = ({
       {/* Animacion circulo verde */}
       {animationState === "greenCircle" && (
         <div className="fixed inset-0 z-[10000] overflow-hidden pointer-events-none">
-          <div className="p-8">
-            <div className="mb-8 mt-12 relative">
+          <div className="p-6 md:p-8 lg:p-10">
+            <div className="mb-6 md:mb-8 lg:mb-10 mt-8 md:mt-12 lg:mt-14 relative">
               <div className="green-circle-from-logo"></div>
             </div>
           </div>
@@ -228,10 +278,10 @@ const OrderAnimation = ({
           <div className="h-[100dvh] p-8 flex flex-col">
             <div className="flex flex-col flex-1">
               {/* Checkmark */}
-              <div className="mb-8 mt-12 animate-simple-fade-in">
-                <div className="size-24 rounded-full bg-white flex items-center justify-center">
+              <div className="mb-6 md:mb-8 lg:mb-10 mt-8 md:mt-12 lg:mt-14 animate-simple-fade-in">
+                <div className="size-20 md:size-24 lg:size-28 rounded-full bg-white flex items-center justify-center">
                   <svg
-                    className="size-16 text-green-500"
+                    className="size-14 md:size-16 lg:size-20 text-green-500"
                     fill="none"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -245,8 +295,8 @@ const OrderAnimation = ({
               </div>
 
               {/* Success message */}
-              <div className="text-white text-5xl font-medium mb-12 mr-28 animate-simple-fade-in">
-                Tu pedido fue creado con éxito
+              <div className="text-white text-3xl md:text-5xl lg:text-6xl font-medium mb-8 md:mb-12 lg:mb-14 mr-16 md:mr-28 lg:mr-32 animate-simple-fade-in">
+                Tu pedido Pick & Go fue creado con éxito
               </div>
             </div>
           </div>
