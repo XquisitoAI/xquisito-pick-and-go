@@ -8,11 +8,13 @@ import { useNavigation } from "@/hooks/useNavigation";
 interface BranchSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onBranchChangeRequested?: (newBranchNumber: number) => void;
 }
 
 export default function BranchSelectionModal({
   isOpen,
   onClose,
+  onBranchChangeRequested,
 }: BranchSelectionModalProps) {
   const { branches, selectedBranchNumber } = useBranch();
   const { changeBranch } = useNavigation();
@@ -35,7 +37,12 @@ export default function BranchSelectionModal({
 
   const handleConfirm = () => {
     if (tempSelectedBranch !== null && tempSelectedBranch !== selectedBranchNumber) {
-      changeBranch(tempSelectedBranch);
+      // Si hay un callback personalizado, usarlo en lugar de cambiar directamente
+      if (onBranchChangeRequested) {
+        onBranchChangeRequested(tempSelectedBranch);
+      } else {
+        changeBranch(tempSelectedBranch);
+      }
     }
     onClose();
   };

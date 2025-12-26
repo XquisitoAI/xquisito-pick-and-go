@@ -42,7 +42,7 @@ export default function CartView() {
           {state.items.length === 0 ? (
             <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
               <h1 className="text-[#e0e0e0] text-xl md:text-2xl lg:text-3xl font-medium">
-                🥡 Pick & Go
+                Pick & Go
               </h1>
               <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
                 El carrito está vacío, agrega items y disfruta
@@ -51,10 +51,10 @@ export default function CartView() {
           ) : (
             <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
               <h1 className="text-[#e0e0e0] text-xl md:text-2xl lg:text-3xl font-medium">
-                🥡 Pick & Go
+                Pick & Go
               </h1>
               <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
-                Todo listo, revisa tu pedido y confirma
+                Confirma tu pedido
               </h2>
             </div>
           )}
@@ -215,9 +215,7 @@ export default function CartView() {
                   </div>
                   <button
                     onClick={handleOrder}
-                    disabled={
-                      isSubmitting || state.isLoading || isUnderMinimum
-                    }
+                    disabled={isSubmitting || state.isLoading || isUnderMinimum}
                     className={`py-3 md:py-4 lg:py-5 text-white rounded-full cursor-pointer font-normal h-fit flex items-center justify-center text-base md:text-lg lg:text-xl active:scale-95 transition-transform ${
                       isSubmitting || state.isLoading || isUnderMinimum
                         ? "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed px-10 md:px-12 lg:px-14"
