@@ -1,48 +1,51 @@
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { useGuest } from "../context/GuestContext";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useRestaurant } from "../context/RestaurantContext";
+import { restaurantService } from "../services/restaurant.service";
 
 /**
- * Hook simplificado para validar acceso a restaurante y sucursal en Pick & Go
- * No requiere validación de mesa como en tap-order-and-pay
+ * Hook para validar acceso a restaurante y sucursal en Pick & Go
+ * Valida que el restaurante exista y tenga sucursales activas
+ * La sucursal se maneja como query param (?branch=X)
  */
 export function useValidateAccess() {
   const router = useRouter();
   const params = useParams();
-  const { setRestaurantAndBranch } = useGuest();
+  const searchParams = useSearchParams();
+  const { setRestaurantId } = useRestaurant();
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(true);
 
   const restaurantId = params?.restaurantId as string;
-  const branchNumber = params?.branchNumber as string;
+  const branchNumber = searchParams?.get("branch");
 
   useEffect(() => {
     const validateAndSetup = async () => {
       try {
         // Validar restaurantId
         if (!restaurantId || isNaN(parseInt(restaurantId))) {
-          console.error("❌ Error en restaurant ID");
-          setValidationError("INVALID_RESTAURANT_ID");
-          router.push("/");
+          console.error("❌ Invalid restaurant ID");
+          setValidationError("RESTAURANT_NOT_FOUND");
+          setIsValidating(false);
           return;
         }
 
-        // Validar branchNumber
-        if (!branchNumber || isNaN(parseInt(branchNumber))) {
-          console.error("❌ Error en número de sucursal");
-          setValidationError("INVALID_BRANCH_NUMBER");
-          router.push("/");
-          return;
+        // Establecer restaurantId en el contexto
+        setRestaurantId(parseInt(restaurantId));
+
+        // Validar que el restaurante y sucursal existan en el backend
+        const validation = await restaurantService.validateRestaurantAndBranch(
+          parseInt(restaurantId),
+          branchNumber ? parseInt(branchNumber) : null
+        );
+
+        if (!validation.valid) {
+          console.error("❌ Validation failed:", validation.error);
+          setValidationError(validation.error || "VALIDATION_ERROR");
+        } else {
+          console.log("✅ Validation successful");
+          setValidationError(null);
         }
-
-        // Establecer contexto de restaurante y sucursal
-        setRestaurantAndBranch(parseInt(restaurantId), parseInt(branchNumber));
-
-        console.log("✅ Validation successful:", {
-          restaurantId: parseInt(restaurantId),
-          branchNumber: parseInt(branchNumber),
-        });
-        setValidationError(null);
       } catch (err) {
         console.error("❌ Validation error:", err);
         setValidationError("VALIDATION_ERROR");
@@ -52,12 +55,12 @@ export function useValidateAccess() {
     };
 
     validateAndSetup();
-  }, [restaurantId, branchNumber, setRestaurantAndBranch, router]);
+  }, [restaurantId, branchNumber, setRestaurantId]);
 
   return {
     validationError,
     isValidating,
     restaurantId: parseInt(restaurantId || "0"),
-    branchNumber: parseInt(branchNumber || "0"),
+    branchNumber: branchNumber ? parseInt(branchNumber) : null,
   };
 }

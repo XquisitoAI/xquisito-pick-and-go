@@ -1,6 +1,7 @@
 export interface Branch {
   id: number;
   restaurant_id: number;
+  branch_number: number;
   name: string;
   address: string;
   phone?: string;
@@ -12,9 +13,9 @@ export interface Branch {
 }
 
 export interface BranchContextType {
-  selectedBranchId: number | null;
+  selectedBranchNumber: number | null;
   branches: Branch[];
   isLoading: boolean;
-  setSelectedBranchId: (branchId: number | null) => void;
+  setSelectedBranchNumber: (branchNumber: number | null) => void;
   fetchBranches: (restaurantId: number) => Promise<void>;
 }

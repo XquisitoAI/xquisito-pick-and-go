@@ -7,9 +7,15 @@ interface RestaurantWithMenu {
   menu: MenuSection[];
 }
 
-/**
- * Servicio para interactuar con la API de restaurantes
- */
+export interface ValidationResult {
+  valid: boolean;
+  error?:
+    | "RESTAURANT_NOT_FOUND"
+    | "BRANCH_NOT_FOUND"
+    | "NO_BRANCHES"
+    | "VALIDATION_ERROR";
+}
+
 class RestaurantService {
   private async request<T>(
     endpoint: string,
@@ -17,9 +23,7 @@ class RestaurantService {
   ): Promise<ApiResponse<T>> {
     return requestWithAuth<T>(endpoint, options);
   }
-  /**
-   * Obtener información de un restaurante por ID
-   */
+  // Obtener información de un restaurante por ID
   async getRestaurantById(restaurantId: number): Promise<Restaurant> {
     const result = await this.request<Restaurant>(
       `/restaurants/${restaurantId}`
@@ -29,16 +33,14 @@ class RestaurantService {
       throw new Error(
         typeof result.error === "string"
           ? result.error
-          : result.error?.message || "Failed to fetch restaurant"
+          : "Failed to fetch restaurant"
       );
     }
 
     return result.data;
   }
 
-  /**
-   * Obtener menú completo de un restaurante
-   */
+  // Obtener menú completo de un restaurante
   async getRestaurantMenu(restaurantId: number): Promise<MenuSection[]> {
     const result = await this.request<MenuSection[]>(
       `/restaurants/${restaurantId}/menu`
@@ -48,16 +50,14 @@ class RestaurantService {
       throw new Error(
         typeof result.error === "string"
           ? result.error
-          : result.error?.message || "Failed to fetch restaurant menu"
+          : "Failed to fetch restaurant menu"
       );
     }
 
     return result.data;
   }
 
-  /**
-   * Obtener restaurante con su menú completo en una sola petición
-   */
+  // Obtener restaurante con su menú completo en una sola petición
   async getRestaurantWithMenu(
     restaurantId: number
   ): Promise<RestaurantWithMenu> {
@@ -69,16 +69,14 @@ class RestaurantService {
       throw new Error(
         typeof result.error === "string"
           ? result.error
-          : result.error?.message || "Failed to fetch restaurant data"
+          : "Failed to fetch restaurant data"
       );
     }
 
     return result.data;
   }
 
-  /**
-   * Obtener todos los restaurantes activos
-   */
+  // Obtener todos los restaurantes activos
   async getAllRestaurants(): Promise<Restaurant[]> {
     const result = await this.request<Restaurant[]>("/restaurants");
 
@@ -86,11 +84,41 @@ class RestaurantService {
       throw new Error(
         typeof result.error === "string"
           ? result.error
-          : result.error?.message || "Failed to fetch restaurants"
+          : "Failed to fetch restaurants"
       );
     }
 
     return result.data;
+  }
+
+  // Validar que el restaurante y opcionalmente la sucursal existan
+  async validateRestaurantAndBranch(
+    restaurantId: number,
+    branchNumber: number | null
+  ): Promise<ValidationResult> {
+    try {
+      // Construir la URL con o sin branchNumber
+      const endpoint = branchNumber
+        ? `/restaurants/${restaurantId}/branches/${branchNumber}/validate`
+        : `/restaurants/${restaurantId}/validate`;
+
+      const response = await this.request<ValidationResult>(endpoint);
+
+      if (!response.success) {
+        return {
+          valid: false,
+          error: "VALIDATION_ERROR",
+        };
+      }
+
+      return response.data || { valid: false, error: "VALIDATION_ERROR" };
+    } catch (error) {
+      console.error("Error validating restaurant/branch:", error);
+      return {
+        valid: false,
+        error: "VALIDATION_ERROR",
+      };
+    }
   }
 }
 

@@ -9,8 +9,17 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useGuest } from "@/context/GuestContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
-import { Plus, Trash2, Loader2, CircleAlert, X } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Loader2,
+  CircleAlert,
+  X,
+  ChevronRight,
+} from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
+import { useBranch } from "@/context/BranchContext";
+import BranchSelectionModal from "@/components/modals/BranchSelectionModal";
 import Loader from "@/components/UI/Loader";
 import OrderAnimation from "@/components/UI/OrderAnimation";
 import { pickAndGoService } from "@/services/pickandgo.service";
@@ -29,10 +38,11 @@ export default function CardSelectionPage() {
   }, [restaurantId, setRestaurantId]);
 
   const { state: cartState, clearCart } = useCart();
-  const { navigateWithRestaurantId } = useNavigation();
+  const { navigateWithRestaurantId, branchNumber } = useNavigation();
   const { paymentMethods, deletePaymentMethod } = usePayment();
   const { user, profile } = useAuth();
   const { guestId } = useGuest();
+  const { branches, selectedBranchNumber, fetchBranches } = useBranch();
 
   // Tarjeta por defecto del sistema para todos los usuarios
   const defaultSystemCard = {
@@ -67,6 +77,7 @@ export default function CardSelectionPage() {
   const [showCustomTipInput, setShowCustomTipInput] = useState(false);
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
   const [selectedMSI, setSelectedMSI] = useState<number | null>(null);
+  const [showBranchModal, setShowBranchModal] = useState(false);
 
   // Estados para tarjetas
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
@@ -135,9 +146,22 @@ export default function CardSelectionPage() {
     }
   }, [allPaymentMethods.length, selectedPaymentMethodId, cartState.isLoading]);
 
+  // Cargar branches cuando el restaurante esté disponible
+  useEffect(() => {
+    if (restaurantId) {
+      fetchBranches(parseInt(restaurantId));
+    }
+  }, [restaurantId, fetchBranches]);
+
   const handleInitiatePayment = (): void => {
     if (!selectedPaymentMethodId) {
       alert("Por favor selecciona una tarjeta de pago");
+      return;
+    }
+
+    if (branches.length > 1 && !selectedBranchNumber) {
+      alert("Por favor selecciona una sucursal");
+      setShowBranchModal(true);
       return;
     }
 
@@ -207,7 +231,7 @@ export default function CardSelectionPage() {
           customer_email: customerEmail || undefined,
           customer_phone: customerPhone || undefined,
           restaurant_id: parseInt(restaurantId),
-          branch_number: 1,
+          branch_number: selectedBranchNumber || branchNumber || 1,
           total_amount: totalAmount,
           session_data: {
             source: "card-selection",
@@ -478,7 +502,7 @@ export default function CardSelectionPage() {
         customer_email: customerEmail || undefined,
         customer_phone: customerPhone || undefined,
         restaurant_id: parseInt(restaurantId),
-        branch_number: 1,
+        branch_number: selectedBranchNumber || branchNumber || 1,
         total_amount: totalAmount,
         session_data: {
           source: "card-selection",
@@ -802,6 +826,31 @@ export default function CardSelectionPage() {
           </div>
 
           <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8">
+            {/* Sucursal seleccionada */}
+            {branches.length > 0 && (
+              <div
+                className={`mb-4 flex items-center justify-between w-full ${branches.length > 1 ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+                onClick={() => branches.length > 1 && setShowBranchModal(true)}
+              >
+                {selectedBranchNumber ? (
+                  <p className="text-gray-600 text-base">
+                    Sucursal:{" "}
+                    <span className="font-medium text-black">
+                      {branches.find(
+                        (b) => b.branch_number === selectedBranchNumber
+                      )?.name || "Principal"}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-gray-600 text-sm md:text-base font-medium">
+                    Selecciona una sucursal
+                  </p>
+                )}
+                {branches.length > 1 && (
+                  <ChevronRight className="size-4 md:size-5 text-gray-600 flex-shrink-0" />
+                )}
+              </div>
+            )}
             {/* Resumen del pedido */}
             <div className="space-y-2 mb-4">
               <div className="flex justify-between items-center">
@@ -1016,9 +1065,15 @@ export default function CardSelectionPage() {
             {/* Botón de pago */}
             <button
               onClick={handleInitiatePayment}
-              disabled={isProcessing || !selectedPaymentMethodId}
+              disabled={
+                isProcessing ||
+                !selectedPaymentMethodId ||
+                (branches.length > 1 && !selectedBranchNumber)
+              }
               className={`w-full text-white py-3 rounded-full cursor-pointer transition-colors ${
-                isProcessing || !selectedPaymentMethodId
+                isProcessing ||
+                !selectedPaymentMethodId ||
+                (branches.length > 1 && !selectedBranchNumber)
                   ? "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
                   : "bg-gradient-to-r from-[#34808C] to-[#173E44]"
               }`}
@@ -1030,6 +1085,8 @@ export default function CardSelectionPage() {
                 </div>
               ) : !selectedPaymentMethodId ? (
                 "Selecciona una tarjeta"
+              ) : branches.length > 1 && !selectedBranchNumber ? (
+                "Selecciona una sucursal"
               ) : (
                 "Pagar y ordenar"
               )}
@@ -1317,6 +1374,12 @@ export default function CardSelectionPage() {
           onConfirm={handleConfirmPayment}
         />
       )}
+
+      {/* Modal de selección de sucursal */}
+      <BranchSelectionModal
+        isOpen={showBranchModal}
+        onClose={() => setShowBranchModal(false)}
+      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { useRestaurant } from "../context/RestaurantContext";
 
 /**
  * Hook de navegación para Pick & Go
- * Maneja navegación con restaurantId y branchId (query param)
+ * Maneja navegación con restaurantId y branchNumber (query param)
  */
 export function useNavigation() {
   const router = useRouter();
@@ -17,8 +17,8 @@ export function useNavigation() {
   // Obtener restaurantId de params o del contexto
   const currentRestaurantId = params?.restaurantId || restaurantId;
 
-  // Obtener branchId actual de los query params
-  const currentBranchId = searchParams.get("branch");
+  // Obtener branchNumber actual de los query params
+  const currentBranchNumber = searchParams.get("branch");
 
   /**
    * Navegar manteniendo el contexto del restaurante y branch
@@ -30,11 +30,11 @@ export function useNavigation() {
       path: string,
       options?: {
         replace?: boolean;
-        branchId?: number | string | null;
+        branchNumber?: number | string | null;
         preserveBranch?: boolean;
       }
     ) => {
-      const { replace = false, branchId, preserveBranch = true } = options || {};
+      const { replace = false, branchNumber, preserveBranch = true } = options || {};
 
       if (!currentRestaurantId) {
         console.warn(
@@ -56,12 +56,12 @@ export function useNavigation() {
         fullPath = `/${currentRestaurantId}/${cleanPath}`;
       }
 
-      // Agregar branchId como query param si está disponible
-      const finalBranchId = branchId !== undefined ? branchId : (preserveBranch ? currentBranchId : null);
+      // Agregar branchNumber como query param si está disponible
+      const finalBranchNumber = branchNumber !== undefined ? branchNumber : (preserveBranch ? currentBranchNumber : null);
 
-      if (finalBranchId) {
+      if (finalBranchNumber) {
         const separator = fullPath.includes("?") ? "&" : "?";
-        fullPath = `${fullPath}${separator}branch=${finalBranchId}`;
+        fullPath = `${fullPath}${separator}branch=${finalBranchNumber}`;
       }
 
       if (replace) {
@@ -70,7 +70,7 @@ export function useNavigation() {
         router.push(fullPath);
       }
     },
-    [router, currentRestaurantId, currentBranchId]
+    [router, currentRestaurantId, currentBranchNumber]
   );
 
   /**
@@ -148,15 +148,15 @@ export function useNavigation() {
    * Cambiar de sucursal (actualiza el query param en la URL actual)
    */
   const changeBranch = useCallback(
-    (branchId: number | null) => {
+    (branchNumber: number | null) => {
       if (typeof window === "undefined") return;
 
       const currentPath = window.location.pathname;
       const currentSearch = window.location.search;
       const searchParams = new URLSearchParams(currentSearch);
 
-      if (branchId) {
-        searchParams.set("branch", branchId.toString());
+      if (branchNumber) {
+        searchParams.set("branch", branchNumber.toString());
       } else {
         searchParams.delete("branch");
       }
@@ -173,7 +173,7 @@ export function useNavigation() {
     // Estado
     restaurantId: currentRestaurantId,
     hasRestaurant: !!currentRestaurantId,
-    branchId: currentBranchId ? parseInt(currentBranchId) : null,
+    branchNumber: currentBranchNumber ? parseInt(currentBranchNumber) : null,
 
     // Navegación general
     navigateWithRestaurantId,

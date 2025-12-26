@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useNavigation } from "../../../hooks/useNavigation";
 import { useGuest, useIsGuest } from "../../../context/GuestContext";
 import { useRestaurant } from "../../../context/RestaurantContext";
+import { useBranch } from "../../../context/BranchContext";
 import { authService } from "../../../services/auth.service";
 import {
   Receipt,
@@ -27,11 +28,12 @@ export default function PaymentSuccessPage() {
     }
   }, [restaurantId, setRestaurantId]);
 
-  const { navigateWithRestaurantId } = useNavigation();
+  const { navigateWithRestaurantId, branchNumber } = useNavigation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const isGuest = useIsGuest();
   const { guestId } = useGuest();
+  const { branches, selectedBranchNumber, fetchBranches } = useBranch();
 
   // Get payment details from URL or localStorage
   const paymentId =
@@ -64,6 +66,13 @@ export default function PaymentSuccessPage() {
       document.body.style.overflow = "unset";
     };
   }, [isTicketModalOpen, isBreakdownModalOpen, isStatusModalOpen]);
+
+  // Cargar branches cuando el restaurante esté disponible
+  useEffect(() => {
+    if (restaurantId) {
+      fetchBranches(parseInt(restaurantId));
+    }
+  }, [restaurantId, fetchBranches]);
 
   // Order progress simulation
   const [orderTime] = useState(new Date()); // Tiempo cuando se creó el pedido
@@ -897,28 +906,14 @@ export default function PaymentSuccessPage() {
                 >
                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 space-y-2.5 md:space-y-3">
                     <p className="text-white/90 text-sm md:text-base lg:text-lg">
-                      <span className="font-medium text-white">Método:</span>{" "}
-                      Pick & Go - Recoger en restaurante
-                    </p>
-                    <p className="text-white/90 text-sm md:text-base lg:text-lg">
-                      <span className="font-medium text-white">Cliente:</span>{" "}
-                      {paymentDetails?.userName ||
-                        paymentDetails?.customerName ||
-                        "Cliente"}
-                    </p>
-                    <p className="text-white/90 text-sm md:text-base lg:text-lg">
                       <span className="font-medium text-white">
                         Restaurante:
                       </span>{" "}
                       {restaurant?.name}
                     </p>
                     <p className="text-white/90 text-sm md:text-base lg:text-lg">
-                      <span className="font-medium text-white">Dirección:</span>{" "}
-                      {restaurant?.address}
-                    </p>
-                    <p className="text-white/90 text-sm md:text-base lg:text-lg">
-                      <span className="font-medium text-white">Orden #:</span>{" "}
-                      {paymentDetails?.orderId || "N/A"}
+                      <span className="font-medium text-white">Dirección de entrega:</span>{" "}
+                      {branches.find((b) => b.branch_number === selectedBranchNumber)?.address || restaurant?.address}
                     </p>
                   </div>
                 </div>

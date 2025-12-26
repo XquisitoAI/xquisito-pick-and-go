@@ -2,7 +2,13 @@
 
 import MenuHeader from "../headers/MenuHeader";
 import MenuCategory from "./MenuCategory";
-import { Search, ShoppingCart, Settings, MapPin } from "lucide-react";
+import {
+  Search,
+  ShoppingCart,
+  Settings,
+  MapPin,
+  ChevronRight,
+} from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useUserData } from "../../context/userDataContext";
@@ -22,9 +28,9 @@ export default function MenuView() {
   const { signUpData } = useUserData();
   const { state, refreshCart } = useCart();
   const { restaurant, menu, loading, error } = useRestaurant();
-  const { branches, selectedBranchId, fetchBranches } = useBranch();
+  const { branches, selectedBranchNumber, fetchBranches } = useBranch();
   const router = useRouter();
-  const { navigateWithRestaurantId, branchId } = useNavigation();
+  const { navigateWithRestaurantId, branchNumber } = useNavigation();
 
   useEffect(() => {
     refreshCart();
@@ -37,13 +43,13 @@ export default function MenuView() {
     }
   }, [restaurant?.id, fetchBranches]);
 
-  // Sincronizar branchId de la URL con el contexto
+  // Sincronizar branchNumber de la URL con el contexto
   useEffect(() => {
-    if (branchId && branchId !== selectedBranchId) {
-      // Si hay un branchId en la URL diferente al seleccionado, actualizarlo
+    if (branchNumber && branchNumber !== selectedBranchNumber) {
+      // Si hay un branchNumber en la URL diferente al seleccionado, actualizarlo
       // El contexto ya maneja esto, solo lo documentamos
     }
-  }, [branchId, selectedBranchId]);
+  }, [branchNumber, selectedBranchNumber]);
 
   // Obtener categorías únicas del menú de la BD
   const categorias = useMemo(() => {
@@ -161,20 +167,6 @@ export default function MenuView() {
                   strokeWidth={1.5}
                 />
               </div>
-
-              {/* Branch Selection Icon - Solo mostrar si hay múltiples sucursales */}
-              {branches.length > 1 && (
-                <div
-                  onClick={() => setShowBranchModal(true)}
-                  className="bg-white rounded-full p-1.5 md:p-2 lg:p-2.5 border border-gray-400 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
-                  title="Seleccionar sucursal"
-                >
-                  <MapPin
-                    className="size-5 md:size-6 lg:size-7 text-stone-800"
-                    strokeWidth={1.5}
-                  />
-                </div>
-              )}
             </div>
 
             {/* Assistent Icon */}
@@ -205,10 +197,43 @@ export default function MenuView() {
                 className="w-full h-full object-cover"
               />
             </div>
-            <h1 className="text-black text-3xl md:text-4xl lg:text-5xl font-medium mt-3 md:mt-5 mb-6 md:mb-8">
+            <h1 className="text-black text-3xl md:text-4xl lg:text-5xl font-medium mt-3 md:mt-5 mb-2 md:mb-3">
               ¡{welcomeMessage}
               {profile?.firstName ? ` ${profile.firstName}` : ""}!
             </h1>
+
+            {/* Sucursal seleccionada */}
+            {branches.length > 0 && (
+              <div
+                className={`mb-4 md:mb-6 inline-flex items-center gap-1 ${branches.length > 1 ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+                onClick={() => branches.length > 1 && setShowBranchModal(true)}
+              >
+                {selectedBranchNumber ? (
+                  <>
+                    <p className="text-gray-600 text-sm md:text-base">
+                      Sucursal:{" "}
+                      <span className="font-medium text-black">
+                        {branches.find(
+                          (b) => b.branch_number === selectedBranchNumber
+                        )?.name || "Principal"}
+                      </span>
+                    </p>
+                    {branches.length > 1 && (
+                      <ChevronRight className="size-4 md:size-5 text-gray-600" />
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-gray-600 text-sm md:text-base font-medium">
+                      Selecciona una sucursal
+                    </p>
+                    {branches.length > 1 && (
+                      <ChevronRight className="size-4 md:size-5 text-gray-600" />
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Search Input */}
@@ -277,6 +302,12 @@ export default function MenuView() {
           </div>
         </div>
       )}
+
+      {/* Modal de selección de sucursal */}
+      <BranchSelectionModal
+        isOpen={showBranchModal}
+        onClose={() => setShowBranchModal(false)}
+      />
     </div>
   );
 }

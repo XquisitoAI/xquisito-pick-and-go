@@ -1,6 +1,7 @@
 "use client";
 
-import { X, MapPin, Phone } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X } from "lucide-react";
 import { useBranch } from "@/context/BranchContext";
 import { useNavigation } from "@/hooks/useNavigation";
 
@@ -13,95 +14,99 @@ export default function BranchSelectionModal({
   isOpen,
   onClose,
 }: BranchSelectionModalProps) {
-  const { branches, selectedBranchId } = useBranch();
+  const { branches, selectedBranchNumber } = useBranch();
   const { changeBranch } = useNavigation();
+
+  // Estado local temporal para la selección
+  const [tempSelectedBranch, setTempSelectedBranch] = useState<number | null>(selectedBranchNumber);
+
+  // Sincronizar el estado temporal cuando cambia la selección global o se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setTempSelectedBranch(selectedBranchNumber);
+    }
+  }, [isOpen, selectedBranchNumber]);
 
   if (!isOpen) return null;
 
-  const handleSelectBranch = (branchId: number) => {
-    changeBranch(branchId);
+  const handleSelectBranch = (branchNumber: number) => {
+    setTempSelectedBranch(branchNumber);
+  };
+
+  const handleConfirm = () => {
+    if (tempSelectedBranch !== null && tempSelectedBranch !== selectedBranchNumber) {
+      changeBranch(tempSelectedBranch);
+    }
     onClose();
   };
 
   return (
     <div
-      className="fixed inset-0 flex items-end justify-center backdrop-blur-sm z-[9999]"
-      onClick={onClose}
+      className="fixed inset-0 flex items-end justify-center"
+      style={{ zIndex: 99999 }}
     >
       {/* Fondo */}
-      <div className="absolute inset-0 bg-black/40"></div>
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+      ></div>
 
       {/* Modal */}
       <div
-        className="relative bg-white rounded-t-4xl w-full mx-4 md:mx-6 lg:mx-8 max-h-[80vh] overflow-y-auto"
+        className="relative bg-white rounded-t-4xl w-full mx-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 md:px-8 lg:px-10 pt-4 md:pt-6 sticky top-0 bg-white z-10">
+        <div className="px-6 pt-4">
           <div className="flex items-center justify-between pb-4 border-b border-[#8e8e8e]">
-            <h3 className="text-lg md:text-xl lg:text-2xl font-semibold text-black">
+            <h3 className="text-lg font-semibold text-black">
               Selecciona una sucursal
             </h3>
             <button
               onClick={onClose}
-              className="p-1 md:p-1.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
             >
-              <X className="size-5 md:size-6 text-gray-500" />
+              <X className="size-5 text-gray-500" />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="px-6 md:px-8 lg:px-10 py-4 md:py-6">
+        <div className="px-6 py-4">
           {branches.length === 0 ? (
-            <div className="text-center py-8 md:py-12">
-              <p className="text-gray-500 text-base md:text-lg">
+            <div className="text-center py-8">
+              <p className="text-gray-500 text-base">
                 No hay sucursales disponibles
               </p>
             </div>
           ) : (
-            <div className="space-y-3 md:space-y-4">
+            <div className="space-y-2.5">
               {branches.map((branch) => {
-                const isSelected = branch.id === selectedBranchId;
+                const isSelected = branch.branch_number === tempSelectedBranch;
 
                 return (
                   <div
                     key={branch.id}
-                    onClick={() => handleSelectBranch(branch.id)}
-                    className={`py-3 md:py-4 lg:py-5 px-4 md:px-5 lg:px-6 border rounded-2xl cursor-pointer transition-all ${
+                    onClick={() => handleSelectBranch(branch.branch_number)}
+                    className={`py-2 px-5 border rounded-full cursor-pointer transition-colors ${
                       isSelected
                         ? "border-teal-500 bg-teal-50"
-                        : "border-gray-300 bg-white hover:border-gray-400 hover:shadow-sm"
+                        : "border-black/50 bg-[#f9f9f9] hover:border-gray-400"
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3 md:gap-4">
+                    <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <h4 className="font-semibold text-black text-base md:text-lg lg:text-xl mb-1 md:mb-2">
+                        <p className="font-medium text-black text-base md:text-lg">
                           {branch.name}
-                        </h4>
-
-                        {/* Address */}
-                        <div className="flex items-start gap-2 mb-1 md:mb-1.5">
-                          <MapPin className="size-4 md:size-5 text-gray-500 flex-shrink-0 mt-0.5" />
-                          <p className="text-sm md:text-base text-gray-600">
-                            {branch.address}
-                          </p>
-                        </div>
-
-                        {/* Phone */}
-                        {branch.phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="size-4 md:size-5 text-gray-500 flex-shrink-0" />
-                            <p className="text-sm md:text-base text-gray-600">
-                              {branch.phone}
-                            </p>
-                          </div>
-                        )}
+                        </p>
+                        <p className="text-xs md:text-sm text-gray-600">
+                          {branch.address}
+                        </p>
                       </div>
 
                       {/* Radio button */}
                       <div
-                        className={`w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
+                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                           isSelected
                             ? "border-teal-500 bg-teal-500"
                             : "border-gray-300"
@@ -119,16 +124,11 @@ export default function BranchSelectionModal({
           )}
         </div>
 
-        {/* Footer con padding para safe area */}
-        <div
-          className="px-6 md:px-8 lg:px-10 pb-4 md:pb-6"
-          style={{
-            paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
-          }}
-        >
+        {/* Footer con botón de confirmar */}
+        <div className="px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white">
           <button
-            onClick={onClose}
-            className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-3 md:py-4 rounded-full cursor-pointer transition-colors text-base md:text-lg"
+            onClick={handleConfirm}
+            className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-3 rounded-full cursor-pointer transition-colors text-base"
           >
             Confirmar
           </button>

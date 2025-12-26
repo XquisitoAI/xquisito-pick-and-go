@@ -1,15 +1,28 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import type { Branch, BranchContextType } from "@/types/branch.types";
 import { branchService } from "@/services/branch.service";
 
 const BranchContext = createContext<BranchContextType | undefined>(undefined);
 
 export function BranchProvider({ children }: { children: React.ReactNode }) {
-  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+  const searchParams = useSearchParams();
+  const [selectedBranchNumber, setSelectedBranchNumber] = useState<number | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Sincronizar selectedBranchNumber con el query param de la URL
+  useEffect(() => {
+    const branchNumberFromUrl = searchParams.get("branch");
+    if (branchNumberFromUrl) {
+      const branchNum = parseInt(branchNumberFromUrl);
+      if (!isNaN(branchNum) && branchNum !== selectedBranchNumber) {
+        setSelectedBranchNumber(branchNum);
+      }
+    }
+  }, [searchParams]);
 
   const fetchBranches = useCallback(async (restaurantId: number) => {
     setIsLoading(true);
@@ -18,13 +31,18 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
       if (response.success && response.data) {
         setBranches(response.data);
 
-        // Si solo hay una sucursal, seleccionarla automáticamente
-        if (response.data.length === 1) {
-          setSelectedBranchId(response.data[0].id);
-        }
-        // Si hay múltiples pero ninguna seleccionada, usar la primera
-        else if (response.data.length > 0 && !selectedBranchId) {
-          setSelectedBranchId(response.data[0].id);
+        // Obtener branch de la URL
+        const branchNumberFromUrl = searchParams.get("branch");
+
+        // Si hay branch en la URL, usarlo
+        if (branchNumberFromUrl) {
+          const branchNum = parseInt(branchNumberFromUrl);
+          if (!isNaN(branchNum)) {
+            setSelectedBranchNumber(branchNum);
+          }
+        } else if (response.data.length > 0) {
+          // Si no hay branch en la URL, seleccionar la primera sucursal por defecto
+          setSelectedBranchNumber(response.data[0].branch_number);
         }
       }
     } catch (error) {
@@ -32,15 +50,15 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedBranchId]);
+  }, [searchParams]);
 
   return (
     <BranchContext.Provider
       value={{
-        selectedBranchId,
+        selectedBranchNumber,
         branches,
         isLoading,
-        setSelectedBranchId,
+        setSelectedBranchNumber,
         fetchBranches,
       }}
     >

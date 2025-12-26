@@ -368,11 +368,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Cargar carrito al montar el componente o cuando cambie el restaurante
   useEffect(() => {
     const effectiveRestaurantId = restaurantId || guestRestaurantId;
-    if (effectiveRestaurantId) {
+    const hasIdentity = user?.id || guestId;
+
+    // Solo cargar el carrito si tenemos restaurantId Y (user_id O guest_id)
+    if (effectiveRestaurantId && hasIdentity && !authLoading) {
       refreshCart();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restaurantId, guestRestaurantId]);
+  }, [restaurantId, guestRestaurantId, user?.id, guestId, authLoading]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
