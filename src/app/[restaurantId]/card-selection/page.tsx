@@ -38,7 +38,8 @@ export default function CardSelectionPage() {
   }, [restaurantId, setRestaurantId]);
 
   const { state: cartState, clearCart } = useCart();
-  const { navigateWithRestaurantId, branchNumber, changeBranch } = useNavigation();
+  const { navigateWithRestaurantId, branchNumber, changeBranch } =
+    useNavigation();
   const { paymentMethods, deletePaymentMethod } = usePayment();
   const { user, profile } = useAuth();
   const { guestId } = useGuest();
@@ -60,6 +61,9 @@ export default function CardSelectionPage() {
   // Obtener monto base del carrito desde el contexto
   const baseAmount = cartState.totalPrice;
 
+  // Validación de compra mínima
+  const MINIMUM_AMOUNT = 20; // Mínimo de compra requerido
+
   // Debug: Log cart state
   useEffect(() => {
     console.log("🛒 Cart state in card-selection:", {
@@ -78,8 +82,11 @@ export default function CardSelectionPage() {
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
   const [selectedMSI, setSelectedMSI] = useState<number | null>(null);
   const [showBranchModal, setShowBranchModal] = useState(false);
-  const [showBranchChangeConfirmModal, setShowBranchChangeConfirmModal] = useState(false);
-  const [pendingBranchChange, setPendingBranchChange] = useState<number | null>(null);
+  const [showBranchChangeConfirmModal, setShowBranchChangeConfirmModal] =
+    useState(false);
+  const [pendingBranchChange, setPendingBranchChange] = useState<number | null>(
+    null
+  );
 
   // Estados para tarjetas
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
@@ -809,6 +816,9 @@ export default function CardSelectionPage() {
 
   const displayTotal = getDisplayTotal();
 
+  // Calcular si está bajo el mínimo usando el total con propina, comisiones, etc.
+  const isUnderMinimum = totalAmount < MINIMUM_AMOUNT;
+
   if (isLoadingInitial) {
     return <Loader />;
   }
@@ -937,6 +947,18 @@ export default function CardSelectionPage() {
                   </div>
                 )}
               </div>
+
+              {/* Alerta de mínimo de compra */}
+              {isUnderMinimum && totalAmount > 0 && (
+                <div className="bg-gradient-to-br from-red-50 to-red-100 px-6 py-3 -mx-8  rounded-lg">
+                  <div className="flex justify-center items-center gap-3">
+                    <X className="size-6 text-red-500 flex-shrink-0" />
+                    <p className="text-red-700 font-medium text-base md:text-lg">
+                      ¡El mínimo de compra es de ${MINIMUM_AMOUNT.toFixed(2)}!
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Comisión e IVA */}
               <div className="space-y-2 mb-4">
@@ -1073,12 +1095,14 @@ export default function CardSelectionPage() {
                 disabled={
                   isProcessing ||
                   !selectedPaymentMethodId ||
-                  (branches.length > 1 && !selectedBranchNumber)
+                  (branches.length > 1 && !selectedBranchNumber) ||
+                  isUnderMinimum
                 }
                 className={`w-full text-white py-3 rounded-full cursor-pointer transition-colors ${
                   isProcessing ||
                   !selectedPaymentMethodId ||
-                  (branches.length > 1 && !selectedBranchNumber)
+                  (branches.length > 1 && !selectedBranchNumber) ||
+                  isUnderMinimum
                     ? "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
                     : "bg-gradient-to-r from-[#34808C] to-[#173E44]"
                 }`}
@@ -1425,7 +1449,9 @@ export default function CardSelectionPage() {
                     setPendingBranchChange(null);
 
                     // Redirigir al menú CON el nuevo branch number en la URL
-                    navigateWithRestaurantId(`/menu?branch=${pendingBranchChange}`);
+                    navigateWithRestaurantId(
+                      `/menu?branch=${pendingBranchChange}`
+                    );
                   }
                 }}
                 className="flex-1 py-3 px-4 bg-gradient-to-r from-[#34808C] to-[#173E44] rounded-full text-white font-medium hover:opacity-90 transition-opacity"
