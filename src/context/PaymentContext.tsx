@@ -7,10 +7,10 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { paymentService } from "@/services/payment.service";
-import { PaymentMethod } from "@/types/payment.types";
+import { paymentService } from "../services/payment.service";
 import { useGuest } from "./GuestContext";
 import { useAuth } from "./AuthContext";
+import { PaymentMethod } from "@/types/payment.types";
 
 interface PaymentContextType {
   paymentMethods: PaymentMethod[];
@@ -33,17 +33,12 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { isGuest, guestId, setAsAuthenticated } = useGuest();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
-  const isLoaded = !authLoading;
   const hasPaymentMethods = paymentMethods.length > 0;
 
   const refreshPaymentMethods = async () => {
-    // Only fetch if user is authenticated (either registered user or guest)
-    if (!isLoaded) {
-      setPaymentMethods([]);
-      return;
-    }
+    // Fetch payment methods for both authenticated users and guests
 
     // For registered users - prioritize user over guest session
     if (user) {
@@ -54,10 +49,10 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       const guestIdBefore = localStorage.getItem("xquisito-guest-id");
       if (guestIdBefore) {
         console.log(
-          " ℹ️ Guest-id found (will be used for cart migration):",
+          "  ℹ️ Guest-id found (will be used for cart migration):",
           guestIdBefore
         );
-        //localStorage.removeItem("xquisito-guest-id");
+        // Solo limpiar table/restaurant/name, NO el guest_id
         localStorage.removeItem("xquisito-table-number");
         localStorage.removeItem("xquisito-restaurant-id");
         localStorage.removeItem("xquisito-guest-name");
@@ -66,18 +61,31 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       console.log("  isGuest state:", isGuest);
       setIsLoading(true);
       try {
-        // Auth token is automatically managed by requestWithAuth
+        // Set auth token from AuthContext (token is automatically managed)
+        // No need to manually get token since paymentService handles it through AuthContext
+
         const response = await paymentService.getPaymentMethods();
-        console.log("🔍 GetPaymentMethods response for registered user:", response);
+        console.log("🔍 Full API response:", response);
+        console.log("🔍 Response.data:", response.data);
 
-        // Handle response structure
-        const paymentMethods = response.data?.paymentMethods || [];
+        if (response.success) {
+          // Handle different possible response structures
+          let methods: PaymentMethod[] = [];
 
-        if (response.success && paymentMethods.length > 0) {
-          setPaymentMethods(paymentMethods);
+          // Check if paymentMethods is directly in response (not in data)
+          if ((response as any).paymentMethods) {
+            methods = (response as any).paymentMethods;
+          } else if (response.data?.paymentMethods) {
+            methods = response.data.paymentMethods;
+          } else if (Array.isArray(response.data)) {
+            methods = response.data;
+          }
+
+          setPaymentMethods(methods);
           console.log(
             "💳 Loaded payment methods for registered user:",
-            paymentMethods.length
+            methods.length,
+            methods
           );
         } else {
           setPaymentMethods([]);
@@ -95,22 +103,33 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       return;
     }
 
-    // For guests, we need either a guestId OR if we're in Pick & Go mode
+    // For guests, ensure we have a guest ID
     if (isGuest && guestId) {
       console.log("👥 Fetching payment methods for guest:", guestId);
       setIsLoading(true);
       try {
         const response = await paymentService.getPaymentMethods();
-        console.log("🔍 GetPaymentMethods response for guest:", response);
+        console.log("🔍 Full API response (guest):", response);
+        console.log("🔍 Response.data (guest):", response.data);
 
-        // Handle response structure
-        const paymentMethods = response.data?.paymentMethods || [];
+        if (response.success) {
+          // Handle different possible response structures
+          let methods: PaymentMethod[] = [];
 
-        if (response.success && paymentMethods.length > 0) {
-          setPaymentMethods(paymentMethods);
+          // Check if paymentMethods is directly in response (not in data)
+          if ((response as any).paymentMethods) {
+            methods = (response as any).paymentMethods;
+          } else if (response.data?.paymentMethods) {
+            methods = response.data.paymentMethods;
+          } else if (Array.isArray(response.data)) {
+            methods = response.data;
+          }
+
+          setPaymentMethods(methods);
           console.log(
             "💳 Loaded payment methods for guest:",
-            paymentMethods.length
+            methods.length,
+            methods
           );
         } else {
           setPaymentMethods([]);
@@ -125,43 +144,8 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       return;
     }
 
-    // For Pick & Go, if no guest context yet but we have guestId in localStorage, try anyway
-    if (!isGuest && !user) {
-      const storedGuestId = localStorage.getItem("xquisito-guest-id");
-      if (storedGuestId) {
-        console.log("🔍 Pick & Go: Found stored guestId, fetching payment methods:", storedGuestId);
-        setIsLoading(true);
-        try {
-          const response = await paymentService.getPaymentMethods();
-          console.log("🔍 GetPaymentMethods response for stored guest:", response);
-
-          const paymentMethods = response.data?.paymentMethods || [];
-
-          if (response.success && paymentMethods.length > 0) {
-            setPaymentMethods(paymentMethods);
-            console.log("💳 Loaded payment methods for stored guest:", paymentMethods.length);
-          } else {
-            setPaymentMethods([]);
-            console.log("💳 No payment methods found for stored guest");
-          }
-        } catch (error) {
-          console.error("❌ Error fetching payment methods for stored guest:", error);
-          setPaymentMethods([]);
-        } finally {
-          setIsLoading(false);
-        }
-        return;
-      }
-    }
-
     // No valid authentication context
-    console.log("⚠️ No valid authentication context for payment methods", {
-      isLoaded,
-      hasUser: !!user,
-      isGuest,
-      guestId,
-      storedGuestId: localStorage.getItem("xquisito-guest-id")
-    });
+    console.log("⚠️ No valid authentication context for payment methods");
     setPaymentMethods([]);
   };
 
@@ -187,7 +171,8 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       paymentMethodId
     );
     try {
-      // Auth token is automatically managed by requestWithAuth
+      // Auth token is automatically managed by AuthContext and paymentService
+
       const response =
         await paymentService.setDefaultPaymentMethod(paymentMethodId);
       if (response.success) {
@@ -203,9 +188,7 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
           paymentMethodId
         );
       } else {
-        throw new Error(
-          response.error || "Failed to set default payment method"
-        );
+        throw new Error("Failed to set default payment method");
       }
     } catch (error) {
       console.error("❌ Error setting default payment method:", error);
@@ -219,23 +202,33 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       console.log(
         "⚠️ deletePaymentMethod: Only registered users can delete saved payment methods"
       );
-      throw new Error("Only registered users can delete saved payment methods");
+      console.log("🔍 Current auth state:", {
+        user,
+        isAuthenticated,
+        isLoading,
+      });
+      throw new Error("Debes estar autenticado para eliminar tarjetas");
     }
 
     console.log(
       "🗑️ Deleting payment method for registered user:",
-      paymentMethodId
+      paymentMethodId,
+      "User ID:",
+      user.id
     );
     try {
-      // Auth token is automatically managed by requestWithAuth
-      const response = await paymentService.deletePaymentMethod(paymentMethodId);
+      // Auth token is automatically managed by AuthContext and paymentService
+
+      const response =
+        await paymentService.deletePaymentMethod(paymentMethodId);
+      console.log("🗑️ Delete response:", response);
+
       if (response.success) {
         removePaymentMethod(paymentMethodId);
         console.log("✅ Payment method deleted successfully:", paymentMethodId);
       } else {
-        throw new Error(
-          response.error || "Failed to delete payment method"
-        );
+        console.error("❌ Delete payment method failed:", response.error);
+        throw new Error("No se pudo eliminar la tarjeta");
       }
     } catch (error) {
       console.error("❌ Error deleting payment method:", error);
@@ -245,23 +238,21 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
 
   // Load payment methods when user context changes
   useEffect(() => {
-    if (isLoaded) {
-      // If user is authenticated, clear any guest session
-      if (user && isGuest) {
-        console.log("🔐 User authenticated - clearing guest session");
-        setAsAuthenticated(user.id);
-      }
-
-      console.log("🔄 PaymentContext - Context changed:", {
-        isLoaded,
-        hasUser: !!user,
-        userId: user?.id,
-        isGuest,
-        guestId,
-      });
-      refreshPaymentMethods();
+    // If user is authenticated, clear any guest session
+    if (user && isGuest) {
+      console.log("🔐 User authenticated - clearing guest session");
+      setAsAuthenticated(user.id);
     }
-  }, [isLoaded, user?.id, isGuest, guestId, setAsAuthenticated]);
+
+    console.log("🔄 PaymentContext - Context changed:", {
+      isAuthenticated,
+      hasUser: !!user,
+      userId: user?.id,
+      isGuest,
+      guestId,
+    });
+    refreshPaymentMethods();
+  }, [isAuthenticated, user?.id, isGuest, guestId, setAsAuthenticated]);
 
   const value: PaymentContextType = {
     paymentMethods,

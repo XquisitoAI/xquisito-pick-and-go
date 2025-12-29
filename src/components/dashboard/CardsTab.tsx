@@ -1,27 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { usePayment } from "@/context/PaymentContext";
 import { useTableNavigation } from "@/hooks/useTableNavigation";
-import {
-  Plus,
-  CreditCard,
-  Trash2,
-  Star,
-  StarOff,
-  AlertTriangle,
-  Loader2,
-} from "lucide-react";
+import { Plus, Trash2, Star, StarOff, Loader2 } from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
 
 export default function CardsTab() {
-  const router = useRouter();
   const { navigateWithTable } = useTableNavigation();
   const {
     paymentMethods,
     isLoading,
-    hasPaymentMethods,
     setDefaultPaymentMethod,
     deletePaymentMethod,
   } = usePayment();
@@ -111,18 +100,21 @@ export default function CardsTab() {
                     </div>
 
                     <div className="flex items-center">
-                      <button
-                        onClick={() => handleSetDefault(method.id)}
-                        disabled={settingDefaultId === method.id}
-                        className="text-gray-400 hover:text-teal-600 transition-colors disabled:opacity-50 cursor-pointer"
-                        title="Establecer como predeterminada"
-                      >
-                        {settingDefaultId === method.id ? (
-                          <Loader2 className="size-5 md:size-6 lg:size-7 animate-spin" />
-                        ) : (
-                          <StarOff className="size-5 md:size-6 lg:size-7" />
-                        )}
-                      </button>
+                      {/* Set Default Button */}
+                      {!method.isDefault && (
+                        <button
+                          onClick={() => handleSetDefault(method.id)}
+                          disabled={settingDefaultId === method.id}
+                          className="text-gray-400 hover:text-teal-600 transition-colors disabled:opacity-50 cursor-pointer"
+                          title="Establecer como predeterminada"
+                        >
+                          {settingDefaultId === method.id ? (
+                            <Loader2 className="size-5 md:size-6 lg:size-7 animate-spin" />
+                          ) : (
+                            <StarOff className="size-5 md:size-6 lg:size-7" />
+                          )}
+                        </button>
+                      )}
 
                       {method.isDefault && (
                         <div

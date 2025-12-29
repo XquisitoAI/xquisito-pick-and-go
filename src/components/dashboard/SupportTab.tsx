@@ -8,13 +8,12 @@ import {
   Dispatch,
   SetStateAction,
 } from "react";
-import { useRestaurant } from "@/context/RestaurantContext";
 import { useAuth } from "@/context/AuthContext";
 
 // Función para comunicarse con el agente a través del backend
 async function chatWithAgent(message: string, sessionId: string | null = null) {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/ai-agent/chat`,
+    `${process.env.NEXT_PUBLIC_API_URL}/ai-agent/chat`,
     {
       method: "POST",
       headers: {
@@ -93,8 +92,6 @@ export default function SupportTab({
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Obtener contextos
-  const { restaurantId, restaurant } = useRestaurant();
   const { user, profile } = useAuth();
 
   // Auto-scroll cuando cambian los mensajes (solo cuando hay nuevos mensajes)
