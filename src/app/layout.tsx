@@ -116,8 +116,8 @@ export default function RootLayout({
       >
         <AuthProvider>
           <GuestProvider>
-            <RestaurantProvider>
-              <BranchProvider>
+            <BranchProvider>
+              <RestaurantProvider>
                 <CartProvider>
                   <PickAndGoProvider>
                     <PaymentProvider>
@@ -125,8 +125,8 @@ export default function RootLayout({
                     </PaymentProvider>
                   </PickAndGoProvider>
                 </CartProvider>
-              </BranchProvider>
-            </RestaurantProvider>
+              </RestaurantProvider>
+            </BranchProvider>
           </GuestProvider>
         </AuthProvider>
       </body>

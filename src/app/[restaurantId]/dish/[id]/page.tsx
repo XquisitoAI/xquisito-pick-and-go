@@ -1319,9 +1319,9 @@ export default function DishDetailPage() {
               <button
                 onClick={handleAddToCartAndReturn}
                 disabled={!isFormValid()}
-                className={`w-full text-white py-3 md:py-4 lg:py-5 rounded-full transition-colors flex items-center justify-center gap-2 ${
+                className={`w-full text-white py-4 md:py-5 lg:py-6 rounded-full transition-all flex items-center justify-center gap-2 ${
                   isFormValid()
-                    ? "bg-gradient-to-r from-[#34808C] to-[#173E44] cursor-pointer animate-pulse-button"
+                    ? "bg-gradient-to-r from-[#34808C] to-[#173E44] cursor-pointer animate-pulse-button active:scale-95"
                     : "bg-gray-400 cursor-not-allowed opacity-60"
                 }`}
               >

@@ -227,6 +227,27 @@ class CartService {
       }),
     });
   }
+
+  /**
+   * Actualizar branch_number de los items del carrito en la base de datos
+   */
+  async updateCartBranch(
+    newBranchNumber: number
+  ): Promise<ApiResponse<{ message: string; items_updated: number }>> {
+    const userId = this.getUserIdentifier();
+
+    return this.request<{ message: string; items_updated: number }>(
+      "/cart/update-branch",
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          ...userId,
+          restaurant_id: this.restaurantId,
+          new_branch_number: newBranchNumber,
+        }),
+      }
+    );
+  }
 }
 
 export const cartService = new CartService();

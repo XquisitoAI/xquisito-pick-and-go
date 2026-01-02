@@ -33,10 +33,10 @@ export function useValidateAccess() {
         // Establecer restaurantId en el contexto
         setRestaurantId(parseInt(restaurantId));
 
-        // Validar que el restaurante y sucursal existan en el backend
         const validation = await restaurantService.validateRestaurantAndBranch(
           parseInt(restaurantId),
-          branchNumber ? parseInt(branchNumber) : null
+          branchNumber ? parseInt(branchNumber) : null,
+          "pick-n-go"
         );
 
         if (!validation.valid) {

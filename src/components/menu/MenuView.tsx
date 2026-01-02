@@ -11,11 +11,9 @@ import {
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useUserData } from "../../context/userDataContext";
 import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { useBranch } from "../../context/BranchContext";
-import { useRouter } from "next/navigation";
 import { useNavigation } from "../../hooks/useNavigation";
 import Loader from "../UI/Loader";
 import BranchSelectionModal from "../modals/BranchSelectionModal";
@@ -24,12 +22,10 @@ export default function MenuView() {
   const [filter, setFilter] = useState("Todo");
   const [searchQuery, setSearchQuery] = useState("");
   const [showBranchModal, setShowBranchModal] = useState(false);
-  const { user, isLoading, profile } = useAuth();
-  const { signUpData } = useUserData();
+  const { user, profile, isAuthenticated } = useAuth();
   const { state, refreshCart } = useCart();
   const { restaurant, menu, loading, error } = useRestaurant();
   const { branches, selectedBranchNumber, fetchBranches } = useBranch();
-  const router = useRouter();
   const { navigateWithRestaurantId, branchNumber } = useNavigation();
 
   useEffect(() => {
@@ -148,25 +144,22 @@ export default function MenuView() {
       <main className="mt-48 md:mt-64 lg:mt-80 relative z-10">
         <div className="bg-white rounded-t-4xl flex flex-col items-center px-6 md:px-8 lg:px-10">
           <div className="mt-6 md:mt-8 flex items-start justify-between w-full">
-            {/* Left side icons */}
-            <div className="flex items-center gap-2 md:gap-3">
-              {/* Settings Icon */}
-              <div
-                onClick={() => {
-                  if (user && !isLoading) {
-                    navigateWithRestaurantId("/dashboard");
-                  } else {
-                    sessionStorage.setItem("signInFromMenu", "true");
-                    navigateWithRestaurantId("/auth");
-                  }
-                }}
-                className="bg-white rounded-full p-1.5 md:p-2 lg:p-2.5 border border-gray-400 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
-              >
-                <Settings
-                  className="size-5 md:size-6 lg:size-7 text-stone-800"
-                  strokeWidth={1.5}
-                />
-              </div>
+            {/* Settings Icon */}
+            <div
+              onClick={() => {
+                if (isAuthenticated) {
+                  navigateWithRestaurantId("/dashboard");
+                } else {
+                  sessionStorage.setItem("signInFromMenu", "true");
+                  navigateWithRestaurantId("/auth");
+                }
+              }}
+              className="bg-white rounded-full p-1.5 md:p-2 lg:p-2.5 border border-gray-400 shadow-sm cursor-pointer hover:bg-gray-50 transition-all active:scale-90"
+            >
+              <Settings
+                className="size-5 md:size-6 lg:size-7 text-stone-800"
+                strokeWidth={1.5}
+              />
             </div>
 
             {/* Assistent Icon */}
@@ -293,7 +286,7 @@ export default function MenuView() {
         <div className="fixed bottom-6 md:bottom-8 lg:bottom-10 left-0 right-0 z-50 flex justify-center">
           <div
             onClick={() => navigateWithRestaurantId("/cart")}
-            className="bg-gradient-to-r from-[#34808C] to-[#173E44] text-white rounded-full px-6 md:px-8 lg:px-10 py-3 md:py-4 lg:py-5 shadow-lg flex items-center gap-3 md:gap-4 cursor-pointer transition-transform hover:scale-105 animate-bounce-in active:scale-95"
+            className="bg-gradient-to-r from-[#34808C] to-[#173E44] text-white rounded-full px-6 md:px-8 lg:px-10 py-4 md:py-5 lg:py-6 shadow-lg flex items-center gap-3 md:gap-4 cursor-pointer transition-all hover:scale-105 animate-bounce-in active:scale-90"
           >
             <ShoppingCart className="size-5 md:size-6 lg:size-7" />
             <span className="text-base md:text-lg lg:text-xl font-medium">

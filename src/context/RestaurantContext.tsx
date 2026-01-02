@@ -12,6 +12,7 @@ import { Restaurant } from "../interfaces/restaurant";
 import { MenuSection } from "../interfaces/category";
 import { restaurantService } from "../services/restaurant.service";
 import { isRestaurantOpen } from "../utils/restaurantHours";
+import { useBranch } from "./BranchContext";
 
 interface RestaurantContextValue {
   restaurantId: number | null;
@@ -34,6 +35,7 @@ interface RestaurantProviderProps {
 
 export function RestaurantProvider({ children }: RestaurantProviderProps) {
   const [restaurantId, setRestaurantIdState] = useState<number | null>(null);
+  const { selectedBranchNumber } = useBranch();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [menu, setMenu] = useState<MenuSection[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -52,23 +54,47 @@ export function RestaurantProvider({ children }: RestaurantProviderProps) {
     console.log("🔄 Refetching menu for restaurant:", restaurantId);
     await fetchRestaurantData(restaurantId);
   };
-
   // Función para cargar datos del restaurante y menú
-  const fetchRestaurantData = async (id: number) => {
+  const fetchRestaurantData = async (id: number, branch?: number) => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log("📡 Fetching restaurant data for ID:", id);
+      if (branch) {
+        console.log(
+          "📡 Fetching restaurant data for ID:",
+          id,
+          "branch:",
+          branch
+        );
+        // Obtener restaurante y menú filtrado por sucursal
+        const data = await restaurantService.getRestaurantWithMenuByBranch(
+          id,
+          branch
+        );
 
-      // Obtener restaurante y menú en una sola petición
-      const data = await restaurantService.getRestaurantWithMenu(id);
+        console.log("✅ Restaurant data loaded:", data.restaurant.name);
+        console.log(
+          "✅ Menu loaded with",
+          data.menu.length,
+          "sections (filtered by branch",
+          branch,
+          ")"
+        );
 
-      console.log("✅ Restaurant data loaded:", data.restaurant.name);
-      console.log("✅ Menu loaded with", data.menu.length, "sections");
+        setRestaurant(data.restaurant);
+        setMenu(data.menu);
+      } else {
+        console.log("📡 Fetching restaurant data for ID:", id);
+        // Obtener restaurante y menú completo (sin filtrar por sucursal)
+        const data = await restaurantService.getRestaurantWithMenu(id);
 
-      setRestaurant(data.restaurant);
-      setMenu(data.menu);
+        console.log("✅ Restaurant data loaded:", data.restaurant.name);
+        console.log("✅ Menu loaded with", data.menu.length, "sections");
+
+        setRestaurant(data.restaurant);
+        setMenu(data.menu);
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to load restaurant data";
@@ -84,14 +110,14 @@ export function RestaurantProvider({ children }: RestaurantProviderProps) {
   // Effect para cargar datos cuando cambia el restaurantId
   useEffect(() => {
     if (restaurantId) {
-      fetchRestaurantData(restaurantId);
+      fetchRestaurantData(restaurantId, selectedBranchNumber || undefined);
     } else {
       // Reset state cuando no hay restaurantId
       setRestaurant(null);
       setMenu([]);
       setError(null);
     }
-  }, [restaurantId]);
+  }, [restaurantId, selectedBranchNumber]);
 
   // Check if restaurant is currently open (re-check every minute)
   const isOpen = useMemo(() => {

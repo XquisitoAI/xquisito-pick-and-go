@@ -6,6 +6,7 @@ interface ValidationErrorProps {
     | "RESTAURANT_NOT_FOUND"
     | "BRANCH_NOT_FOUND"
     | "NO_BRANCHES"
+    | "SERVICE_NOT_AVAILABLE"
     | "VALIDATION_ERROR";
 }
 
@@ -27,6 +28,11 @@ export default function ValidationError({ errorType }: ValidationErrorProps) {
       title: "Sin sucursales disponibles",
       description: "Este restaurante no tiene sucursales activas",
       detail: "Por favor contacta al restaurante",
+    },
+    SERVICE_NOT_AVAILABLE: {
+      title: "Servicio no disponible",
+      description: "Este restaurante no tiene habilitado el servicio Pick-n-Go",
+      detail: "Por favor contacta al restaurante para más información",
     },
     VALIDATION_ERROR: {
       title: "Error de validación",

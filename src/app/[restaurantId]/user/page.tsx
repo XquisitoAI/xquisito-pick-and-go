@@ -80,7 +80,6 @@ export default function UserPage() {
               </div>
 
               <div className="w-full mb-24">
-
                 <input
                   type="text"
                   placeholder="Nombre"
@@ -88,32 +87,33 @@ export default function UserPage() {
                   onChange={handleNameChange}
                   className="w-full px-4 py-3 border-0 border-b border-black text-black text-2xl text-center font-medium focus:outline-none focus:border-teal-500"
                 />
-                
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Botón flotante en la parte inferior */}
-      <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-6">
-        <button
-          onClick={handleProceedToOrder}
-          disabled={!userName.trim() || isSubmitting}
-          className={`w-full max-w-md py-3 rounded-full transition-all text-white shadow-lg ${
-            userName.trim() && !isSubmitting
-              ? "bg-gradient-to-r from-[#34808C] to-[#173E44] hover:scale-105 cursor-pointer"
-              : "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
-          }`}
-        >
-          {isSubmitting ? (
-            <div className="flex items-center justify-center gap-2">
-              <Loader2 className="h-5 w-5 animate-spin" />
-            </div>
-          ) : (
-            "Continuar"
-          )}
-        </button>
+      {/* Fixed bottom button */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center py-4 md:py-5 lg:py-6">
+        <div className="mx-4 md:mx-6 lg:mx-8 w-full max-w-full px-4 md:px-6 lg:px-8">
+          <button
+            onClick={handleProceedToOrder}
+            disabled={!userName.trim()}
+            className={`w-full py-3 md:py-4 lg:py-5 rounded-full transition-all text-white cursor-pointer text-base md:text-lg lg:text-xl active:scale-90 ${
+              userName.trim() && !isSubmitting
+                ? "bg-gradient-to-r from-[#34808C] to-[#173E44]"
+                : "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
+            }`}
+          >
+            {isSubmitting ? (
+              <div className="flex items-center justify-center gap-2 md:gap-3">
+                <Loader2 className="h-5 w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 animate-spin" />
+              </div>
+            ) : (
+              "Continuar"
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

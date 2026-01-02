@@ -9,7 +9,7 @@ import { useValidateAccess } from "@/hooks/useValidateAccess";
 import React, { useEffect } from "react";
 
 const MenuPage = () => {
-  const { validationError, isValidating, restaurantId } = useValidateAccess();
+  const { validationError, restaurantId } = useValidateAccess();
   const { setRestaurantId: setPickAndGoRestaurantId } = usePickAndGoContext();
   const { restaurant, loading, error } = useRestaurant();
 
@@ -21,7 +21,7 @@ const MenuPage = () => {
   }, [restaurantId, setPickAndGoRestaurantId]);
 
   // Mostrar loader mientras valida
-  if (isValidating || loading) {
+  if (loading) {
     return <Loader />;
   }
 

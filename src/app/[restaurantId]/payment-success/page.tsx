@@ -422,7 +422,7 @@ export default function PaymentSuccessPage() {
             >
               <button
                 onClick={handleGoHome}
-                className="w-full text-white py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-gradient-to-r from-[#34808C] to-[#173E44] text-base md:text-lg lg:text-xl"
+                className="w-full text-white py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-gradient-to-r from-[#34808C] to-[#173E44] text-base md:text-lg lg:text-xl"
               >
                 Ir al menú
               </button>
@@ -430,7 +430,7 @@ export default function PaymentSuccessPage() {
               {/* Ticket btn */}
               <button
                 onClick={() => setIsTicketModalOpen(true)}
-                className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-white hover:bg-stone-100"
+                className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-white hover:bg-stone-100"
               >
                 <Receipt
                   className="size-5 md:size-6 lg:size-7"
@@ -442,7 +442,7 @@ export default function PaymentSuccessPage() {
               {/* Status btn */}
               <button
                 onClick={() => setIsStatusModalOpen(true)}
-                className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-white hover:bg-stone-100"
+                className="text-base md:text-lg lg:text-xl w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-white hover:bg-stone-100"
               >
                 <Calendar
                   className="size-5 md:size-6 lg:size-7"
@@ -450,19 +450,6 @@ export default function PaymentSuccessPage() {
                 />
                 Ver Estatus
               </button>
-              {/*
-              {!isSignedIn && (
-                <button
-                  onClick={() => {
-                    // Mark that user is coming from payment-success context
-                    sessionStorage.setItem("signupFromPaymentSuccess", "true");
-                    router.push("/sign-up");
-                  }}
-                  className="w-full text-black border border-black py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-colors bg-white hover:bg-stone-100 text-base md:text-lg lg:text-xl"
-                >
-                  Crear una cuenta
-                </button>
-              )}*/}
             </div>
           </div>
         </div>
@@ -912,8 +899,12 @@ export default function PaymentSuccessPage() {
                       {restaurant?.name}
                     </p>
                     <p className="text-white/90 text-sm md:text-base lg:text-lg">
-                      <span className="font-medium text-white">Dirección de entrega:</span>{" "}
-                      {branches.find((b) => b.branch_number === selectedBranchNumber)?.address || restaurant?.address}
+                      <span className="font-medium text-white">
+                        Dirección de entrega:
+                      </span>{" "}
+                      {branches.find(
+                        (b) => b.branch_number === selectedBranchNumber
+                      )?.address || restaurant?.address}
                     </p>
                   </div>
                 </div>

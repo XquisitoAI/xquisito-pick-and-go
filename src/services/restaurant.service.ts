@@ -13,6 +13,7 @@ export interface ValidationResult {
     | "RESTAURANT_NOT_FOUND"
     | "BRANCH_NOT_FOUND"
     | "NO_BRANCHES"
+    | "SERVICE_NOT_AVAILABLE"
     | "VALIDATION_ERROR";
 }
 
@@ -76,6 +77,26 @@ class RestaurantService {
     return result.data;
   }
 
+  // Obtener restaurante con su menú filtrado por sucursal en una sola petición
+  async getRestaurantWithMenuByBranch(
+    restaurantId: number,
+    branchNumber: number
+  ): Promise<RestaurantWithMenu> {
+    const result = await this.request<RestaurantWithMenu>(
+      `/restaurants/${restaurantId}/${branchNumber}/complete`
+    );
+
+    if (!result.success || !result.data) {
+      throw new Error(
+        typeof result.error === "string"
+          ? result.error
+          : "Failed to fetch restaurant data"
+      );
+    }
+
+    return result.data;
+  }
+
   // Obtener todos los restaurantes activos
   async getAllRestaurants(): Promise<Restaurant[]> {
     const result = await this.request<Restaurant[]>("/restaurants");
@@ -94,13 +115,19 @@ class RestaurantService {
   // Validar que el restaurante y opcionalmente la sucursal existan
   async validateRestaurantAndBranch(
     restaurantId: number,
-    branchNumber: number | null
+    branchNumber: number | null,
+    service?: string
   ): Promise<ValidationResult> {
     try {
       // Construir la URL con o sin branchNumber
-      const endpoint = branchNumber
+      let endpoint = branchNumber
         ? `/restaurants/${restaurantId}/branches/${branchNumber}/validate`
         : `/restaurants/${restaurantId}/validate`;
+
+      // Agregar el parámetro service si se proporciona
+      if (service) {
+        endpoint += `?service=${encodeURIComponent(service)}`;
+      }
 
       const response = await this.request<ValidationResult>(endpoint);
 
