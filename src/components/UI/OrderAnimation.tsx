@@ -133,7 +133,7 @@ const OrderAnimation = ({
 
               {/* Título */}
               <div className="text-black text-3xl md:text-5xl lg:text-6xl font-medium mb-8 md:mb-12 lg:mb-14 mr-12 md:mr-20 lg:mr-24">
-                Estamos creando tu pedido Pick & Go
+                Estamos creando tu pedido
               </div>
 
               {/* Información del pedido */}
@@ -296,7 +296,7 @@ const OrderAnimation = ({
 
               {/* Success message */}
               <div className="text-white text-3xl md:text-5xl lg:text-6xl font-medium mb-8 md:mb-12 lg:mb-14 mr-16 md:mr-28 lg:mr-32 animate-simple-fade-in">
-                Tu pedido Pick & Go fue creado con éxito
+                Tu pedido fue creado con éxito
               </div>
             </div>
           </div>

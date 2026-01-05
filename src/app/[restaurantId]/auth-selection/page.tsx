@@ -7,6 +7,11 @@ import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 export default function AuthSelectionPage() {
   const { navigateWithRestaurantId } = useNavigation();
 
+  const handleSignUp = () => {
+    sessionStorage.setItem("signupFromCart", "true");
+    navigateWithRestaurantId("/auth");
+  };
+
   return (
     <div className="h-[100dvh] bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
       <MenuHeaderBack />
@@ -27,7 +32,7 @@ export default function AuthSelectionPage() {
           <div className="space-y-3 md:space-y-4 lg:space-y-5">
             {/* Sign In Option */}
             <button
-              onClick={() => navigateWithRestaurantId("/auth")}
+              onClick={handleSignUp}
               className="w-full bg-white hover:bg-gray-50 text-black py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6 rounded-xl md:rounded-2xl transition-all duration-200 flex items-center gap-3 md:gap-4 lg:gap-5 active:scale-95"
             >
               <div className="bg-gradient-to-r from-[#34808C] to-[#173E44] p-2 md:p-2.5 lg:p-3 rounded-full group-hover:scale-110 transition-transform">

@@ -128,6 +128,19 @@ export default function AuthPage() {
 
   // Helper function to handle post-auth redirects
   const handleAuthRedirect = () => {
+    // Check for saved redirect URL (from payment-success modal)
+    const savedRedirect = sessionStorage.getItem("xquisito-post-auth-redirect");
+
+    if (savedRedirect) {
+      // Clear the saved redirect
+      sessionStorage.removeItem("xquisito-post-auth-redirect");
+
+      // Redirect to the saved URL
+      console.log("🔄 Redirecting to saved URL:", savedRedirect);
+      window.location.href = savedRedirect;
+      return;
+    }
+
     const isFromCart = sessionStorage.getItem("signupFromCart");
     const isFromMenu = sessionStorage.getItem("signInFromMenu");
 
@@ -405,9 +418,9 @@ export default function AuthPage() {
               <p className="text-gray-300 text-xs">
                 Ejemplo:{" "}
                 {countryCode === "+52"
-                  ? "551 234 5678"
+                  ? "500 555 0006"
                   : countryCode === "+1"
-                    ? "212 555 1234"
+                    ? "500 555 0006"
                     : "123 456 789"}
               </p>
             </div>

@@ -22,7 +22,6 @@ export default function Home() {
       "signupFromPaymentSuccess"
     );
     const isFromMenu = sessionStorage.getItem("signInFromMenu");
-    const isFromCart = sessionStorage.getItem("signupFromCart");
 
     console.log("🔍 Root page debugging:", {
       isLoading,
@@ -31,7 +30,6 @@ export default function Home() {
       isFromPaymentFlow,
       isFromPaymentSuccess,
       isFromMenu,
-      isFromCart,
       currentPath: window.location.pathname,
     });
 
@@ -39,15 +37,6 @@ export default function Home() {
     const restaurantParam = searchParams.get("restaurant");
     const restaurantId =
       restaurantParam || storedRestaurant || DEFAULT_RESTAURANT_ID;
-
-    if (user && isFromCart) {
-      // User signed in/up from cart (CartView), redirect to card-selection
-      sessionStorage.removeItem("signupFromCart");
-      sessionStorage.removeItem("pendingTableRedirect");
-      sessionStorage.removeItem("pendingRestaurantId");
-      router.replace(`/${restaurantId}/card-selection`);
-      return;
-    }
 
     if (user && isFromMenu) {
       // User signed in from MenuView settings, redirect to dashboard (Pick & Go - no table)

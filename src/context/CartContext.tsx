@@ -193,13 +193,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 `✅ Cart migrated successfully: ${response.data.items_migrated || 0} items`
               );
 
-              // Limpiar el guest_id del localStorage después de la migración exitosa
-              if (typeof window !== "undefined") {
-                localStorage.removeItem("xquisito-guest-id");
-                console.log(
-                  "🗑️ Guest ID removed from localStorage after successful migration"
-                );
-              }
+              // IMPORTANT: DO NOT remove guest-id immediately
+              // It's needed for payment methods migration which happens in PaymentContext
+              // The guest-id will be removed by PaymentContext after all migrations complete
+              console.log(
+                "ℹ️ Cart migration completed - preserving guest-id for payment methods migration"
+              );
 
               // Refrescar el carrito después de la migración
               await refreshCart();

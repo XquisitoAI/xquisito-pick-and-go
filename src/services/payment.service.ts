@@ -106,6 +106,18 @@ class PaymentService {
       body: JSON.stringify({ paymentMethodId, amount }),
     });
   }
+
+  /**
+   * Migrar métodos de pago de guest a usuario autenticado
+   */
+  async migrateGuestPaymentMethods(
+    guestId: string
+  ): Promise<ApiResponse<{ migratedCount: number }>> {
+    return this.request("/payment-methods/migrate-from-guest", {
+      method: "POST",
+      body: JSON.stringify({ guestId }),
+    });
+  }
 }
 
 export const paymentService = new PaymentService();

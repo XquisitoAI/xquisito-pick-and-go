@@ -25,7 +25,6 @@ export default function CartView() {
         setIsSubmitting(false);
       }
     } else {
-      sessionStorage.setItem("signupFromCart", "true");
       navigateWithRestaurantId("/auth-selection");
     }
   };

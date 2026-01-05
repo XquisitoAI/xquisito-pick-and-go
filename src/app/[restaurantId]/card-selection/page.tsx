@@ -444,13 +444,19 @@ export default function CardSelectionPage() {
           JSON.stringify(paymentDetailsForSuccess)
         );
 
+        // Guardar referencia al key actual para fácil acceso
+        sessionStorage.setItem("xquisito-current-payment-key", uniqueKey);
+
+        // IMPORTANTE: Guardar el orderId directamente en sessionStorage para la navegación
+        sessionStorage.setItem("xquisito-current-order-id", pickAndGoOrderId);
+
         // Limpiar el carrito después de completar la orden
         await clearCart();
         console.log("🧹 Cart cleared after successful order");
 
         // Guardar orderId para la navegación después de la animación
         setCompletedOrderId(pickAndGoOrderId);
-        console.log("✅ Order processing completed, animation will continue");
+        console.log("✅ Order processing completed, orderId saved:", pickAndGoOrderId);
 
         // NO redirigir aquí - dejar que la animación continúe
         // El timer navigateTimer (9s) en OrderAnimation se encargará de la redirección
@@ -734,13 +740,19 @@ export default function CardSelectionPage() {
         JSON.stringify(paymentDetailsForSuccess)
       );
 
+      // Guardar referencia al key actual para fácil acceso
+      sessionStorage.setItem("xquisito-current-payment-key", uniqueKey);
+
+      // IMPORTANTE: Guardar el orderId directamente en sessionStorage para la navegación
+      sessionStorage.setItem("xquisito-current-order-id", pickAndGoOrderId);
+
       // Limpiar el carrito después de completar la orden
       await clearCart();
       console.log("🧹 Cart cleared after successful order");
 
       // Guardar orderId para la navegación después de la animación
       setCompletedOrderId(pickAndGoOrderId);
-      console.log("✅ Order processing completed, animation will continue");
+      console.log("✅ Order processing completed, orderId saved:", pickAndGoOrderId);
 
       // NO redirigir aquí - dejar que la animación continúe
       // El timer navigateTimer (9s) en OrderAnimation se encargará de la redirección
@@ -1422,21 +1434,57 @@ export default function CardSelectionPage() {
           userName={completedUserName}
           orderedItems={completedOrderItems}
           onContinue={() => {
-            // Obtener el orderId desde localStorage como respaldo
-            const paymentData = localStorage.getItem(
-              "xquisito-completed-payment"
-            );
-            let orderId = completedOrderId;
+            console.log("🔍 DEBUG - completedOrderId state:", completedOrderId);
 
-            if (!orderId && paymentData) {
-              try {
-                const parsed = JSON.parse(paymentData);
-                orderId = parsed.orderId;
-              } catch (e) {
-                console.error("Error parsing payment data:", e);
+            // PRIORIDAD 1: Intentar obtener desde sessionStorage directamente
+            let orderId = sessionStorage.getItem("xquisito-current-order-id");
+
+            if (orderId) {
+              console.log("✅ Found orderId from sessionStorage (direct):", orderId);
+            } else {
+              // PRIORIDAD 2: Usar el estado si está disponible
+              orderId = completedOrderId;
+
+              if (orderId) {
+                console.log("✅ Using completedOrderId from state:", orderId);
+              } else {
+                // PRIORIDAD 3: Buscar en sessionStorage por payment-success keys
+                console.log("⚠️ completedOrderId is null, searching in sessionStorage...");
+                for (let i = 0; i < sessionStorage.length; i++) {
+                  const key = sessionStorage.key(i);
+                  if (key && key.startsWith("xquisito-payment-success-")) {
+                    try {
+                      const data = sessionStorage.getItem(key);
+                      if (data) {
+                        const parsed = JSON.parse(data);
+                        orderId = parsed.orderId;
+                        console.log("📦 Found orderId from sessionStorage key:", key, "orderId:", orderId);
+                        break;
+                      }
+                    } catch (e) {
+                      console.error("Error parsing sessionStorage data:", e);
+                    }
+                  }
+                }
+
+                // PRIORIDAD 4: Último intento en localStorage
+                if (!orderId) {
+                  console.log("⚠️ Still no orderId, trying localStorage...");
+                  const paymentData = localStorage.getItem("xquisito-completed-payment");
+                  if (paymentData) {
+                    try {
+                      const parsed = JSON.parse(paymentData);
+                      orderId = parsed.orderId;
+                      console.log("📦 Found orderId from localStorage:", orderId);
+                    } catch (e) {
+                      console.error("Error parsing payment data:", e);
+                    }
+                  }
+                }
               }
             }
 
+            console.log("🔍 Final orderId for navigation:", orderId);
             navigateWithRestaurantId(
               `/payment-success?orderId=${orderId || "unknown"}&success=true`
             );
@@ -1535,7 +1583,7 @@ export default function CardSelectionPage() {
                             setIsCheckingAvailability(true);
 
                             // 1. Actualizar el branch_number en el cartService (en memoria)
-                            cartService.setBranchNumber(pendingBranchChange);
+                            //cartService.setBranchNumber(pendingBranchChange);
 
                             // 2. Eliminar solo los items no disponibles
                             for (const item of itemsToRemove) {
@@ -1554,6 +1602,7 @@ export default function CardSelectionPage() {
                             }
 
                             // 3. Actualizar el branch_number en la base de datos
+                            /*
                             const updateResult =
                               await cartService.updateCartBranch(
                                 pendingBranchChange
@@ -1568,7 +1617,7 @@ export default function CardSelectionPage() {
                                 "⚠️ Error updating cart branch in DB:",
                                 updateResult.error
                               );
-                            }
+                            }*/
 
                             // 4. Cambiar la sucursal
                             changeBranch(pendingBranchChange);
