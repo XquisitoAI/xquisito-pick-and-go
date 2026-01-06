@@ -64,13 +64,6 @@ export default function Home() {
       return;
     }
 
-    // Check for table parameter in current URL
-    const tableParam = searchParams.get("table");
-    if (tableParam) {
-      router.replace(`/${restaurantId}/menu?table=${tableParam}`);
-      return;
-    }
-
     // Default redirect to restaurant 3 menu for Pick & Go (no table needed)
     console.log(
       `✅ Default redirect to /${DEFAULT_RESTAURANT_ID}/menu (Pick & Go)`

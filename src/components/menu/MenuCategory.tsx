@@ -3,11 +3,20 @@ import { MenuSection } from "../../interfaces/category";
 
 interface MenuCategoryProps {
   section: MenuSection;
+  showSectionName?: boolean;
 }
 
-export default function MenuCategory({ section }: MenuCategoryProps) {
+export default function MenuCategory({
+  section,
+  showSectionName = false,
+}: MenuCategoryProps) {
   return (
-    <section className="w-full">
+    <section className="w-full mb-4 md:mb-5">
+      {showSectionName && section.name && (
+        <h2 className="text-black text-xl md:text-2xl lg:text-3xl font-medium">
+          {section.name}
+        </h2>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-x-6 md:gap-x-8 lg:gap-x-10">
         {section.items && section.items.length > 0 ? (
           section.items.map((item) => <MenuItem key={item.id} item={item} />)

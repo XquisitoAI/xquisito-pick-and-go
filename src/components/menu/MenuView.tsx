@@ -98,11 +98,6 @@ export default function MenuView() {
     return filtered;
   }, [menu, filter, searchQuery]);
 
-  // Mostrar loader mientras carga
-  if (loading) {
-    return <Loader />;
-  }
-
   // Mostrar error si falla
   if (error) {
     return (
@@ -267,7 +262,11 @@ export default function MenuView() {
           {/* Items */}
           {filteredMenu.length > 0 ? (
             filteredMenu.map((section) => (
-              <MenuCategory key={section.id} section={section} />
+              <MenuCategory
+                key={section.id}
+                section={section}
+                showSectionName={filter === "Todo"}
+              />
             ))
           ) : (
             <div className="text-center py-10 md:py-16">

@@ -49,8 +49,9 @@ export default function CardsTab() {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="fixed bottom-0 left-0 right-0 flex flex-col flex-shrink-0 mx-6 md:mx-8 lg:mx-10 pb-6 md:pb-8 lg:pb-10 px-4 md:px-6 lg:px-8 z-50">
+    <div className="absolute inset-0 flex flex-col">
+      <div className="flex-1"></div>
+      <div className="flex-shrink-0 pb-6 md:pb-8 lg:pb-10">
         {/* Loading State */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12 md:py-16 lg:py-20">

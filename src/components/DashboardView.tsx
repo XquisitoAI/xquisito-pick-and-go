@@ -115,8 +115,8 @@ export default function DashboardView() {
           </div>
         </div>
 
-        <div className="flex-1 h-full flex flex-col overflow-hidden">
-          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-7 lg:px-8">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-7 lg:px-8 min-h-0">
             {/* Tabs */}
             <div className="relative grid grid-cols-4 gap-2 my-6 md:my-7 lg:my-8 w-full">
               {/* Animated Background Indicator */}
@@ -180,7 +180,7 @@ export default function DashboardView() {
 
             {/* Tab Content */}
             <div
-              className={`flex-1 flex flex-col pb-6 ${activeTab === "support" ? "relative" : ""}`}
+              className={`flex-1 flex flex-col pb-6 min-h-0 ${activeTab === "support" || activeTab === "cards" ? "relative" : ""}`}
             >
               {activeTab === "profile" && <ProfileTab />}
               {activeTab === "cards" && <CardsTab />}

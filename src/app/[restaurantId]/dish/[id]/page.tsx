@@ -217,10 +217,24 @@ export default function DishDetailPage() {
   };
 
   const handleDropdownChange = (fieldId: string, optionId: string) => {
-    setCustomFieldSelections((prev) => ({
-      ...prev,
-      [fieldId]: [optionId],
-    }));
+    setCustomFieldSelections((prev) => {
+      const currentSelection = prev[fieldId] as string[] | undefined;
+      const isSelected = currentSelection?.includes(optionId);
+
+      // Si ya está seleccionado, deseleccionar
+      if (isSelected) {
+        return {
+          ...prev,
+          [fieldId]: [],
+        };
+      }
+
+      // Si no está seleccionado, seleccionar
+      return {
+        ...prev,
+        [fieldId]: [optionId],
+      };
+    });
   };
 
   const handleCheckboxChange = (
@@ -1135,8 +1149,11 @@ export default function DishDetailPage() {
                               const isSelected =
                                 currentSelection?.includes(option.id) || false;
                               return (
-                                <label
+                                <div
                                   key={option.id}
+                                  onClick={() =>
+                                    handleDropdownChange(field.id, option.id)
+                                  }
                                   className={`flex items-center justify-between gap-2 md:gap-3 cursor-pointer py-4 md:py-5 px-4 md:px-6 hover:bg-[#f9f9f9] transition-colors duration-200 ${
                                     isSelected ? "bg-[#eab3f4]/10" : ""
                                   } ${index !== (field.options?.length ?? 0) - 1 ? "border-b border-[#8e8e8e]/20" : ""}`}
@@ -1154,12 +1171,11 @@ export default function DishDetailPage() {
                                   <input
                                     type="radio"
                                     checked={isSelected}
-                                    onChange={() =>
-                                      handleDropdownChange(field.id, option.id)
-                                    }
-                                    className="myradio md:scale-125 lg:scale-150"
+                                    onChange={() => {}}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="myradio md:scale-125 lg:scale-150 pointer-events-none"
                                   />
-                                </label>
+                                </div>
                               );
                             })}
                           </div>
