@@ -611,12 +611,18 @@ export default function DishDetailPage() {
     setLocalQuantity((prev) => prev + 1);
     setIsPulsing(true);
 
-    await addItem({
+    const itemToAdd = {
       ...dishData.dish,
       price: basePrice,
       customFields: customFieldsData,
       extraPrice,
-    });
+    };
+
+    await addItem(itemToAdd);
+
+    // Guardar en localStorage como el último item agregado
+    const lastItemKey = `lastItem_${dishData.dish.id}`;
+    localStorage.setItem(lastItemKey, JSON.stringify(itemToAdd));
   };
 
   const handleAddToCartAndReturn = async () => {
@@ -712,12 +718,18 @@ export default function DishDetailPage() {
     setLocalQuantity((prev) => prev + 1);
     setIsPulsing(true);
 
-    await addItem({
+    const itemToAdd = {
       ...dishData.dish,
       price: basePrice,
       customFields: customFieldsData,
       extraPrice,
-    });
+    };
+
+    await addItem(itemToAdd);
+
+    // Guardar en localStorage como el último item agregado
+    const lastItemKey = `lastItem_${dishData.dish.id}`;
+    localStorage.setItem(lastItemKey, JSON.stringify(itemToAdd));
 
     setTimeout(() => {
       navigateWithRestaurantId("/menu");

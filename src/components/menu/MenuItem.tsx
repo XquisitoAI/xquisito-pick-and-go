@@ -77,9 +77,34 @@ export default function MenuItem({ item }: MenuItemProps) {
       return;
     }
 
-    // Si tiene custom fields, navegar a la página de detalle
+    // Si tiene custom fields, verificar si hay un último item guardado
     if (hasCustomFields) {
-      navigateToDish(adaptedItem.id);
+      const lastItemKey = `lastItem_${adaptedItem.id}`;
+      const lastItemData = localStorage.getItem(lastItemKey);
+
+      if (lastItemData) {
+        // Si hay un último item guardado, agregarlo al carrito
+        try {
+          const lastItem = JSON.parse(lastItemData);
+
+          setLocalQuantity((prev) => prev + 1);
+          setIsPulsing(true);
+
+          if (plusButtonRef.current) {
+            flyToCart(plusButtonRef.current, () => {
+              addItem(lastItem);
+            });
+          } else {
+            addItem(lastItem);
+          }
+        } catch (error) {
+          console.error('Error parsing last item:', error);
+          navigateToDish(adaptedItem.id);
+        }
+      } else {
+        // Si no hay último item, navegar a la página de detalle
+        navigateToDish(adaptedItem.id);
+      }
       return;
     }
 

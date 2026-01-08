@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useCart, CartItem } from "@/context/CartContext";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -20,6 +20,7 @@ export default function UserPage() {
   }, [restaurantId, setRestaurantId]);
 
   const [userName, setUserName] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderedItems, setOrderedItems] = useState<CartItem[]>([]);
   const [orderUserName, setOrderUserName] = useState("");
@@ -37,6 +38,26 @@ export default function UserPage() {
     if (textOnlyRegex.test(value)) {
       setUserName(value);
     }
+  };
+
+  // Manejar presión de Enter/Intro
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && userName.trim() && !isSubmitting) {
+      e.preventDefault();
+      handleProceedToOrder();
+    }
+  };
+
+  // Manejar foco del input para scroll al teclado
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    }, 300);
   };
 
   const handleProceedToOrder = async () => {
@@ -73,18 +94,23 @@ export default function UserPage() {
         </div>
 
         <div className="flex-1 h-full flex flex-col ">
-          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6">
-            <div className="flex-1 flex flex-col items-center w-full h-full">
-              <div className="pt-32 mb-6">
-                <h2 className="text-lg font-medium text-black">Tu nombre</h2>
+          <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-8 lg:px-10 pb-32">
+            <div className="flex flex-col items-center w-full pt-32 md:pt-36 lg:pt-40">
+              <div className="mb-6 md:mb-8">
+                <h2 className="text-lg md:text-xl lg:text-2xl font-medium text-black">
+                  Tu nombre
+                </h2>
               </div>
 
               <div className="w-full mb-24">
                 <input
+                  ref={inputRef}
                   type="text"
                   placeholder="Nombre"
                   value={userName}
                   onChange={handleNameChange}
+                  onKeyDown={handleKeyDown}
+                  onFocus={handleInputFocus}
                   className="w-full px-4 py-3 border-0 border-b border-black text-black text-2xl text-center font-medium focus:outline-none focus:border-teal-500"
                 />
               </div>
@@ -98,8 +124,8 @@ export default function UserPage() {
         <div className="mx-4 md:mx-6 lg:mx-8 w-full max-w-full px-4 md:px-6 lg:px-8">
           <button
             onClick={handleProceedToOrder}
-            disabled={!userName.trim()}
-            className={`w-full py-3 md:py-4 lg:py-5 rounded-full transition-all text-white cursor-pointer text-base md:text-lg lg:text-xl active:scale-90 ${
+            disabled={!userName.trim() || isSubmitting}
+            className={`w-full py-3 md:py-4 lg:py-5 rounded-full transition-colors text-white cursor-pointer text-base md:text-lg lg:text-xl ${
               userName.trim() && !isSubmitting
                 ? "bg-gradient-to-r from-[#34808C] to-[#173E44]"
                 : "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
@@ -107,7 +133,39 @@ export default function UserPage() {
           >
             {isSubmitting ? (
               <div className="flex items-center justify-center gap-2 md:gap-3">
-                <Loader2 className="h-5 w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 animate-spin" />
+                <svg
+                  className="h-5 w-5 md:h-6 md:w-6 lg:h-7 lg:w-7 text-white"
+                  style={{
+                    animation: "spin 1s linear infinite",
+                  }}
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                <style jsx>{`
+                  @keyframes spin {
+                    from {
+                      transform: rotate(0deg);
+                    }
+                    to {
+                      transform: rotate(360deg);
+                    }
+                  }
+                `}</style>
               </div>
             ) : (
               "Continuar"
