@@ -131,12 +131,12 @@ export default function MenuView() {
           "https://w0.peakpx.com/wallpaper/531/501/HD-wallpaper-coffee-espresso-latte-art-cup-food.jpg"
         }
         alt=""
-        className="absolute top-0 left-0 w-full h-72 md:h-96 lg:h-[28rem] object-cover z-0"
+        className="absolute top-0 left-0 w-full h-[230px] md:h-96 lg:h-[28rem] object-cover banner-mobile z-0"
       />
 
       <MenuHeader restaurant={restaurant} />
 
-      <main className="mt-48 md:mt-64 lg:mt-80 relative z-10">
+      <main className="mt-[9rem] md:mt-64 lg:mt-80 relative z-10">
         <div className="bg-white rounded-t-4xl flex flex-col items-center px-6 md:px-8 lg:px-10">
           <div className="mt-6 md:mt-8 flex items-start justify-between w-full">
             {/* Settings Icon */}
