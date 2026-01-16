@@ -10,6 +10,7 @@ interface OrderHistoryItem {
     | "flex-bill"
     | "tap-order-and-pay"
     | "pick-and-go"
+    | "tap-and-pay"
     | "room-service"; // Tipo de orden
   dishOrderId: number;
   item: string;
@@ -206,15 +207,17 @@ export default function HistoryTab() {
                             ? "bg-green-100 text-green-700"
                             : order.orderType === "room-service"
                               ? "bg-orange-100 text-orange-700"
-                              : "bg-blue-100 text-blue-700"
+                              : order.orderType === "tap-and-pay"
+                                ? "bg-yellow-100 text-yellow-600"
+                                : "bg-blue-100 text-blue-700"
                       }`}
                     >
                       {order.orderType === "tap-order-and-pay"
-                        ? "Tap Order & Pay"
-                        : order.orderType === "pick-and-go"
-                          ? "Pick & Go"
-                          : order.orderType === "room-service"
-                            ? "Room Service"
+                        ? "Pick & Go"
+                        : order.orderType === "room-service"
+                          ? "Room Service"
+                          : order.orderType === "tap-and-pay"
+                            ? "Tap & Pay"
                             : "Flex Bill"}
                     </span>
                   </div>
