@@ -1,19 +1,31 @@
 "use client";
 
 import { ChevronLeft, Mic, Plus, SendHorizontal } from "lucide-react";
-import { useState, useRef, useEffect, useMemo, memo } from "react";
-import { useRestaurant } from "@/context/RestaurantContext";
-import { useGuest } from "@/context/GuestContext";
-import { useAuth } from "@/context/AuthContext";
+import { useState, useRef, useEffect, memo } from "react";
+import { useRestaurant } from "../context/RestaurantContext";
+import { useGuest } from "../context/GuestContext";
+import { useAuth } from "../context/AuthContext";
 
 interface ChatViewProps {
   onBack: () => void;
 }
 
-// Función para comunicarse con el agente a través del backend
-async function chatWithAgent(message: string, sessionId: string | null = null) {
+// Tipo para los eventos del stream
+interface StreamEvent {
+  type: "token" | "done" | "error" | "session";
+  content?: string;
+  session_id?: string;
+}
+
+// Función para streaming con el agente
+async function streamFromAgent(
+  message: string,
+  sessionId: string | null = null,
+  onToken: (token: string) => void,
+  onSessionId: (sessionId: string) => void
+): Promise<void> {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/ai-agent/chat`,
+    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/ai-agent/chat/stream`,
     {
       method: "POST",
       headers: {
@@ -30,45 +42,156 @@ async function chatWithAgent(message: string, sessionId: string | null = null) {
     throw new Error(`Error del servidor: ${response.status}`);
   }
 
-  const data = await response.json();
-  return data;
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error("No se pudo obtener el reader del stream");
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        try {
+          const event: StreamEvent = JSON.parse(line.slice(6));
+
+          if (event.type === "token" && event.content) {
+            onToken(event.content);
+          } else if (event.type === "session" && event.session_id) {
+            onSessionId(event.session_id);
+          } else if (event.type === "error") {
+            throw new Error(event.content || "Error del agente");
+          }
+        } catch (e) {
+          // Si no es JSON válido, intentar extraer el contenido directamente
+          console.warn("Error parseando evento:", line);
+        }
+      }
+    }
+  }
 }
+
+// Componente para los puntos de carga animados
+const LoadingDots = () => (
+  <p className="flex items-center gap-1">
+    <span className="animate-bounce" style={{ animationDelay: "0ms" }}>
+      .
+    </span>
+    <span className="animate-bounce" style={{ animationDelay: "100ms" }}>
+      .
+    </span>
+    <span className="animate-bounce" style={{ animationDelay: "200ms" }}>
+      .
+    </span>
+  </p>
+);
 
 // Componente para renderizar mensajes con imágenes (memoizado para evitar re-renders innecesarios)
 const MessageContent = memo(({ content }: { content: string }) => {
-  // Regex para detectar URLs de imágenes (incluyendo avif)
-  const imageUrlRegex =
-    /(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s]*)?)/gi;
+  // Si el contenido está vacío, mostrar puntos de carga
+  if (!content) {
+    return <LoadingDots />;
+  }
 
-  // Dividir el contenido en partes (texto e imágenes) y memoizar el resultado
-  const parts = useMemo(() => content.split(imageUrlRegex), [content]);
+  // Regex para detectar imágenes en formato Markdown: ![alt](url)
+  const markdownImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
 
-  return (
-    <div className="space-y-2">
-      {parts.map((part, index) => {
-        // Verificar si es una URL de imagen sin ejecutar match dos veces
-        const isImage = imageUrlRegex.test(part);
-        imageUrlRegex.lastIndex = 0; // Resetear el índice del regex
+  // Regex para detectar URLs directas de imágenes
+  const directImageRegex =
+    /(?<![(\[])(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?)/gi;
 
-        if (isImage) {
-          return (
-            <img
-              key={index}
-              src={part}
-              alt="Imagen del agente"
-              className="rounded-lg max-w-full h-auto"
-              loading="lazy"
-            />
-          );
-        }
-        return part ? (
-          <p key={index} className="whitespace-pre-wrap">
-            {part}
+  // Procesar el contenido
+  const elements: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
+
+  // Primero, encontrar todas las imágenes Markdown
+  const matches: Array<{ index: number; length: number; type: 'markdown' | 'direct'; url: string; alt?: string }> = [];
+
+  let match;
+  while ((match = markdownImageRegex.exec(content)) !== null) {
+    matches.push({
+      index: match.index,
+      length: match[0].length,
+      type: 'markdown',
+      alt: match[1],
+      url: match[2]
+    });
+  }
+
+  // Luego, encontrar URLs directas (que no estén dentro de Markdown)
+  while ((match = directImageRegex.exec(content)) !== null) {
+    // Verificar que no esté dentro de un match de Markdown
+    const isInsideMarkdown = matches.some(
+      m => match!.index >= m.index && match!.index < m.index + m.length
+    );
+    if (!isInsideMarkdown) {
+      matches.push({
+        index: match.index,
+        length: match[0].length,
+        type: 'direct',
+        url: match[0]
+      });
+    }
+  }
+
+  // Ordenar por posición
+  matches.sort((a, b) => a.index - b.index);
+
+  // Construir los elementos
+  for (const m of matches) {
+    // Agregar texto antes de la imagen
+    if (m.index > lastIndex) {
+      const text = content.slice(lastIndex, m.index);
+      if (text.trim()) {
+        elements.push(
+          <p key={key++} className="whitespace-pre-wrap">
+            {text}
           </p>
-        ) : null;
-      })}
-    </div>
-  );
+        );
+      }
+    }
+
+    // Agregar la imagen
+    elements.push(
+      <img
+        key={key++}
+        src={m.url}
+        alt={m.alt || "Imagen del agente"}
+        className="rounded-lg max-w-full h-auto"
+        loading="lazy"
+      />
+    );
+
+    lastIndex = m.index + m.length;
+  }
+
+  // Agregar texto restante
+  if (lastIndex < content.length) {
+    const text = content.slice(lastIndex);
+    if (text.trim()) {
+      elements.push(
+        <p key={key++} className="whitespace-pre-wrap">
+          {text}
+        </p>
+      );
+    }
+  }
+
+  // Si no hay elementos (solo espacios), mostrar el contenido original
+  if (elements.length === 0) {
+    return <p className="whitespace-pre-wrap">{content}</p>;
+  }
+
+  return <div className="space-y-2">{elements}</div>;
 });
 
 MessageContent.displayName = "MessageContent";
@@ -119,34 +242,60 @@ export default function ChatView({ onBack }: ChatViewProps) {
         const currentGuestId = isGuest ? guestId : null;
 
         // Construir el mensaje con el contexto separado
-        const contextualMessage = `[CONTEXT: restaurant_id=${restaurantId || "null"}, user_id=${userId || "null"}, guest_id=${currentGuestId || "null"}]
+        const contextualMessage = `[CONTEXT: restaurant_id=${restaurantId || "null"}, user_id=${userId || "null"}, guest_id=${currentGuestId || "null"}, branch_number="null"]
 [USER_MESSAGE: ${userMessage}]`;
 
-        // Llamar al agente con el mensaje que incluye el contexto
-        const result = await chatWithAgent(contextualMessage, sessionId);
+        // Ocultar loading ya que veremos el texto aparecer
+        setIsLoading(false);
 
-        // Guardar el session_id si es la primera vez
-        if (result.session_id && !sessionId) {
-          setSessionId(result.session_id);
-        }
+        // Agregar mensaje vacío de Pepper que se irá llenando con el stream
+        setMessages((prev) => [...prev, { role: "pepper", content: "" }]);
 
-        // Agregar la respuesta de Pepper
-        setMessages((prev) => [
-          ...prev,
-          { role: "pepper", content: result.response },
-        ]);
+        // Llamar al agente con streaming
+        await streamFromAgent(
+          contextualMessage,
+          sessionId,
+          // Callback para cada token recibido
+          (token) => {
+            setMessages((prev) => {
+              const lastIndex = prev.length - 1;
+              const lastMessage = prev[lastIndex];
+              if (lastMessage && lastMessage.role === "pepper") {
+                // Crear nuevo array con nuevo objeto para el último mensaje
+                return [
+                  ...prev.slice(0, lastIndex),
+                  { ...lastMessage, content: lastMessage.content + token },
+                ];
+              }
+              return prev;
+            });
+          },
+          // Callback para el session_id
+          (newSessionId) => {
+            if (!sessionId) {
+              setSessionId(newSessionId);
+            }
+          }
+        );
       } catch (error) {
         console.error("Error al comunicarse con Pepper:", error);
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "pepper",
-            content:
-              "Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.",
-          },
-        ]);
-      } finally {
         setIsLoading(false);
+        // Reemplazar el último mensaje (que está vacío o incompleto) con el error
+        setMessages((prev) => {
+          const lastIndex = prev.length - 1;
+          const lastMessage = prev[lastIndex];
+          if (lastMessage && lastMessage.role === "pepper") {
+            return [
+              ...prev.slice(0, lastIndex),
+              {
+                ...lastMessage,
+                content:
+                  "Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.",
+              },
+            ];
+          }
+          return prev;
+        });
       }
     }
   };
@@ -266,7 +415,10 @@ export default function ChatView({ onBack }: ChatViewProps) {
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
             placeholder="Pregunta lo que necesites..."
-            className="flex-1 bg-transparent text-black placeholder-gray-500 focus:outline-none text-base md:text-lg lg:text-xl"
+            className="flex-1 min-w-0 bg-transparent text-black placeholder-gray-500 focus:outline-none text-base md:text-lg lg:text-xl"
+            style={{
+              textOverflow: "ellipsis",
+            }}
           />
           <button className="text-gray-400 hover:text-gray-600 cursor-pointer">
             <Mic className="size-6 md:size-7 lg:size-8" />
