@@ -27,6 +27,7 @@ import { paymentService } from "@/services/payment.service";
 import { calculateCommissions } from "@/utils/commissionCalculator";
 import { restaurantService } from "@/services/restaurant.service";
 import { cartService } from "@/services/cart.service";
+import PickupTimeSelector from "@/components/UI/PickupTimeSelector";
 
 export default function CardSelectionPage() {
   const params = useParams();
@@ -93,6 +94,9 @@ export default function CardSelectionPage() {
     []
   );
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+
+  // Estado para hora de recolección programada
+  const [scheduledPickupTime, setScheduledPickupTime] = useState<string | null>(null);
 
   // Estados para tarjetas
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
@@ -256,8 +260,9 @@ export default function CardSelectionPage() {
             tip_amount: tipAmount,
           },
           prep_metadata: {
-            estimated_minutes: 15,
+            estimated_minutes: 25,
             items_count: cartState.items.length,
+            scheduled_pickup_time: scheduledPickupTime,
           },
         };
 
@@ -426,6 +431,7 @@ export default function CardSelectionPage() {
           })),
           restaurantId: parseInt(restaurantId),
           paymentMethodId: null,
+          scheduledPickupTime: scheduledPickupTime,
           timestamp: Date.now(),
         };
 
@@ -533,8 +539,9 @@ export default function CardSelectionPage() {
           tip_amount: tipAmount,
         },
         prep_metadata: {
-          estimated_minutes: 15, // Default, se puede calcular basado en items
+          estimated_minutes:25,
           items_count: cartState.items.length,
+          scheduled_pickup_time: scheduledPickupTime,
         },
       };
 
@@ -720,6 +727,7 @@ export default function CardSelectionPage() {
         // Additional metadata
         restaurantId: parseInt(restaurantId),
         paymentMethodId: selectedPaymentMethodId,
+        scheduledPickupTime: scheduledPickupTime,
         timestamp: Date.now(),
       };
 
@@ -919,6 +927,13 @@ export default function CardSelectionPage() {
                   )}
                 </div>
               )}
+              {/* Selector de hora de recolección */}
+              <PickupTimeSelector
+                selectedTime={scheduledPickupTime}
+                onTimeChange={setScheduledPickupTime}
+                estimatedMinutes={25}
+              />
+
               {/* Resumen del pedido */}
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between items-center">

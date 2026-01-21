@@ -16,6 +16,7 @@ import {
   ChevronDown,
   LogIn,
   UserCircle2,
+  Clock,
 } from "lucide-react";
 import { getCardTypeIcon } from "../../../utils/cardIcons";
 import { useAuth } from "../../../context/AuthContext";
@@ -763,24 +764,42 @@ export default function PaymentSuccessPage() {
 
               {/* Estimated time */}
               <div className="mb-8 md:mb-10">
-                <p className="text-white/80 text-base md:text-lg lg:text-xl mb-2 flex items-center justify-center gap-2 md:gap-3">
-                  Entrega estimada:
-                  <span className="font-semibold text-white">
-                    {orderTime.toLocaleTimeString("es-MX", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}{" "}
-                    -{" "}
-                    {new Date(
-                      orderTime.getTime() + 20 * 60 * 1000
-                    ).toLocaleTimeString("es-MX", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}
-                  </span>
-                </p>
+                {paymentDetails?.scheduledPickupTime ? (
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
+                      <Clock className="w-5 h-5 md:w-6 md:h-6 text-white/80" />
+                      <p className="text-white/80 text-base md:text-lg lg:text-xl">
+                        Recolección programada:
+                      </p>
+                    </div>
+                    <p className="font-semibold text-white text-lg md:text-xl lg:text-2xl">
+                      {new Date(paymentDetails.scheduledPickupTime).toLocaleTimeString("es-MX", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-white/80 text-base md:text-lg lg:text-xl mb-2 flex items-center justify-center gap-2 md:gap-3">
+                    Entrega estimada:
+                    <span className="font-semibold text-white">
+                      {orderTime.toLocaleTimeString("es-MX", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}{" "}
+                      -{" "}
+                      {new Date(
+                        orderTime.getTime() + 20 * 60 * 1000
+                      ).toLocaleTimeString("es-MX", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </span>
+                  </p>
+                )}
               </div>
 
               {/* Progress bar */}
