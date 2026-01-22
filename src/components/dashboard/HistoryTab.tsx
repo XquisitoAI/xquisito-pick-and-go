@@ -198,6 +198,7 @@ export default function HistoryTab() {
 
                 {/* Order Type Badge */}
                 <div className="flex items-center gap-2 md:gap-3 lg:gap-4">
+                  {/*
                   <div className="text-right">
                     <span
                       className={`text-xs md:text-sm lg:text-base px-2 md:px-3 lg:px-4 py-1 md:py-1.5 lg:py-2 rounded-full font-medium truncate ${
@@ -220,7 +221,7 @@ export default function HistoryTab() {
                             ? "Tap & Pay"
                             : "Flex Bill"}
                     </span>
-                  </div>
+                  </div>*/}
                   <ChevronRight className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-400 shrink-0" />
                 </div>
               </div>
