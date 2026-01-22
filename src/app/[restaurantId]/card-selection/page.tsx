@@ -428,6 +428,7 @@ export default function CardSelectionPage() {
               item.price * (item.quantity || 1) + (item.extraPrice || 0),
             guest_name: userName,
             custom_fields: item.customFields || null,
+            image_url: item.images?.[0] || null,
           })),
           restaurantId: parseInt(restaurantId),
           paymentMethodId: null,
@@ -723,6 +724,7 @@ export default function CardSelectionPage() {
             item.price * (item.quantity || 1) + (item.extraPrice || 0),
           guest_name: userName,
           custom_fields: item.customFields || null,
+          image_url: item.images?.[0] || null,
         })),
         // Additional metadata
         restaurantId: parseInt(restaurantId),

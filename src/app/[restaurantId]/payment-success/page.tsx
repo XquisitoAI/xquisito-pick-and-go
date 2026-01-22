@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { getCardTypeIcon } from "../../../utils/cardIcons";
 import { useAuth } from "../../../context/AuthContext";
+import { pickAndGoService } from "../../../services/pickandgo.service";
 
 export default function PaymentSuccessPage() {
   const params = useParams();
@@ -249,8 +250,70 @@ export default function PaymentSuccessPage() {
   const amount =
     paymentDetails?.totalAmountCharged || paymentDetails?.amount || urlAmount;
 
-  // Get dish orders from paymentDetails
-  const dishOrders = paymentDetails?.dishOrders || [];
+  // Estado para dish orders (obtenidos del backend)
+  const [dishOrders, setDishOrders] = useState<any[]>([]);
+  // Estado para la fecha de creación del pedido
+  const [orderCreatedAt, setOrderCreatedAt] = useState<Date | null>(null);
+
+  // Obtener dish orders desde el backend usando el orderId
+  useEffect(() => {
+    const fetchDishOrders = async () => {
+      const orderId = paymentId || paymentDetails?.orderId;
+      if (!orderId) {
+        // Fallback a los datos del storage si no hay orderId
+        setDishOrders(paymentDetails?.dishOrders || []);
+        if (paymentDetails?.createdAt) {
+          setOrderCreatedAt(new Date(paymentDetails.createdAt));
+        }
+        return;
+      }
+
+      try {
+        console.log("🔍 Fetching order details from backend:", orderId);
+        const response = await pickAndGoService.getOrder(orderId);
+
+        if (response.success && response.data) {
+          // Guardar la fecha de creación del pedido
+          if (response.data.created_at) {
+            setOrderCreatedAt(new Date(response.data.created_at));
+          }
+
+          if (response.data.items) {
+            console.log("✅ Order items fetched:", response.data.items);
+            // Transformar los items del backend al formato esperado
+            const transformedItems = response.data.items.map((item: any) => ({
+              dish_order_id: item.id,
+              item: item.item,
+              quantity: item.quantity,
+              price: item.price,
+              extra_price: item.extra_price || 0,
+              total_price: (item.price * item.quantity) + (item.extra_price || 0),
+              guest_name: item.guest_name,
+              custom_fields: item.custom_fields,
+              image_url: item.images?.[0] || null,
+            }));
+            setDishOrders(transformedItems);
+          }
+        } else {
+          // Fallback a los datos del storage
+          console.log("⚠️ Could not fetch from backend, using storage data");
+          setDishOrders(paymentDetails?.dishOrders || []);
+          if (paymentDetails?.createdAt) {
+            setOrderCreatedAt(new Date(paymentDetails.createdAt));
+          }
+        }
+      } catch (error) {
+        console.error("❌ Error fetching order details:", error);
+        // Fallback a los datos del storage
+        setDishOrders(paymentDetails?.dishOrders || []);
+        if (paymentDetails?.createdAt) {
+          setOrderCreatedAt(new Date(paymentDetails.createdAt));
+        }
+      }
+    };
+
+    fetchDishOrders();
+  }, [paymentId, paymentDetails]);
 
   // Función para determinar el estado de cada paso basado en el progreso
   const getStepStatus = (stepNumber: number) => {
@@ -521,9 +584,16 @@ export default function PaymentSuccessPage() {
                     Pick & Go
                   </p>
                   <p className="text-xs md:text-sm text-white/70 mt-1">
-                    {new Date().toLocaleTimeString("es-MX", {
+                    {(orderCreatedAt || new Date()).toLocaleTimeString("es-MX", {
                       hour: "2-digit",
                       minute: "2-digit",
+                    })}
+                  </p>
+                  <p className="text-xs md:text-sm text-white/70 mt-1">
+                    {(orderCreatedAt || new Date()).toLocaleDateString("es-MX", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "2-digit",
                     })}
                   </p>
                 </div>
@@ -537,45 +607,23 @@ export default function PaymentSuccessPage() {
                 <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white mb-3 md:mb-4 lg:mb-5">
                   Detalles del pago
                 </h3>
-                <div className="space-y-2 md:space-y-3 lg:space-y-4">
+                <div className="flex justify-center gap-12 items-center">
                   {paymentDetails?.userName && (
                     <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
                       <div className="bg-orange-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
                         <Utensils className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-orange-600" />
                       </div>
-                      <span className="text-sm md:text-base lg:text-lg">
-                        {paymentDetails.userName}
-                      </span>
+                      <span className="text-sm md:text-base lg:text-lg">{paymentDetails.userName}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
-                    <div className="bg-blue-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
-                      <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-blue-600" />
-                    </div>
-                    <span className="text-sm md:text-base lg:text-lg">
-                      {new Date()
-                        .toLocaleDateString("es-MX", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "2-digit",
-                        })
-                        .replace(/\//g, "/")}
-                    </span>
-                  </div>
-
                   {paymentDetails?.cardLast4 && (
                     <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
                       <div className="bg-green-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
-                        <div className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center">
-                          {getCardTypeIcon(
-                            paymentDetails.cardBrand || "unknown",
-                            "small"
-                          )}
+                        <div className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center scale-150">
+                          {getCardTypeIcon(paymentDetails.cardBrand || "unknown", "medium")}
                         </div>
                       </div>
-                      <span className="text-sm md:text-base lg:text-lg">
-                        *** {paymentDetails.cardLast4.slice(-3)}
-                      </span>
+                      <span className="text-sm md:text-base lg:text-lg">**** {paymentDetails.cardLast4.slice(-4)}</span>
                     </div>
                   )}
                 </div>
@@ -583,7 +631,7 @@ export default function PaymentSuccessPage() {
 
               {/* Order Items */}
               {dishOrders.length > 0 && (
-                <div className="border-t border-white/20 pt-4 md:pt-5 lg:pt-6">
+                <div className="border-t border-white/20 py-4 md:py-5 lg:py-6">
                   <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white mb-3 md:mb-4 lg:mb-5">
                     Items de la orden
                   </h3>
@@ -591,8 +639,15 @@ export default function PaymentSuccessPage() {
                     {dishOrders.map((dish: any, index: number) => (
                       <div
                         key={dish.dish_order_id || index}
-                        className="flex justify-between items-start gap-3 md:gap-4 lg:gap-5"
+                        className="flex items-center gap-3 md:gap-4 lg:gap-5"
                       >
+                        {dish.image_url && (
+                          <img
+                            src={dish.image_url}
+                            alt={dish.item}
+                            className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-lg object-cover"
+                          />
+                        )}
                         <div className="flex-1">
                           <p className="text-white font-medium text-base md:text-lg lg:text-xl">
                             {dish.quantity}x {dish.item}

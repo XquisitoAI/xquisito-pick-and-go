@@ -3,6 +3,7 @@
 import {
   MenuItem as MenuItemDB,
   MenuItemData,
+  CustomField,
 } from "../../interfaces/menuItemData";
 import { useCart } from "../../context/CartContext";
 import { useFlyToCart } from "../../hooks/useFlyToCart";
@@ -45,21 +46,22 @@ export default function MenuItem({ item }: MenuItemProps) {
   const [isPulsing, setIsPulsing] = useState(false);
   const [showClosedModal, setShowClosedModal] = useState(false);
 
-  // Verificar si el item tiene custom fields
-  const hasCustomFields = useMemo(() => {
+  // Verificar si el item tiene custom fields obligatorios
+  const hasRequiredCustomFields = useMemo(() => {
     const dbItem = item as MenuItemDB;
     if (dbItem.custom_fields) {
+      let fields: CustomField[] = [];
       if (typeof dbItem.custom_fields === "string") {
         try {
-          const parsed = JSON.parse(dbItem.custom_fields);
-          return Array.isArray(parsed) && parsed.length > 0;
+          fields = JSON.parse(dbItem.custom_fields);
         } catch {
           return false;
         }
+      } else if (Array.isArray(dbItem.custom_fields)) {
+        fields = dbItem.custom_fields;
       }
-      return (
-        Array.isArray(dbItem.custom_fields) && dbItem.custom_fields.length > 0
-      );
+      // Solo retorna true si hay al menos un campo obligatorio
+      return fields.some((field: CustomField) => field.required === true);
     }
     return false;
   }, [item]);
@@ -77,8 +79,8 @@ export default function MenuItem({ item }: MenuItemProps) {
       return;
     }
 
-    // Si tiene custom fields, verificar si hay un último item guardado
-    if (hasCustomFields) {
+    // Si tiene custom fields obligatorios, verificar si hay un último item guardado
+    if (hasRequiredCustomFields) {
       const lastItemKey = `lastItem_${adaptedItem.id}`;
       const lastItemData = localStorage.getItem(lastItemKey);
 
