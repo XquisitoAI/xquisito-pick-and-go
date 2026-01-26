@@ -10,19 +10,26 @@ interface ChatViewProps {
   onBack: () => void;
 }
 
-// Tipo para los eventos del stream
+// Tipo para los eventos del stream (basado en la API real de AI Spine)
 interface StreamEvent {
-  type: "token" | "done" | "error" | "session";
+  type: "token" | "done" | "error" | "conversation_start" | "thinking_start" | "thinking_end" | "node_start" | "node_end" | "final_response" | "tool_start" | "tool_end";
   content?: string;
   session_id?: string;
+  tool_name?: string;
+  node_name?: string;
+  node_type?: string;
+  phase?: string;
 }
 
-// Función para streaming con el agente
+// Función para streaming con el agente (muestra herramientas y tokens en tiempo real)
 async function streamFromAgent(
   message: string,
   sessionId: string | null = null,
   onToken: (token: string) => void,
-  onSessionId: (sessionId: string) => void
+  onSessionId: (sessionId: string) => void,
+  onToolStart: (toolName: string) => void,
+  onToolEnd: () => void,
+  onFinalResponse?: (content: string) => void
 ): Promise<void> {
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/ai-agent/chat/stream`,
@@ -65,19 +72,50 @@ async function streamFromAgent(
 
           if (event.type === "token" && event.content) {
             onToken(event.content);
-          } else if (event.type === "session" && event.session_id) {
+          } else if (event.type === "conversation_start" && event.session_id) {
+            // Session ID viene en conversation_start
             onSessionId(event.session_id);
+          } else if (event.type === "thinking_start") {
+            // Mostrar indicador de "pensando"
+            onToolStart("thinking");
+          } else if (event.type === "thinking_end") {
+            onToolEnd();
+          } else if (event.type === "tool_start" && event.tool_name) {
+            onToolStart(event.tool_name);
+          } else if (event.type === "tool_end") {
+            onToolEnd();
+          } else if (event.type === "final_response" && event.content) {
+            // La respuesta final viene completa - reemplazar, no agregar
+            if (onFinalResponse) {
+              onFinalResponse(event.content);
+            } else {
+              onToken(event.content);
+            }
           } else if (event.type === "error") {
             throw new Error(event.content || "Error del agente");
           }
         } catch (e) {
-          // Si no es JSON válido, intentar extraer el contenido directamente
           console.warn("Error parseando evento:", line);
         }
       }
     }
   }
 }
+
+// Mapeo de nombres de herramientas a nombres amigables
+const toolDisplayNames: Record<string, string> = {
+  thinking: "Pensando...",
+  extracts_image_urls: "Obteniendo imagen",
+  retrieves_restaurant_information: "Obteniendo información del restaurante",
+  extract_restaurant_dish: "Obteniendo estadísticas del platillo",
+  herramienta_para_limpiar: "Limpiando carrito",
+  extrae_datos_completos: "Obteniendo el menu",
+  query_supabase_restaurant: "Obteniendo estadísticas del restaurante",
+  actualiza_la_cantidad: "Actualizando carrito",
+  remove_item_from: "Eliminando del carrito",
+  add_items_to: "Agregando al carrito",
+  herramienta_de_supabase: "Obteniendo carrito",
+};
 
 // Componente para los puntos de carga animados
 const LoadingDots = () => (
@@ -94,11 +132,91 @@ const LoadingDots = () => (
   </p>
 );
 
+// Spinner SVG igual al de user/page.tsx
+const Spinner = () => (
+  <svg
+    className="h-4 w-4 text-[#ebb2f4]"
+    style={{ animation: "spin 1s linear infinite" }}
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    />
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+    />
+    <style jsx>{`
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `}</style>
+  </svg>
+);
+
+// Componente para mostrar herramienta en ejecución (diálogo separado)
+const ToolIndicator = memo(({ toolName }: { toolName: string }) => {
+  const displayName = toolDisplayNames[toolName] || toolName;
+
+  return (
+    <div className="flex justify-start">
+      <div className="max-w-[80%] rounded-xl md:rounded-2xl px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-black text-base md:text-lg lg:text-xl bg-gray-100 flex items-center gap-2">
+        <Spinner />
+        <span className="text-gray-500">{displayName}</span>
+      </div>
+    </div>
+  );
+});
+
+ToolIndicator.displayName = "ToolIndicator";
+
+// Función para detectar si hay una URL de imagen incompleta al final del contenido
+const hasIncompleteImageUrl = (text: string): boolean => {
+  // Detectar markdown de imagen incompleto: ![...] o ![...]( o ![...](url incompleta
+  if (/!\[[^\]]*\]?\(?[^)]*$/.test(text)) {
+    return true;
+  }
+  // Detectar URL de imagen incompleta al final (empieza con http pero no termina con extensión de imagen completa)
+  if (/https?:\/\/[^\s]*$/.test(text)) {
+    const urlMatch = text.match(/https?:\/\/[^\s]*$/);
+    if (urlMatch) {
+      const partialUrl = urlMatch[0];
+      // Si parece que está escribiendo una URL de imagen pero no está completa
+      if (!/\.(jpg|jpeg|png|gif|webp|svg|avif)(\?[^\s]*)?$/i.test(partialUrl)) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
 // Componente para renderizar mensajes con imágenes (memoizado para evitar re-renders innecesarios)
-const MessageContent = memo(({ content }: { content: string }) => {
-  // Si el contenido está vacío, mostrar puntos de carga
+const MessageContent = memo(({ content, isStreaming, activeTool }: { content: string; isStreaming?: boolean; activeTool?: string | null }) => {
+  // Si el contenido está vacío, mostrar herramienta o puntos de carga
   if (!content) {
+    if (activeTool) {
+      return (
+        <div className="flex items-center gap-2">
+          <Spinner />
+          <span className="text-gray-500">{toolDisplayNames[activeTool] || activeTool}</span>
+        </div>
+      );
+    }
     return <LoadingDots />;
+  }
+
+  // Si está en streaming o hay una URL de imagen incompleta, mostrar texto plano
+  if (isStreaming || hasIncompleteImageUrl(content)) {
+    return <p className="whitespace-pre-wrap">{content}</p>;
   }
 
   // Regex para detectar imágenes en formato Markdown: ![alt](url)
@@ -204,22 +322,23 @@ export default function ChatView({ onBack }: ChatViewProps) {
   const [hasStartedChat, setHasStartedChat] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Obtener contextos
-  const { restaurantId } = useRestaurant();
+  const { restaurantId, branchNumber } = useRestaurant();
   const { guestId, isGuest } = useGuest();
   const { user } = useAuth();
 
-  // Auto-scroll cuando cambian los mensajes (solo cuando hay nuevos mensajes)
+  // Auto-scroll cuando cambian los mensajes, durante streaming, o cuando hay tool activa
   useEffect(() => {
-    if (messages.length > 0) {
-      // Usar requestAnimationFrame para asegurar que el DOM esté actualizado
+    if (messages.length > 0 || activeTool) {
       requestAnimationFrame(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       });
     }
-  }, [messages.length]);
+  }, [messages, activeTool]);
 
   const handleSend = async () => {
     if (message.trim() && !isLoading) {
@@ -242,26 +361,23 @@ export default function ChatView({ onBack }: ChatViewProps) {
         const currentGuestId = isGuest ? guestId : null;
 
         // Construir el mensaje con el contexto separado
-        const contextualMessage = `[CONTEXT: restaurant_id=${restaurantId || "null"}, user_id=${userId || "null"}, guest_id=${currentGuestId || "null"}, branch_number="null"]
+        const contextualMessage = `[CONTEXT: restaurant_id=${restaurantId || "null"}, user_id=${userId || "null"}, guest_id=${currentGuestId || "null"}, branch_number=${branchNumber || "null"}]
 [USER_MESSAGE: ${userMessage}]`;
 
-        // Ocultar loading ya que veremos el texto aparecer
-        setIsLoading(false);
-
-        // Agregar mensaje vacío de Pepper que se irá llenando con el stream
+        // Agregar mensaje vacío de Pepper mientras se procesa
         setMessages((prev) => [...prev, { role: "pepper", content: "" }]);
+        setIsStreaming(true);
 
         // Llamar al agente con streaming
         await streamFromAgent(
           contextualMessage,
           sessionId,
-          // Callback para cada token recibido
+          // Callback para cada token recibido - mostrar en tiempo real
           (token) => {
             setMessages((prev) => {
               const lastIndex = prev.length - 1;
               const lastMessage = prev[lastIndex];
               if (lastMessage && lastMessage.role === "pepper") {
-                // Crear nuevo array con nuevo objeto para el último mensaje
                 return [
                   ...prev.slice(0, lastIndex),
                   { ...lastMessage, content: lastMessage.content + token },
@@ -275,11 +391,38 @@ export default function ChatView({ onBack }: ChatViewProps) {
             if (!sessionId) {
               setSessionId(newSessionId);
             }
+          },
+          // Callback para cuando inicia una herramienta
+          (toolName) => {
+            setActiveTool(toolName);
+          },
+          // Callback para cuando termina una herramienta
+          () => {
+            setActiveTool(null);
+          },
+          // Callback para respuesta final (reemplazar, no agregar)
+          (content) => {
+            setMessages((prev) => {
+              const lastIndex = prev.length - 1;
+              const lastMessage = prev[lastIndex];
+              if (lastMessage && lastMessage.role === "pepper") {
+                return [
+                  ...prev.slice(0, lastIndex),
+                  { ...lastMessage, content: content },
+                ];
+              }
+              return prev;
+            });
           }
         );
+
+        setIsStreaming(false);
+        setIsLoading(false);
       } catch (error) {
         console.error("Error al comunicarse con Pepper:", error);
+        setIsStreaming(false);
         setIsLoading(false);
+        setActiveTool(null);
         // Reemplazar el último mensaje (que está vacío o incompleto) con el error
         setMessages((prev) => {
           const lastIndex = prev.length - 1;
@@ -373,33 +516,29 @@ export default function ChatView({ onBack }: ChatViewProps) {
             </p>
           </div>
         )}
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`flex ${
-              msg.role === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
+        {messages.map((msg, index) => {
+          const isLastPepperMessage = msg.role === "pepper" && index === messages.length - 1;
+          return (
             <div
-              className={`max-w-[80%] rounded-xl md:rounded-2xl px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-black text-base md:text-lg lg:text-xl ${
-                msg.role === "user" ? "bg-[#ebb2f4]" : "bg-gray-100"
+              key={index}
+              className={`flex ${
+                msg.role === "user" ? "justify-end" : "justify-start"
               }`}
             >
-              <MessageContent content={msg.content} />
+              <div
+                className={`max-w-[80%] rounded-xl md:rounded-2xl px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-black text-base md:text-lg lg:text-xl ${
+                  msg.role === "user" ? "bg-[#ebb2f4]" : "bg-gray-100"
+                }`}
+              >
+                <MessageContent
+                  content={msg.content}
+                  isStreaming={isLastPepperMessage && isStreaming}
+                  activeTool={isLastPepperMessage ? activeTool : null}
+                />
+              </div>
             </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-xl md:rounded-2xl px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-black text-base md:text-lg lg:text-xl bg-gray-100">
-              <p className="flex items-center gap-1">
-                <span className="animate-bounce">.</span>
-                <span className="animate-bounce delay-100">.</span>
-                <span className="animate-bounce delay-200">.</span>
-              </p>
-            </div>
-          </div>
-        )}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
