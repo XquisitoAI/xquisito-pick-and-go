@@ -38,6 +38,7 @@ function AddCardContent() {
   const { user } = useAuth();
 
   // Refresh payment methods on mount to ensure we have the latest data
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     refreshPaymentMethods();
   }, []);
@@ -49,6 +50,12 @@ function AddCardContent() {
   const [cvv, setCvv] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [isLoadingParams, setIsLoadingParams] = useState(true);
+  const [showToast, setShowToast] = useState(false);
+
+  const handleScanClick = () => {
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
 
   const handleFullNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -275,6 +282,18 @@ function AddCardContent() {
         />
       )}
 
+      {/* Toast notification */}
+      {showToast && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-fade-in-out">
+          <div className="bg-gray-900 text-white px-5 py-2 rounded-lg shadow-lg flex items-center gap-3">
+            <Camera className="size-5 text-gray-400" />
+            <span className="text-sm">
+              Esta función no está disponible por el momento
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
         <MenuHeaderBack />
 
@@ -316,7 +335,7 @@ function AddCardContent() {
               {/* Card Scanner */}
               <button
                 type="button"
-                onClick={() => setShowScanner(true)}
+                onClick={handleScanClick}
                 className="bg-black hover:bg-stone-950 w-full text-white py-3 rounded-full font-normal cursor-pointer transition-colors disabled:bg-stone-900 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-6"
               >
                 <Camera className="size-5" />

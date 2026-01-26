@@ -110,7 +110,7 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       console.log(
-        "🔍 Payment success page - checking storage for payment data"
+        "🔍 Payment success page - checking storage for payment data",
       );
 
       // Get payment ID from URL to identify this specific payment
@@ -195,7 +195,7 @@ export default function PaymentSuccessPage() {
 
       // Calcular minutos transcurridos desde que se hizo el pedido
       const minutesElapsed = Math.floor(
-        (now.getTime() - orderTime.getTime()) / (1000 * 60)
+        (now.getTime() - orderTime.getTime()) / (1000 * 60),
       );
       const totalMinutes = 20; // 20 minutos total para completar el pedido
 
@@ -287,7 +287,7 @@ export default function PaymentSuccessPage() {
               quantity: item.quantity,
               price: item.price,
               extra_price: item.extra_price || 0,
-              total_price: (item.price * item.quantity) + (item.extra_price || 0),
+              total_price: item.price * item.quantity + (item.extra_price || 0),
               guest_name: item.guest_name,
               custom_fields: item.custom_fields,
               image_url: item.images?.[0] || null,
@@ -404,7 +404,7 @@ export default function PaymentSuccessPage() {
             restaurant_id: parseInt(restaurantId),
             rating: rating,
           }),
-        }
+        },
       );
 
       const data = await response.json();
@@ -462,8 +462,9 @@ export default function PaymentSuccessPage() {
                     return (
                       <div
                         key={starIndex}
-                        className={`relative ${hasRated ? "cursor-default" : "cursor-pointer"
-                          }`}
+                        className={`relative ${
+                          hasRated ? "cursor-default" : "cursor-pointer"
+                        }`}
                         onMouseEnter={() =>
                           !hasRated && setHoveredRating(starIndex)
                         }
@@ -474,8 +475,9 @@ export default function PaymentSuccessPage() {
                       >
                         {/* Estrella */}
                         <svg
-                          className={`size-8 md:size-10 lg:size-12 transition-all ${isFilled ? "text-yellow-400" : "text-white"
-                            }`}
+                          className={`size-8 md:size-10 lg:size-12 transition-all ${
+                            isFilled ? "text-yellow-400" : "text-white"
+                          }`}
                           fill="currentColor"
                           stroke={isFilled ? "#facc15" : "black"}
                           strokeWidth="1"
@@ -550,7 +552,7 @@ export default function PaymentSuccessPage() {
           onClick={() => setIsTicketModalOpen(false)}
         >
           <div
-            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 max-h-[85vh] flex flex-col"
+            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 max-h-[77vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-full flex justify-end flex-shrink-0">
@@ -582,10 +584,13 @@ export default function PaymentSuccessPage() {
                     Pick & Go
                   </p>
                   <p className="text-xs md:text-sm text-white/70 mt-1">
-                    {(orderCreatedAt || new Date()).toLocaleTimeString("es-MX", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {(orderCreatedAt || new Date()).toLocaleTimeString(
+                      "es-MX",
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      },
+                    )}
                   </p>
                 </div>
               </div>
@@ -627,10 +632,15 @@ export default function PaymentSuccessPage() {
                     <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
                       <div className="bg-green-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
                         <div className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center scale-150">
-                          {getCardTypeIcon(paymentDetails.cardBrand || "unknown", "medium")}
+                          {getCardTypeIcon(
+                            paymentDetails.cardBrand || "unknown",
+                            "medium",
+                          )}
                         </div>
                       </div>
-                      <span className="text-sm md:text-base lg:text-lg">**** {paymentDetails.cardLast4.slice(-4)}</span>
+                      <span className="text-sm md:text-base lg:text-lg">
+                        **** {paymentDetails.cardLast4.slice(-4)}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -780,20 +790,20 @@ export default function PaymentSuccessPage() {
                 {(paymentDetails?.xquisitoCommissionClient || 0) +
                   (paymentDetails?.ivaXquisitoClient || 0) >
                   0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                        + Comisión de servicio
-                      </span>
-                      <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                        $
-                        {(
-                          (paymentDetails?.xquisitoCommissionClient || 0) +
-                          (paymentDetails?.ivaXquisitoClient || 0)
-                        ).toFixed(2)}{" "}
-                        MXN
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
+                      + Comisión de servicio
+                    </span>
+                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
+                      $
+                      {(
+                        (paymentDetails?.xquisitoCommissionClient || 0) +
+                        (paymentDetails?.ivaXquisitoClient || 0)
+                      ).toFixed(2)}{" "}
+                      MXN
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -835,7 +845,9 @@ export default function PaymentSuccessPage() {
                       </p>
                     </div>
                     <p className="font-semibold text-white text-lg md:text-xl lg:text-2xl">
-                      {new Date(paymentDetails.scheduledPickupTime).toLocaleTimeString("es-MX", {
+                      {new Date(
+                        paymentDetails.scheduledPickupTime,
+                      ).toLocaleTimeString("es-MX", {
                         hour: "2-digit",
                         minute: "2-digit",
                         hour12: true,
@@ -853,7 +865,7 @@ export default function PaymentSuccessPage() {
                       })}{" "}
                       -{" "}
                       {new Date(
-                        orderTime.getTime() + 20 * 60 * 1000
+                        orderTime.getTime() + 20 * 60 * 1000,
                       ).toLocaleTimeString("es-MX", {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -870,10 +882,11 @@ export default function PaymentSuccessPage() {
                   {/* Step 1: Order received */}
                   <div className="flex flex-col items-center gap-2">
                     <div
-                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${getStepStatus(1) === "completed"
+                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                        getStepStatus(1) === "completed"
                           ? "bg-green-500 ring-4 ring-green-500/30"
                           : "bg-white/10"
-                        }`}
+                      }`}
                     >
                       <svg
                         className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white"
@@ -903,12 +916,13 @@ export default function PaymentSuccessPage() {
                   {/* Step 2: Cooking */}
                   <div className="flex flex-col items-center gap-2">
                     <div
-                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${getStepStatus(2) === "active"
+                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                        getStepStatus(2) === "active"
                           ? "bg-orange-500 ring-4 ring-orange-500/30 animate-pulse"
                           : getStepStatus(2) === "completed"
                             ? "bg-green-500 ring-4 ring-green-500/30"
                             : "bg-white/10"
-                        }`}
+                      }`}
                     >
                       <Utensils className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
                     </div>
@@ -928,12 +942,13 @@ export default function PaymentSuccessPage() {
                   {/* Step 3: Ready for pickup */}
                   <div className="flex flex-col items-center gap-2">
                     <div
-                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${getStepStatus(3) === "active"
+                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                        getStepStatus(3) === "active"
                           ? "bg-blue-500 ring-4 ring-blue-500/30 animate-pulse"
                           : getStepStatus(3) === "completed"
                             ? "bg-green-500 ring-4 ring-green-500/30"
                             : "bg-white/10"
-                        }`}
+                      }`}
                     >
                       <div className="text-2xl md:text-3xl">📦</div>
                     </div>
@@ -953,10 +968,11 @@ export default function PaymentSuccessPage() {
                   {/* Step 4: Delivered */}
                   <div className="flex flex-col items-center gap-2">
                     <div
-                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${getStepStatus(4) === "completed"
+                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
+                        getStepStatus(4) === "completed"
                           ? "bg-green-500 ring-4 ring-green-500/30"
                           : "bg-white/10"
-                        }`}
+                      }`}
                     >
                       <div className="text-2xl md:text-3xl">🏠</div>
                     </div>
@@ -980,17 +996,19 @@ export default function PaymentSuccessPage() {
                     Detalles de la entrega
                   </h3>
                   <ChevronDown
-                    className={`w-5 h-5 md:w-6 md:h-6 text-white transition-transform duration-300 ${isDeliveryDetailsExpanded ? "rotate-180" : ""
-                      }`}
+                    className={`w-5 h-5 md:w-6 md:h-6 text-white transition-transform duration-300 ${
+                      isDeliveryDetailsExpanded ? "rotate-180" : ""
+                    }`}
                   />
                 </button>
 
                 {/* Contenido expandible con animación */}
                 <div
-                  className={`overflow-hidden transition-all duration-300 ease-in-out ${isDeliveryDetailsExpanded
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    isDeliveryDetailsExpanded
                       ? "max-h-96 opacity-100 mt-4 md:mt-5"
                       : "max-h-0 opacity-0"
-                    }`}
+                  }`}
                 >
                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 space-y-2.5 md:space-y-3">
                     <p className="text-white/90 text-sm md:text-base lg:text-lg">
@@ -1004,7 +1022,7 @@ export default function PaymentSuccessPage() {
                         Dirección de entrega:
                       </span>{" "}
                       {branches.find(
-                        (b) => b.branch_number === selectedBranchNumber
+                        (b) => b.branch_number === selectedBranchNumber,
                       )?.address || restaurant?.address}
                     </p>
                   </div>

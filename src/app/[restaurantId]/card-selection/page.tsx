@@ -88,15 +88,17 @@ export default function CardSelectionPage() {
   const [showBranchChangeConfirmModal, setShowBranchChangeConfirmModal] =
     useState(false);
   const [pendingBranchChange, setPendingBranchChange] = useState<number | null>(
-    null
+    null,
   );
   const [itemsToRemove, setItemsToRemove] = useState<typeof cartState.items>(
-    []
+    [],
   );
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
 
   // Estado para hora de recolección programada
-  const [scheduledPickupTime, setScheduledPickupTime] = useState<string | null>(null);
+  const [scheduledPickupTime, setScheduledPickupTime] = useState<string | null>(
+    null,
+  );
 
   // Estados para tarjetas
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
@@ -214,7 +216,7 @@ export default function CardSelectionPage() {
       // Si se seleccionó la tarjeta del sistema, omitir EcartPay y procesar directamente
       if (selectedPaymentMethodId === "system-default-card") {
         console.log(
-          "💳 Sistema: Procesando pago con tarjeta del sistema (sin EcartPay)"
+          "💳 Sistema: Procesando pago con tarjeta del sistema (sin EcartPay)",
         );
 
         // No necesitamos configurar token para tarjeta del sistema
@@ -272,7 +274,7 @@ export default function CardSelectionPage() {
         if (!pickAndGoOrderResult.success || !pickAndGoOrderResult.data) {
           console.error(
             "❌ Failed to create Pick & Go order:",
-            pickAndGoOrderResult
+            pickAndGoOrderResult,
           );
           const errorMessage =
             typeof pickAndGoOrderResult.error === "string"
@@ -285,7 +287,7 @@ export default function CardSelectionPage() {
         const pickAndGoOrderId = pickAndGoOrderResult.data.id;
         console.log(
           "✅ Pick & Go order created successfully:",
-          pickAndGoOrderId
+          pickAndGoOrderId,
         );
 
         // PASO 2: Crear dish orders vinculados a la orden Pick & Go
@@ -319,7 +321,7 @@ export default function CardSelectionPage() {
 
           const dishOrderResult = await pickAndGoService.createDishOrder(
             pickAndGoOrderId,
-            dishOrderData
+            dishOrderData,
           );
 
           if (!dishOrderResult.success) {
@@ -329,20 +331,20 @@ export default function CardSelectionPage() {
 
           console.log(
             "✅ Dish order created - Full response:",
-            dishOrderResult
+            dishOrderResult,
           );
         }
 
         // Actualizar payment status y order status
         const paymentStatusResult = await pickAndGoService.updatePaymentStatus(
           pickAndGoOrderId,
-          "paid"
+          "paid",
         );
 
         if (!paymentStatusResult.success) {
           console.warn(
             "⚠️ Failed to update Pick & Go payment status:",
-            paymentStatusResult.error
+            paymentStatusResult.error,
           );
         } else {
           console.log("✅ Pick & Go payment status updated to 'paid'");
@@ -350,13 +352,13 @@ export default function CardSelectionPage() {
 
         const orderStatusResult = await pickAndGoService.updateOrderStatus(
           pickAndGoOrderId,
-          "confirmed"
+          "confirmed",
         );
 
         if (!orderStatusResult.success) {
           console.warn(
             "⚠️ Failed to update Pick & Go order status:",
-            orderStatusResult.error
+            orderStatusResult.error,
           );
         } else {
           console.log("✅ Pick & Go order status updated to 'confirmed'");
@@ -392,7 +394,7 @@ export default function CardSelectionPage() {
         } catch (transactionError) {
           console.error(
             "❌ Error recording payment transaction:",
-            transactionError
+            transactionError,
           );
         }
 
@@ -438,17 +440,17 @@ export default function CardSelectionPage() {
 
         console.log(
           "💾 Saving payment details for payment-success:",
-          paymentDetailsForSuccess
+          paymentDetailsForSuccess,
         );
         localStorage.setItem(
           "xquisito-completed-payment",
-          JSON.stringify(paymentDetailsForSuccess)
+          JSON.stringify(paymentDetailsForSuccess),
         );
 
         const uniqueKey = `xquisito-payment-success-${pickAndGoOrderId}`;
         sessionStorage.setItem(
           uniqueKey,
-          JSON.stringify(paymentDetailsForSuccess)
+          JSON.stringify(paymentDetailsForSuccess),
         );
 
         // Guardar referencia al key actual para fácil acceso
@@ -463,7 +465,10 @@ export default function CardSelectionPage() {
 
         // Guardar orderId para la navegación después de la animación
         setCompletedOrderId(pickAndGoOrderId);
-        console.log("✅ Order processing completed, orderId saved:", pickAndGoOrderId);
+        console.log(
+          "✅ Order processing completed, orderId saved:",
+          pickAndGoOrderId,
+        );
 
         // NO redirigir aquí - dejar que la animación continúe
         // El timer navigateTimer (9s) en OrderAnimation se encargará de la redirección
@@ -540,7 +545,7 @@ export default function CardSelectionPage() {
           tip_amount: tipAmount,
         },
         prep_metadata: {
-          estimated_minutes:25,
+          estimated_minutes: 25,
           items_count: cartState.items.length,
           scheduled_pickup_time: scheduledPickupTime,
         },
@@ -552,7 +557,7 @@ export default function CardSelectionPage() {
       if (!pickAndGoOrderResult.success || !pickAndGoOrderResult.data) {
         console.error(
           "❌ Failed to create Pick & Go order:",
-          pickAndGoOrderResult
+          pickAndGoOrderResult,
         );
         const errorMessage =
           typeof pickAndGoOrderResult.error === "string"
@@ -598,7 +603,7 @@ export default function CardSelectionPage() {
 
         const dishOrderResult = await pickAndGoService.createDishOrder(
           pickAndGoOrderId,
-          dishOrderData
+          dishOrderData,
         );
 
         if (!dishOrderResult.success) {
@@ -612,7 +617,7 @@ export default function CardSelectionPage() {
         // Solo log del éxito de crear dish order (ya no necesitamos capturar IDs)
         console.log(
           "✅ Dish order created and linked to Pick & Go order:",
-          pickAndGoOrderId
+          pickAndGoOrderId,
         );
       }
 
@@ -622,13 +627,13 @@ export default function CardSelectionPage() {
       // Actualizar payment status a 'paid'
       const paymentStatusResult = await pickAndGoService.updatePaymentStatus(
         pickAndGoOrderId,
-        "paid"
+        "paid",
       );
 
       if (!paymentStatusResult.success) {
         console.warn(
           "⚠️ Failed to update Pick & Go payment status:",
-          paymentStatusResult.error
+          paymentStatusResult.error,
         );
       } else {
         console.log("✅ Pick & Go payment status updated to 'paid'");
@@ -637,13 +642,13 @@ export default function CardSelectionPage() {
       // Actualizar order status a 'confirmed' (no 'completed' aún, está en preparación)
       const orderStatusResult = await pickAndGoService.updateOrderStatus(
         pickAndGoOrderId,
-        "confirmed"
+        "confirmed",
       );
 
       if (!orderStatusResult.success) {
         console.warn(
           "⚠️ Failed to update Pick & Go order status:",
-          orderStatusResult.error
+          orderStatusResult.error,
         );
       } else {
         console.log("✅ Pick & Go order status updated to 'confirmed'");
@@ -680,7 +685,7 @@ export default function CardSelectionPage() {
         } catch (transactionError) {
           console.error(
             "❌ Error recording payment transaction:",
-            transactionError
+            transactionError,
           );
           // Don't throw - continue with payment flow even if transaction recording fails
         }
@@ -736,18 +741,18 @@ export default function CardSelectionPage() {
       // Guardar en localStorage para payment-success
       console.log(
         "💾 Saving payment details for payment-success:",
-        paymentDetailsForSuccess
+        paymentDetailsForSuccess,
       );
       localStorage.setItem(
         "xquisito-completed-payment",
-        JSON.stringify(paymentDetailsForSuccess)
+        JSON.stringify(paymentDetailsForSuccess),
       );
 
       // También guardarlo con ID único para evitar conflictos
       const uniqueKey = `xquisito-payment-success-${pickAndGoOrderId}`;
       sessionStorage.setItem(
         uniqueKey,
-        JSON.stringify(paymentDetailsForSuccess)
+        JSON.stringify(paymentDetailsForSuccess),
       );
 
       // Guardar referencia al key actual para fácil acceso
@@ -762,7 +767,10 @@ export default function CardSelectionPage() {
 
       // Guardar orderId para la navegación después de la animación
       setCompletedOrderId(pickAndGoOrderId);
-      console.log("✅ Order processing completed, orderId saved:", pickAndGoOrderId);
+      console.log(
+        "✅ Order processing completed, orderId saved:",
+        pickAndGoOrderId,
+      );
 
       // NO redirigir aquí - dejar que la animación continúe
       // El timer navigateTimer (9s) en OrderAnimation se encargará de la redirección
@@ -780,7 +788,7 @@ export default function CardSelectionPage() {
 
   const handleAddCard = (): void => {
     navigateWithRestaurantId(
-      `/add-card?amount=${totalAmount}&baseAmount=${baseAmount}&scan=true`
+      `/add-card?amount=${totalAmount}&baseAmount=${baseAmount}&scan=false`,
     );
   };
 
@@ -806,7 +814,7 @@ export default function CardSelectionPage() {
       // Obtener el menú de la nueva sucursal
       const menuData = await restaurantService.getRestaurantWithMenuByBranch(
         parseInt(restaurantId),
-        newBranchNumber
+        newBranchNumber,
       );
 
       // Crear un Set con todos los menu_item_id disponibles en la nueva sucursal
@@ -819,7 +827,7 @@ export default function CardSelectionPage() {
 
       // Verificar qué items del carrito NO están disponibles
       const unavailableItems = cartState.items.filter(
-        (cartItem) => !availableMenuItemIds.has(cartItem.id)
+        (cartItem) => !availableMenuItemIds.has(cartItem.id),
       );
 
       setItemsToRemove(unavailableItems);
@@ -842,7 +850,7 @@ export default function CardSelectionPage() {
 
     // Obtener el tipo de tarjeta seleccionada
     const selectedMethod = allPaymentMethods.find(
-      (pm) => pm.id === selectedPaymentMethodId
+      (pm) => pm.id === selectedPaymentMethodId,
     );
     const cardBrand = selectedMethod?.cardBrand;
 
@@ -915,7 +923,7 @@ export default function CardSelectionPage() {
                       Sucursal:{" "}
                       <span className="font-medium text-black">
                         {branches.find(
-                          (b) => b.branch_number === selectedBranchNumber
+                          (b) => b.branch_number === selectedBranchNumber,
                         )?.name || "Principal"}
                       </span>
                     </p>
@@ -1062,7 +1070,7 @@ export default function CardSelectionPage() {
                 {/* Payment Options - Solo mostrar si es tarjeta de crédito */}
                 {(() => {
                   const selectedMethod = allPaymentMethods.find(
-                    (pm) => pm.id === selectedPaymentMethodId
+                    (pm) => pm.id === selectedPaymentMethodId,
                   );
                   return selectedMethod?.cardType === "credit" ? (
                     <div
@@ -1228,7 +1236,7 @@ export default function CardSelectionPage() {
             <div className="px-6 py-4">
               {(() => {
                 const selectedMethod = allPaymentMethods.find(
-                  (pm) => pm.id === selectedPaymentMethodId
+                  (pm) => pm.id === selectedPaymentMethodId,
                 );
                 const cardBrand = selectedMethod?.cardBrand;
 
@@ -1303,7 +1311,7 @@ export default function CardSelectionPage() {
                     {/* Opciones MSI */}
                     {(() => {
                       const availableOptions = msiOptions.filter(
-                        (option) => totalAmount >= option.minAmount
+                        (option) => totalAmount >= option.minAmount,
                       );
                       const hasUnavailableOptions =
                         availableOptions.length < msiOptions.length;
@@ -1457,7 +1465,10 @@ export default function CardSelectionPage() {
             let orderId = sessionStorage.getItem("xquisito-current-order-id");
 
             if (orderId) {
-              console.log("✅ Found orderId from sessionStorage (direct):", orderId);
+              console.log(
+                "✅ Found orderId from sessionStorage (direct):",
+                orderId,
+              );
             } else {
               // PRIORIDAD 2: Usar el estado si está disponible
               orderId = completedOrderId;
@@ -1466,7 +1477,9 @@ export default function CardSelectionPage() {
                 console.log("✅ Using completedOrderId from state:", orderId);
               } else {
                 // PRIORIDAD 3: Buscar en sessionStorage por payment-success keys
-                console.log("⚠️ completedOrderId is null, searching in sessionStorage...");
+                console.log(
+                  "⚠️ completedOrderId is null, searching in sessionStorage...",
+                );
                 for (let i = 0; i < sessionStorage.length; i++) {
                   const key = sessionStorage.key(i);
                   if (key && key.startsWith("xquisito-payment-success-")) {
@@ -1475,7 +1488,12 @@ export default function CardSelectionPage() {
                       if (data) {
                         const parsed = JSON.parse(data);
                         orderId = parsed.orderId;
-                        console.log("📦 Found orderId from sessionStorage key:", key, "orderId:", orderId);
+                        console.log(
+                          "📦 Found orderId from sessionStorage key:",
+                          key,
+                          "orderId:",
+                          orderId,
+                        );
                         break;
                       }
                     } catch (e) {
@@ -1487,12 +1505,17 @@ export default function CardSelectionPage() {
                 // PRIORIDAD 4: Último intento en localStorage
                 if (!orderId) {
                   console.log("⚠️ Still no orderId, trying localStorage...");
-                  const paymentData = localStorage.getItem("xquisito-completed-payment");
+                  const paymentData = localStorage.getItem(
+                    "xquisito-completed-payment",
+                  );
                   if (paymentData) {
                     try {
                       const parsed = JSON.parse(paymentData);
                       orderId = parsed.orderId;
-                      console.log("📦 Found orderId from localStorage:", orderId);
+                      console.log(
+                        "📦 Found orderId from localStorage:",
+                        orderId,
+                      );
                     } catch (e) {
                       console.error("Error parsing payment data:", e);
                     }
@@ -1503,7 +1526,7 @@ export default function CardSelectionPage() {
 
             console.log("🔍 Final orderId for navigation:", orderId);
             navigateWithRestaurantId(
-              `/payment-success?orderId=${orderId || "unknown"}&success=true`
+              `/payment-success?orderId=${orderId || "unknown"}&success=true`,
             );
           }}
           onCancel={handleCancelPayment}
@@ -1607,12 +1630,12 @@ export default function CardSelectionPage() {
                               if (item.cartItemId) {
                                 try {
                                   await cartService.removeFromCart(
-                                    item.cartItemId
+                                    item.cartItemId,
                                   );
                                 } catch (error) {
                                   console.error(
                                     "Error removing unavailable item:",
-                                    error
+                                    error,
                                   );
                                 }
                               }
@@ -1652,7 +1675,7 @@ export default function CardSelectionPage() {
                             console.error("Error during branch change:", error);
                             setIsCheckingAvailability(false);
                             alert(
-                              "Hubo un error al cambiar de sucursal. Por favor intenta de nuevo."
+                              "Hubo un error al cambiar de sucursal. Por favor intenta de nuevo.",
                             );
                           }
                         }

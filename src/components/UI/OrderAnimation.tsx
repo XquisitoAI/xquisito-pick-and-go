@@ -194,7 +194,7 @@ const OrderAnimation = ({
                     <p className="text-xs md:text-sm lg:text-base text-gray-500 mb-3 md:mb-4">
                       Platillos ordenados
                     </p>
-                    <div className="space-y-2 md:space-y-3 lg:space-y-4 max-h-48 md:max-h-64 lg:max-h-80 overflow-y-auto">
+                    <div className="space-y-2 md:space-y-3 lg:space-y-4">
                       {displayItems.map((item, index) => (
                         <div
                           key={`${item.id}-${index}`}
