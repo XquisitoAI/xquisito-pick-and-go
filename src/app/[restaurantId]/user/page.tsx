@@ -6,7 +6,6 @@ import { useCart, CartItem } from "@/context/CartContext";
 import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
-import { Loader2 } from "lucide-react";
 
 export default function UserPage() {
   const params = useParams();
@@ -81,19 +80,19 @@ export default function UserPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
+    <div className="min-h-dvh bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
       <MenuHeaderBack />
 
-      <div className="px-4 w-full flex-1 flex flex-col">
-        <div className="left-4 right-4 bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
-          <div className="py-6 px-8 flex flex-col justify-center">
-            <h2 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
+      <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
+        <div className="left-4 right-4 bg-linear-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
+          <div className="py-6 md:py-8 lg:py-10 px-8 md:px-10 lg:px-12 flex flex-col justify-center">
+            <h2 className="font-medium text-white text-3xl md:text-4xl lg:text-5xl leading-7 md:leading-9 lg:leading-tight mt-2 md:mt-3 mb-6 md:mb-8">
               Ingresa tu nombre para continuar
             </h2>
           </div>
         </div>
 
-        <div className="flex-1 h-full flex flex-col ">
+        <div className="flex-1 flex flex-col">
           <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-8 lg:px-10 pb-32">
             <div className="flex flex-col items-center w-full pt-32 md:pt-36 lg:pt-40">
               <div className="mb-6 md:mb-8">
@@ -102,7 +101,7 @@ export default function UserPage() {
                 </h2>
               </div>
 
-              <div className="w-full mb-24">
+              <div className="w-full">
                 <input
                   ref={inputRef}
                   type="text"
@@ -111,7 +110,7 @@ export default function UserPage() {
                   onChange={handleNameChange}
                   onKeyDown={handleKeyDown}
                   onFocus={handleInputFocus}
-                  className="w-full px-4 py-3 border-0 border-b-[1.3px] border-black !rounded-none text-black text-2xl text-center font-medium focus:outline-none focus:border-teal-500"
+                  className="w-full px-4 md:px-5 lg:px-6 py-3 md:py-4 lg:py-5 border-0 border-b-[1.3px] border-black !rounded-none text-black text-2xl md:text-3xl lg:text-4xl text-center font-medium focus:outline-none focus:border-teal-500"
                 />
               </div>
             </div>
