@@ -1311,11 +1311,7 @@ export default function DishDetailPage() {
                                           field
                                         )
                                       }
-                                      className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 rounded border-[#8e8e8e] focus:ring-[#eab3f4] accent-[#eab3f4] ${
-                                        isDisabled
-                                          ? "cursor-not-allowed opacity-50"
-                                          : "text-[#eab3f4]"
-                                      }`}
+                                      className="mycheckbox md:scale-125 lg:scale-150"
                                     />
                                   </label>
                                 );
