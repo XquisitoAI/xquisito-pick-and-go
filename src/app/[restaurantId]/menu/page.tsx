@@ -11,7 +11,7 @@ import React, { useEffect } from "react";
 const MenuPage = () => {
   const { validationError, restaurantId } = useValidateAccess();
   const { setRestaurantId: setPickAndGoRestaurantId } = usePickAndGoContext();
-  const { restaurant, loading, error } = useRestaurant();
+  const { restaurant, error } = useRestaurant();
 
   useEffect(() => {
     if (restaurantId && !isNaN(restaurantId)) {
@@ -19,11 +19,6 @@ const MenuPage = () => {
       console.log("🥡 Pick & Go Menu Page:", { restaurantId });
     }
   }, [restaurantId, setPickAndGoRestaurantId]);
-
-  // Mostrar loader mientras valida
-  if (loading) {
-    return <Loader />;
-  }
 
   // Mostrar error de validación
   if (validationError) {

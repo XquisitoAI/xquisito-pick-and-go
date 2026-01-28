@@ -15,7 +15,6 @@ import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { useBranch } from "../../context/BranchContext";
 import { useNavigation } from "../../hooks/useNavigation";
-import Loader from "../UI/Loader";
 import BranchSelectionModal from "../modals/BranchSelectionModal";
 
 export default function MenuView() {
@@ -24,7 +23,7 @@ export default function MenuView() {
   const [showBranchModal, setShowBranchModal] = useState(false);
   const { user, profile, isAuthenticated } = useAuth();
   const { state, refreshCart } = useCart();
-  const { restaurant, menu, loading, error } = useRestaurant();
+  const { restaurant, menu, error } = useRestaurant();
   const { branches, selectedBranchNumber, fetchBranches } = useBranch();
   const { navigateWithRestaurantId, branchNumber } = useNavigation();
 
@@ -89,7 +88,7 @@ export default function MenuView() {
           items: section.items.filter(
             (item) =>
               item.name.toLowerCase().includes(query) ||
-              item.description?.toLowerCase().includes(query)
+              item.description?.toLowerCase().includes(query),
           ),
         }))
         .filter((section) => section.items.length > 0);
@@ -202,7 +201,7 @@ export default function MenuView() {
                       Sucursal:{" "}
                       <span className="font-medium text-black">
                         {branches.find(
-                          (b) => b.branch_number === selectedBranchNumber
+                          (b) => b.branch_number === selectedBranchNumber,
                         )?.name || "Principal"}
                       </span>
                     </p>
