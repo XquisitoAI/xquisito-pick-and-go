@@ -123,7 +123,7 @@ export default function SupportTab({
             ? `${profile.firstName} ${profile.lastName}`
             : profile?.firstName || null;
 
-        const contextualMessage = `[CONTEXT: support_dashboard, user_id=${userId || "null"}, user_name="${userName || "unknown"}"]
+        const contextualMessage = `[CONTEXT: service=support_dashboard, user_id=${userId || "null"}, user_name="${userName || "unknown"}"]
 [USER_MESSAGE: ${userMessage}]`;
 
         const result = await chatWithAgent(contextualMessage, sessionId);
