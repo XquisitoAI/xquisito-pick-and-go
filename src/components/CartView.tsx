@@ -174,6 +174,11 @@ export default function CartView() {
                       id=""
                       className="h-24 md:h-28 lg:h-32 text-base md:text-lg lg:text-xl w-full bg-[#f9f9f9] border border-[#bfbfbf] px-3 md:px-4 py-2 md:py-3 rounded-lg resize-none focus:outline-none mt-2 md:mt-3"
                       placeholder="Alergias, instrucciones especiales, comentarios..."
+                      onFocus={(e) => {
+                        setTimeout(() => {
+                          e.target.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }, 300);
+                      }}
                     ></textarea>
                   </div>
                 </div>
