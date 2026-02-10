@@ -895,8 +895,90 @@ export default function CardSelectionPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
-      <MenuHeaderBack />
+    <>
+      {/* Animación de orden completada - fuera del contenedor principal para Safari */}
+      {showAnimation && (
+        <OrderAnimation
+          userName={completedUserName}
+          orderedItems={completedOrderItems}
+          onContinue={() => {
+            console.log("🔍 DEBUG - completedOrderId state:", completedOrderId);
+
+            // PRIORIDAD 1: Intentar obtener desde sessionStorage directamente
+            let orderId = sessionStorage.getItem("xquisito-current-order-id");
+
+            if (orderId) {
+              console.log(
+                "✅ Found orderId from sessionStorage (direct):",
+                orderId,
+              );
+            } else {
+              // PRIORIDAD 2: Usar el estado si está disponible
+              orderId = completedOrderId;
+
+              if (orderId) {
+                console.log("✅ Using completedOrderId from state:", orderId);
+              } else {
+                // PRIORIDAD 3: Buscar en sessionStorage por payment-success keys
+                console.log(
+                  "⚠️ completedOrderId is null, searching in sessionStorage...",
+                );
+                for (let i = 0; i < sessionStorage.length; i++) {
+                  const key = sessionStorage.key(i);
+                  if (key && key.startsWith("xquisito-payment-success-")) {
+                    try {
+                      const data = sessionStorage.getItem(key);
+                      if (data) {
+                        const parsed = JSON.parse(data);
+                        orderId = parsed.orderId;
+                        console.log(
+                          "📦 Found orderId from sessionStorage key:",
+                          key,
+                          "orderId:",
+                          orderId,
+                        );
+                        break;
+                      }
+                    } catch (e) {
+                      console.error("Error parsing sessionStorage data:", e);
+                    }
+                  }
+                }
+
+                // PRIORIDAD 4: Último intento en localStorage
+                if (!orderId) {
+                  console.log("⚠️ Still no orderId, trying localStorage...");
+                  const paymentData = localStorage.getItem(
+                    "xquisito-completed-payment",
+                  );
+                  if (paymentData) {
+                    try {
+                      const parsed = JSON.parse(paymentData);
+                      orderId = parsed.orderId;
+                      console.log(
+                        "📦 Found orderId from localStorage:",
+                        orderId,
+                      );
+                    } catch (e) {
+                      console.error("Error parsing payment data:", e);
+                    }
+                  }
+                }
+              }
+            }
+
+            console.log("🔍 Final orderId for navigation:", orderId);
+            navigateWithRestaurantId(
+              `/payment-success?orderId=${orderId || "unknown"}&success=true`,
+            );
+          }}
+          onCancel={handleCancelPayment}
+          onConfirm={handleConfirmPayment}
+        />
+      )}
+
+      <div className="min-h-[100dvh] bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
+        <MenuHeaderBack />
 
       <div className="flex-1 flex flex-col justify-end overflow-y-auto">
         <div className="px-4 w-full">
@@ -1453,87 +1535,6 @@ export default function CardSelectionPage() {
         </div>
       )}
 
-      {/* Animación de orden completada */}
-      {showAnimation && (
-        <OrderAnimation
-          userName={completedUserName}
-          orderedItems={completedOrderItems}
-          onContinue={() => {
-            console.log("🔍 DEBUG - completedOrderId state:", completedOrderId);
-
-            // PRIORIDAD 1: Intentar obtener desde sessionStorage directamente
-            let orderId = sessionStorage.getItem("xquisito-current-order-id");
-
-            if (orderId) {
-              console.log(
-                "✅ Found orderId from sessionStorage (direct):",
-                orderId,
-              );
-            } else {
-              // PRIORIDAD 2: Usar el estado si está disponible
-              orderId = completedOrderId;
-
-              if (orderId) {
-                console.log("✅ Using completedOrderId from state:", orderId);
-              } else {
-                // PRIORIDAD 3: Buscar en sessionStorage por payment-success keys
-                console.log(
-                  "⚠️ completedOrderId is null, searching in sessionStorage...",
-                );
-                for (let i = 0; i < sessionStorage.length; i++) {
-                  const key = sessionStorage.key(i);
-                  if (key && key.startsWith("xquisito-payment-success-")) {
-                    try {
-                      const data = sessionStorage.getItem(key);
-                      if (data) {
-                        const parsed = JSON.parse(data);
-                        orderId = parsed.orderId;
-                        console.log(
-                          "📦 Found orderId from sessionStorage key:",
-                          key,
-                          "orderId:",
-                          orderId,
-                        );
-                        break;
-                      }
-                    } catch (e) {
-                      console.error("Error parsing sessionStorage data:", e);
-                    }
-                  }
-                }
-
-                // PRIORIDAD 4: Último intento en localStorage
-                if (!orderId) {
-                  console.log("⚠️ Still no orderId, trying localStorage...");
-                  const paymentData = localStorage.getItem(
-                    "xquisito-completed-payment",
-                  );
-                  if (paymentData) {
-                    try {
-                      const parsed = JSON.parse(paymentData);
-                      orderId = parsed.orderId;
-                      console.log(
-                        "📦 Found orderId from localStorage:",
-                        orderId,
-                      );
-                    } catch (e) {
-                      console.error("Error parsing payment data:", e);
-                    }
-                  }
-                }
-              }
-            }
-
-            console.log("🔍 Final orderId for navigation:", orderId);
-            navigateWithRestaurantId(
-              `/payment-success?orderId=${orderId || "unknown"}&success=true`,
-            );
-          }}
-          onCancel={handleCancelPayment}
-          onConfirm={handleConfirmPayment}
-        />
-      )}
-
       {/* Modal de confirmación de cambio de sucursal */}
       {showBranchChangeConfirmModal && (
         <div
@@ -1714,5 +1715,6 @@ export default function CardSelectionPage() {
         }}
       />
     </div>
+    </>
   );
 }
