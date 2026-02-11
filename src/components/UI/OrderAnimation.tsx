@@ -147,14 +147,28 @@ const OrderAnimation = ({
     <>
       {/* White circle */}
       {animationState === "circle" && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none overflow-hidden">
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none overflow-hidden"
+          style={{
+            minHeight: '100vh',
+            minHeight: '-webkit-fill-available',
+          }}
+        >
           <div className="circle-animation"></div>
         </div>
       )}
 
       {/* Contenido */}
       {(animationState === "content" || animationState === "greenCircle") && (
-        <div className="fixed inset-0 z-[9999] bg-white overflow-hidden">
+        <div
+          className="fixed inset-0 z-[9999] bg-white overflow-hidden"
+          style={{
+            minHeight: '100vh',
+            minHeight: '-webkit-fill-available',
+            overscrollBehaviorY: 'none',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
           <div className="h-[100dvh] bg-white p-8 animate-fade-in flex flex-col overflow-y-auto">
             <div className="flex flex-col flex-1">
               {/* Logo animado */}
@@ -307,7 +321,13 @@ const OrderAnimation = ({
 
       {/* Animacion circulo verde */}
       {animationState === "greenCircle" && (
-        <div className="fixed inset-0 z-[10000] overflow-hidden pointer-events-none">
+        <div
+          className="fixed inset-0 z-[10000] overflow-hidden pointer-events-none"
+          style={{
+            minHeight: '100vh',
+            minHeight: '-webkit-fill-available',
+          }}
+        >
           <div className="p-6 md:p-8 lg:p-10">
             <div className="mb-6 md:mb-8 lg:mb-10 mt-8 md:mt-12 lg:mt-14 relative">
               <div className="green-circle-from-logo"></div>
@@ -318,7 +338,14 @@ const OrderAnimation = ({
 
       {/* Success screen */}
       {animationState === "success" && (
-        <div className="fixed inset-0 z-[9999] bg-green-500 overflow-hidden">
+        <div
+          className="fixed inset-0 z-[9999] bg-green-500 overflow-hidden"
+          style={{
+            minHeight: '100vh',
+            minHeight: '-webkit-fill-available',
+            overscrollBehaviorY: 'none',
+          }}
+        >
           <div className="h-[100dvh] p-8 flex flex-col">
             <div className="flex flex-col flex-1">
               {/* Checkmark */}
