@@ -149,10 +149,7 @@ const OrderAnimation = ({
       {animationState === "circle" && (
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none overflow-hidden"
-          style={{
-            minHeight: '100vh',
-            minHeight: '-webkit-fill-available',
-          }}
+          style={{ minHeight: '-webkit-fill-available' }}
         >
           <div className="circle-animation"></div>
         </div>
@@ -163,7 +160,6 @@ const OrderAnimation = ({
         <div
           className="fixed inset-0 z-[9999] bg-white overflow-hidden"
           style={{
-            minHeight: '100vh',
             minHeight: '-webkit-fill-available',
             overscrollBehaviorY: 'none',
             WebkitOverflowScrolling: 'touch',
@@ -323,10 +319,7 @@ const OrderAnimation = ({
       {animationState === "greenCircle" && (
         <div
           className="fixed inset-0 z-[10000] overflow-hidden pointer-events-none"
-          style={{
-            minHeight: '100vh',
-            minHeight: '-webkit-fill-available',
-          }}
+          style={{ minHeight: '-webkit-fill-available' }}
         >
           <div className="p-6 md:p-8 lg:p-10">
             <div className="mb-6 md:mb-8 lg:mb-10 mt-8 md:mt-12 lg:mt-14 relative">
@@ -341,7 +334,6 @@ const OrderAnimation = ({
         <div
           className="fixed inset-0 z-[9999] bg-green-500 overflow-hidden"
           style={{
-            minHeight: '100vh',
             minHeight: '-webkit-fill-available',
             overscrollBehaviorY: 'none',
           }}
