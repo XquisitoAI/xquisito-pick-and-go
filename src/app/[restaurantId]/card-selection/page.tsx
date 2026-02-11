@@ -977,20 +977,12 @@ export default function CardSelectionPage() {
         />
       )}
 
-      <div className="min-h-new bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
-        {/* Fixed Header */}
-        <div
-          className="fixed top-0 left-0 right-0 z-50"
-          style={{ zIndex: 999 }}
-        >
-          <MenuHeaderBack />
-        </div>
-
-        {/* Spacer for fixed header */}
-        <div className="h-20"></div>
+      <div className="min-h-new bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col overflow-y-auto">
+        {/* Header */}
+        <MenuHeaderBack />
 
         <div className="w-full flex-1 flex flex-col justify-end">
-          <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
+          <div className="w-full flex justify-center">
             <div className="flex flex-col relative mx-4 w-full">
               <div className="left-4 right-4 bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
                 <div className="py-6 px-8 flex flex-col justify-center">
@@ -1001,658 +993,662 @@ export default function CardSelectionPage() {
               </div>
 
               <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8">
-              {/* Sucursal seleccionada */}
-              {branches.length > 0 && (
-                <div
-                  className={`mb-4 flex items-center justify-between w-full ${branches.length > 1 ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
-                  onClick={() =>
-                    branches.length > 1 && setShowBranchModal(true)
-                  }
-                >
-                  {selectedBranchNumber ? (
-                    <p className="text-gray-600 text-base">
-                      Sucursal:{" "}
-                      <span className="font-medium text-black">
-                        {branches.find(
-                          (b) => b.branch_number === selectedBranchNumber,
-                        )?.name || "Principal"}
-                      </span>
-                    </p>
-                  ) : (
-                    <p className="text-gray-600 text-sm md:text-base font-medium">
-                      Selecciona una sucursal
-                    </p>
-                  )}
-                  {branches.length > 1 && (
-                    <ChevronRight className="size-4 md:size-5 text-gray-600 flex-shrink-0" />
-                  )}
-                </div>
-              )}
-              {/* Selector de hora de recolección */}
-              <PickupTimeSelector
-                selectedTime={scheduledPickupTime}
-                onTimeChange={setScheduledPickupTime}
-                estimatedMinutes={25}
-              />
+                {/* Sucursal seleccionada */}
+                {branches.length > 0 && (
+                  <div
+                    className={`mb-4 flex items-center justify-between w-full ${branches.length > 1 ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+                    onClick={() =>
+                      branches.length > 1 && setShowBranchModal(true)
+                    }
+                  >
+                    {selectedBranchNumber ? (
+                      <p className="text-gray-600 text-base">
+                        Sucursal:{" "}
+                        <span className="font-medium text-black">
+                          {branches.find(
+                            (b) => b.branch_number === selectedBranchNumber,
+                          )?.name || "Principal"}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-gray-600 text-sm md:text-base font-medium">
+                        Selecciona una sucursal
+                      </p>
+                    )}
+                    {branches.length > 1 && (
+                      <ChevronRight className="size-4 md:size-5 text-gray-600 flex-shrink-0" />
+                    )}
+                  </div>
+                )}
+                {/* Selector de hora de recolección */}
+                <PickupTimeSelector
+                  selectedTime={scheduledPickupTime}
+                  onTimeChange={setScheduledPickupTime}
+                  estimatedMinutes={25}
+                />
 
-              {/* Resumen del pedido */}
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-black font-medium">Subtotal</span>
-                  <span className="text-black font-medium">
-                    ${baseAmount.toFixed(2)} MXN
-                  </span>
+                {/* Resumen del pedido */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-black font-medium">Subtotal</span>
+                    <span className="text-black font-medium">
+                      ${baseAmount.toFixed(2)} MXN
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Selección de propina */}
-              <div className="mb-4">
-                {/* Propina label y botones de porcentaje */}
-                <div className="flex items-center gap-4 mb-3">
-                  <span className="text-black font-medium text-base md:text-lg lg:text-xl whitespace-nowrap">
-                    Propina
-                  </span>
-                  {/* Tip Percentage Buttons */}
-                  <div className="grid grid-cols-5 gap-2 flex-1">
-                    {[0, 10, 15, 20].map((percentage) => (
+                {/* Selección de propina */}
+                <div className="mb-4">
+                  {/* Propina label y botones de porcentaje */}
+                  <div className="flex items-center gap-4 mb-3">
+                    <span className="text-black font-medium text-base md:text-lg lg:text-xl whitespace-nowrap">
+                      Propina
+                    </span>
+                    {/* Tip Percentage Buttons */}
+                    <div className="grid grid-cols-5 gap-2 flex-1">
+                      {[0, 10, 15, 20].map((percentage) => (
+                        <button
+                          key={percentage}
+                          onClick={() => {
+                            handleTipPercentage(percentage);
+                            setShowCustomTipInput(false);
+                          }}
+                          className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-[#8e8e8e]/40 text-black transition-colors cursor-pointer ${
+                            tipPercentage === percentage && !showCustomTipInput
+                              ? "bg-[#eab3f4] text-white"
+                              : "bg-[#f9f9f9] hover:border-gray-400"
+                          }`}
+                        >
+                          {percentage === 0 ? "0%" : `${percentage}%`}
+                        </button>
+                      ))}
+                      {/* Custom Tip Button */}
                       <button
-                        key={percentage}
                         onClick={() => {
-                          handleTipPercentage(percentage);
-                          setShowCustomTipInput(false);
+                          setShowCustomTipInput(true);
+                          setTipPercentage(0);
                         }}
                         className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-[#8e8e8e]/40 text-black transition-colors cursor-pointer ${
-                          tipPercentage === percentage && !showCustomTipInput
+                          showCustomTipInput
                             ? "bg-[#eab3f4] text-white"
                             : "bg-[#f9f9f9] hover:border-gray-400"
                         }`}
                       >
-                        {percentage === 0 ? "0%" : `${percentage}%`}
+                        $
                       </button>
-                    ))}
-                    {/* Custom Tip Button */}
-                    <button
-                      onClick={() => {
-                        setShowCustomTipInput(true);
-                        setTipPercentage(0);
-                      }}
-                      className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-[#8e8e8e]/40 text-black transition-colors cursor-pointer ${
-                        showCustomTipInput
-                          ? "bg-[#eab3f4] text-white"
-                          : "bg-[#f9f9f9] hover:border-gray-400"
-                      }`}
-                    >
-                      $
-                    </button>
+                    </div>
                   </div>
+
+                  {/* Custom Tip Input - Solo se muestra cuando showCustomTipInput es true */}
+                  {showCustomTipInput && (
+                    <div className="flex flex-col gap-2 mb-3">
+                      <div className="relative w-full">
+                        <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black text-sm">
+                          $
+                        </span>
+                        <input
+                          type="number"
+                          value={customTip}
+                          onChange={(e) =>
+                            handleCustomTipChange(e.target.value)
+                          }
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                          autoFocus
+                          className="w-full pl-8 pr-4 py-1 md:py-1.5 lg:py-2 border border-[#8e8e8e]/40 rounded-full focus:outline-none focus:ring focus:ring-gray-400 focus:border-transparent text-black text-center bg-[#f9f9f9] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {tipAmount > 0 && (
+                    <div className="flex justify-end items-center mt-2 text-sm">
+                      <span className="text-[#eab3f4] font-medium">
+                        +${tipAmount.toFixed(2)} MXN
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Custom Tip Input - Solo se muestra cuando showCustomTipInput es true */}
-                {showCustomTipInput && (
-                  <div className="flex flex-col gap-2 mb-3">
-                    <div className="relative w-full">
-                      <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black text-sm">
-                        $
+                {/* Alerta de mínimo de compra */}
+                {isUnderMinimum && totalAmount > 0 && (
+                  <div className="bg-gradient-to-br from-red-50 to-red-100 px-6 py-3 -mx-8  rounded-lg">
+                    <div className="flex justify-center items-center gap-3">
+                      <X className="size-6 text-red-500 flex-shrink-0" />
+                      <p className="text-red-700 font-medium text-base md:text-lg">
+                        ¡El mínimo de compra es de ${MINIMUM_AMOUNT.toFixed(2)}!
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Comisión e IVA */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between items-center border-t pt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-black font-medium text-base md:text-lg lg:text-xl">
+                        Total a pagar
                       </span>
-                      <input
-                        type="number"
-                        value={customTip}
-                        onChange={(e) => handleCustomTipChange(e.target.value)}
-                        placeholder="0.00"
-                        step="0.01"
-                        min="0"
-                        autoFocus
-                        className="w-full pl-8 pr-4 py-1 md:py-1.5 lg:py-2 border border-[#8e8e8e]/40 rounded-full focus:outline-none focus:ring focus:ring-gray-400 focus:border-transparent text-black text-center bg-[#f9f9f9] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                      <CircleAlert
+                        className="size-4 cursor-pointer text-gray-500"
+                        strokeWidth={2.3}
+                        onClick={() => setShowTotalModal(true)}
                       />
                     </div>
-                  </div>
-                )}
-
-                {tipAmount > 0 && (
-                  <div className="flex justify-end items-center mt-2 text-sm">
-                    <span className="text-[#eab3f4] font-medium">
-                      +${tipAmount.toFixed(2)} MXN
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Alerta de mínimo de compra */}
-              {isUnderMinimum && totalAmount > 0 && (
-                <div className="bg-gradient-to-br from-red-50 to-red-100 px-6 py-3 -mx-8  rounded-lg">
-                  <div className="flex justify-center items-center gap-3">
-                    <X className="size-6 text-red-500 flex-shrink-0" />
-                    <p className="text-red-700 font-medium text-base md:text-lg">
-                      ¡El mínimo de compra es de ${MINIMUM_AMOUNT.toFixed(2)}!
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Comisión e IVA */}
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between items-center border-t pt-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                      Total a pagar
-                    </span>
-                    <CircleAlert
-                      className="size-4 cursor-pointer text-gray-500"
-                      strokeWidth={2.3}
-                      onClick={() => setShowTotalModal(true)}
-                    />
-                  </div>
-                  <div className="text-right">
-                    {selectedMSI !== null ? (
-                      <>
+                    <div className="text-right">
+                      {selectedMSI !== null ? (
+                        <>
+                          <span className="font-medium text-black text-base md:text-lg lg:text-xl">
+                            ${(displayTotal / selectedMSI).toFixed(2)} MXN x{" "}
+                            {selectedMSI} meses
+                          </span>
+                        </>
+                      ) : (
                         <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                          ${(displayTotal / selectedMSI).toFixed(2)} MXN x{" "}
-                          {selectedMSI} meses
+                          ${displayTotal.toFixed(2)} MXN
                         </span>
-                      </>
-                    ) : (
-                      <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                        ${displayTotal.toFixed(2)} MXN
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Payment Options - Solo mostrar si es tarjeta de crédito */}
-                {(() => {
-                  const selectedMethod = allPaymentMethods.find(
-                    (pm) => pm.id === selectedPaymentMethodId,
-                  );
-                  return selectedMethod?.cardType === "credit" ? (
-                    <div
-                      className="py-2 cursor-pointer"
-                      onClick={() => setShowPaymentOptionsModal(true)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                          Pago a meses
-                        </span>
-                        <div
-                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                            selectedMSI !== null
-                              ? "border-[#eab3f4] bg-[#eab3f4]"
-                              : "border-gray-300"
-                          }`}
-                        >
-                          {selectedMSI !== null && (
-                            <div className="w-full h-full rounded-full bg-white scale-50"></div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-              </div>
-
-              {/* Métodos de pago guardados - Mostrar siempre (incluye tarjeta del sistema) */}
-              <div className="mb-4">
-                <h3 className="text-black font-medium mb-3">Métodos de pago</h3>
-                <div className="space-y-2.5">
-                  {allPaymentMethods.map((method) => (
-                    <div
-                      key={method.id}
-                      className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
-                        selectedPaymentMethodId === method.id
-                          ? "border-teal-500 bg-teal-50"
-                          : "border-black/50 bg-[#f9f9f9]"
-                      }`}
-                    >
-                      <div
-                        onClick={() => setSelectedPaymentMethodId(method.id)}
-                        className="flex items-center justify-center gap-3 mx-auto cursor-pointer"
-                      >
-                        <div>{getCardTypeIcon(method.cardBrand)}</div>
-                        <div>
-                          <p className="text-black">
-                            **** **** **** {method.lastFourDigits}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div
-                        onClick={() => setSelectedPaymentMethodId(method.id)}
-                        className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
-                          selectedPaymentMethodId === method.id
-                            ? "border-teal-500 bg-teal-500"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        {selectedPaymentMethodId === method.id && (
-                          <div className="w-full h-full rounded-full bg-white scale-50"></div>
-                        )}
-                      </div>
-
-                      {/* Delete Button - No mostrar para tarjeta del sistema */}
-                      {method.id !== "system-default-card" && (
-                        <button
-                          onClick={() => handleDeleteCard(method.id)}
-                          disabled={deletingCardId === method.id}
-                          className="pl-2 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 cursor-pointer"
-                          title="Eliminar tarjeta"
-                        >
-                          {deletingCardId === method.id ? (
-                            <Loader2 className="size-5 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-5" />
-                          )}
-                        </button>
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Botón agregar tarjeta */}
-              <div className="mb-4">
-                <button
-                  onClick={handleAddCard}
-                  className="border border-black/50 flex justify-center items-center gap-1 w-full text-black py-3 rounded-full cursor-pointer transition-colors bg-[#f9f9f9] hover:bg-gray-100"
-                >
-                  <Plus className="size-5" />
-                  Agregar método de pago
-                </button>
-              </div>
-
-              {/* Botón de pago */}
-              <button
-                onClick={handleInitiatePayment}
-                disabled={
-                  isProcessing ||
-                  !selectedPaymentMethodId ||
-                  (branches.length > 1 && !selectedBranchNumber) ||
-                  isUnderMinimum
-                }
-                className={`w-full text-white py-3 rounded-full cursor-pointer transition-all active:scale-90 ${
-                  isProcessing ||
-                  !selectedPaymentMethodId ||
-                  (branches.length > 1 && !selectedBranchNumber) ||
-                  isUnderMinimum
-                    ? "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
-                    : "bg-gradient-to-r from-[#34808C] to-[#173E44]"
-                }`}
-              >
-                {isProcessing ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Procesando pago...</span>
                   </div>
-                ) : !selectedPaymentMethodId ? (
-                  "Selecciona una tarjeta"
-                ) : branches.length > 1 && !selectedBranchNumber ? (
-                  "Selecciona una sucursal"
-                ) : (
-                  "Pagar y ordenar"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Modal de opciones de pago */}
-      {showPaymentOptionsModal && (
-        <div
-          className="fixed inset-0 flex items-end justify-center backdrop-blur-sm"
-          style={{ zIndex: 99999 }}
-        >
-          {/* Fondo */}
-          <div
-            className="absolute inset-0 bg-black/20"
-            onClick={() => setShowPaymentOptionsModal(false)}
-          ></div>
-
-          {/* Modal */}
-          <div className="relative bg-white rounded-t-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            {/* Titulo */}
-            <div className="px-6 pt-4 sticky top-0 bg-white z-10">
-              <div className="flex items-center justify-between pb-4 border-b border-[#8e8e8e]">
-                <h3 className="text-lg font-semibold text-black">
-                  Opciones de pago
-                </h3>
-                <button
-                  onClick={() => setShowPaymentOptionsModal(false)}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-                >
-                  <X className="size-5 text-gray-500" />
-                </button>
-              </div>
-            </div>
-
-            {/* Contenido */}
-            <div className="px-6 py-4">
-              {(() => {
-                const selectedMethod = allPaymentMethods.find(
-                  (pm) => pm.id === selectedPaymentMethodId,
-                );
-                const cardBrand = selectedMethod?.cardBrand;
-
-                // Configuración de MSI según el tipo de tarjeta
-                const msiOptions =
-                  cardBrand === "amex"
-                    ? [
-                        { months: 3, rate: 3.25, minAmount: 0 },
-                        { months: 6, rate: 6.25, minAmount: 0 },
-                        { months: 9, rate: 8.25, minAmount: 0 },
-                        { months: 12, rate: 10.25, minAmount: 0 },
-                        { months: 15, rate: 13.25, minAmount: 0 },
-                        { months: 18, rate: 15.25, minAmount: 0 },
-                        { months: 21, rate: 17.25, minAmount: 0 },
-                        { months: 24, rate: 19.25, minAmount: 0 },
-                      ]
-                    : [
-                        // Visa/Mastercard
-                        { months: 3, rate: 3.5, minAmount: 300 },
-                        { months: 6, rate: 5.5, minAmount: 600 },
-                        { months: 9, rate: 8.5, minAmount: 900 },
-                        { months: 12, rate: 11.5, minAmount: 1200 },
-                        { months: 18, rate: 15.0, minAmount: 1800 },
-                      ];
-
-                return (
-                  <div className="space-y-2.5">
-                    {/* Opción: Pago completo */}
-                    <div
-                      onClick={() => setSelectedMSI(null)}
-                      className={`py-2 px-5 border rounded-full cursor-pointer transition-colors ${
-                        selectedMSI === null
-                          ? "border-teal-500 bg-teal-50"
-                          : "border-black/50 bg-[#f9f9f9] hover:border-gray-400"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-black text-base md:text-lg">
-                            Pago completo
-                          </p>
-                          <p className="text-xs md:text-sm text-gray-600">
-                            ${totalAmount.toFixed(2)} MXN
-                          </p>
+                  {/* Payment Options - Solo mostrar si es tarjeta de crédito */}
+                  {(() => {
+                    const selectedMethod = allPaymentMethods.find(
+                      (pm) => pm.id === selectedPaymentMethodId,
+                    );
+                    return selectedMethod?.cardType === "credit" ? (
+                      <div
+                        className="py-2 cursor-pointer"
+                        onClick={() => setShowPaymentOptionsModal(true)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-black text-base md:text-lg lg:text-xl">
+                            Pago a meses
+                          </span>
+                          <div
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                              selectedMSI !== null
+                                ? "border-[#eab3f4] bg-[#eab3f4]"
+                                : "border-gray-300"
+                            }`}
+                          >
+                            {selectedMSI !== null && (
+                              <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                            )}
+                          </div>
                         </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+
+                {/* Métodos de pago guardados - Mostrar siempre (incluye tarjeta del sistema) */}
+                <div className="mb-4">
+                  <h3 className="text-black font-medium mb-3">
+                    Métodos de pago
+                  </h3>
+                  <div className="space-y-2.5">
+                    {allPaymentMethods.map((method) => (
+                      <div
+                        key={method.id}
+                        className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
+                          selectedPaymentMethodId === method.id
+                            ? "border-teal-500 bg-teal-50"
+                            : "border-black/50 bg-[#f9f9f9]"
+                        }`}
+                      >
                         <div
-                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                            selectedMSI === null
+                          onClick={() => setSelectedPaymentMethodId(method.id)}
+                          className="flex items-center justify-center gap-3 mx-auto cursor-pointer"
+                        >
+                          <div>{getCardTypeIcon(method.cardBrand)}</div>
+                          <div>
+                            <p className="text-black">
+                              **** **** **** {method.lastFourDigits}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => setSelectedPaymentMethodId(method.id)}
+                          className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
+                            selectedPaymentMethodId === method.id
                               ? "border-teal-500 bg-teal-500"
                               : "border-gray-300"
                           }`}
                         >
-                          {selectedMSI === null && (
+                          {selectedPaymentMethodId === method.id && (
                             <div className="w-full h-full rounded-full bg-white scale-50"></div>
                           )}
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Separador */}
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300"></div>
-                      </div>
-                      <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-white text-gray-500">
-                          Pago a meses
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Opciones MSI */}
-                    {(() => {
-                      const availableOptions = msiOptions.filter(
-                        (option) => totalAmount >= option.minAmount,
-                      );
-                      const hasUnavailableOptions =
-                        availableOptions.length < msiOptions.length;
-                      const minAmountNeeded = msiOptions[0]?.minAmount || 0;
-
-                      return (
-                        <>
-                          {availableOptions.map((option) => {
-                            // Calcular comisión e IVA
-                            const commission =
-                              totalAmount * (option.rate / 100);
-                            const ivaCommission = commission * 0.16;
-                            const totalWithCommission =
-                              totalAmount + commission + ivaCommission;
-                            const monthlyPayment =
-                              totalWithCommission / option.months;
-
-                            return (
-                              <div
-                                key={option.months}
-                                onClick={() => setSelectedMSI(option.months)}
-                                className={`py-2 px-5 border rounded-full cursor-pointer transition-colors ${
-                                  selectedMSI === option.months
-                                    ? "border-teal-500 bg-teal-50"
-                                    : "border-black/50 bg-[#f9f9f9] hover:border-gray-400"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <p className="font-medium text-black text-base md:text-lg">
-                                      ${monthlyPayment.toFixed(2)} MXN x{" "}
-                                      {option.months} meses
-                                    </p>
-                                    <p className="text-xs md:text-sm text-gray-600">
-                                      Total ${totalWithCommission.toFixed(2)}{" "}
-                                      MXN
-                                    </p>
-                                  </div>
-                                  <div
-                                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                                      selectedMSI === option.months
-                                        ? "border-teal-500 bg-teal-500"
-                                        : "border-gray-300"
-                                    }`}
-                                  >
-                                    {selectedMSI === option.months && (
-                                      <div className="w-full h-full rounded-full bg-white scale-50"></div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-
-                          {hasUnavailableOptions &&
-                            totalAmount < minAmountNeeded && (
-                              <p className="text-xs md:text-sm text-gray-500 text-center mt-2">
-                                Monto mínimo ${minAmountNeeded.toFixed(2)} MXN
-                                para pagos a meses
-                              </p>
+                        {/* Delete Button - No mostrar para tarjeta del sistema */}
+                        {method.id !== "system-default-card" && (
+                          <button
+                            onClick={() => handleDeleteCard(method.id)}
+                            disabled={deletingCardId === method.id}
+                            className="pl-2 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 cursor-pointer"
+                            title="Eliminar tarjeta"
+                          >
+                            {deletingCardId === method.id ? (
+                              <Loader2 className="size-5 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-5" />
                             )}
-                        </>
-                      );
-                    })()}
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                );
-              })()}
-            </div>
+                </div>
 
-            {/* Footer con botón de confirmar */}
-            <div className="px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white">
-              <button
-                onClick={() => setShowPaymentOptionsModal(false)}
-                className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-3 rounded-full cursor-pointer transition-colors text-base"
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                {/* Botón agregar tarjeta */}
+                <div className="mb-4">
+                  <button
+                    onClick={handleAddCard}
+                    className="border border-black/50 flex justify-center items-center gap-1 w-full text-black py-3 rounded-full cursor-pointer transition-colors bg-[#f9f9f9] hover:bg-gray-100"
+                  >
+                    <Plus className="size-5" />
+                    Agregar método de pago
+                  </button>
+                </div>
 
-      {/* Modal de resumen del total */}
-      {showTotalModal && (
-        <div
-          className="fixed inset-0 flex items-end justify-center"
-          style={{ zIndex: 99999 }}
-        >
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowTotalModal(false)}
-          ></div>
-          <div className="relative bg-white rounded-t-4xl w-full mx-4">
-            <div className="px-6 pt-4">
-              <div className="flex items-center justify-between pb-4 border-b border-[#8e8e8e]">
-                <h3 className="text-lg font-semibold text-black">
-                  Resumen del total
-                </h3>
+                {/* Botón de pago */}
                 <button
-                  onClick={() => setShowTotalModal(false)}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                  onClick={handleInitiatePayment}
+                  disabled={
+                    isProcessing ||
+                    !selectedPaymentMethodId ||
+                    (branches.length > 1 && !selectedBranchNumber) ||
+                    isUnderMinimum
+                  }
+                  className={`w-full text-white py-3 rounded-full cursor-pointer transition-all active:scale-90 ${
+                    isProcessing ||
+                    !selectedPaymentMethodId ||
+                    (branches.length > 1 && !selectedBranchNumber) ||
+                    isUnderMinimum
+                      ? "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
+                      : "bg-gradient-to-r from-[#34808C] to-[#173E44]"
+                  }`}
                 >
-                  ✕
+                  {isProcessing ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>Procesando pago...</span>
+                    </div>
+                  ) : !selectedPaymentMethodId ? (
+                    "Selecciona una tarjeta"
+                  ) : branches.length > 1 && !selectedBranchNumber ? (
+                    "Selecciona una sucursal"
+                  ) : (
+                    "Pagar y ordenar"
+                  )}
                 </button>
               </div>
             </div>
-            <div className="px-6 py-4">
-              <p className="text-black mb-4">
-                El total se obtiene de la suma de:
-              </p>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-black font-medium">+ Consumo</span>
-                  <span className="text-black font-medium">
-                    ${baseAmount.toFixed(2)} MXN
-                  </span>
+          </div>
+        </div>
+
+        {/* Modal de opciones de pago */}
+        {showPaymentOptionsModal && (
+          <div
+            className="fixed inset-0 flex items-end justify-center backdrop-blur-sm"
+            style={{ zIndex: 99999 }}
+          >
+            {/* Fondo */}
+            <div
+              className="absolute inset-0 bg-black/20"
+              onClick={() => setShowPaymentOptionsModal(false)}
+            ></div>
+
+            {/* Modal */}
+            <div className="relative bg-white rounded-t-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+              {/* Titulo */}
+              <div className="px-6 pt-4 sticky top-0 bg-white z-10">
+                <div className="flex items-center justify-between pb-4 border-b border-[#8e8e8e]">
+                  <h3 className="text-lg font-semibold text-black">
+                    Opciones de pago
+                  </h3>
+                  <button
+                    onClick={() => setShowPaymentOptionsModal(false)}
+                    className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                  >
+                    <X className="size-5 text-gray-500" />
+                  </button>
                 </div>
-                {tipAmount > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium">+ Propina</span>
-                    <span className="text-black font-medium">
-                      ${tipAmount.toFixed(2)} MXN
-                    </span>
-                  </div>
-                )}
-                {xquisitoClientCharge > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium">
-                      + Comisión de servicio
-                    </span>
-                    <span className="text-black font-medium">
-                      ${xquisitoClientCharge.toFixed(2)} MXN
-                    </span>
-                  </div>
-                )}
+              </div>
+
+              {/* Contenido */}
+              <div className="px-6 py-4">
+                {(() => {
+                  const selectedMethod = allPaymentMethods.find(
+                    (pm) => pm.id === selectedPaymentMethodId,
+                  );
+                  const cardBrand = selectedMethod?.cardBrand;
+
+                  // Configuración de MSI según el tipo de tarjeta
+                  const msiOptions =
+                    cardBrand === "amex"
+                      ? [
+                          { months: 3, rate: 3.25, minAmount: 0 },
+                          { months: 6, rate: 6.25, minAmount: 0 },
+                          { months: 9, rate: 8.25, minAmount: 0 },
+                          { months: 12, rate: 10.25, minAmount: 0 },
+                          { months: 15, rate: 13.25, minAmount: 0 },
+                          { months: 18, rate: 15.25, minAmount: 0 },
+                          { months: 21, rate: 17.25, minAmount: 0 },
+                          { months: 24, rate: 19.25, minAmount: 0 },
+                        ]
+                      : [
+                          // Visa/Mastercard
+                          { months: 3, rate: 3.5, minAmount: 300 },
+                          { months: 6, rate: 5.5, minAmount: 600 },
+                          { months: 9, rate: 8.5, minAmount: 900 },
+                          { months: 12, rate: 11.5, minAmount: 1200 },
+                          { months: 18, rate: 15.0, minAmount: 1800 },
+                        ];
+
+                  return (
+                    <div className="space-y-2.5">
+                      {/* Opción: Pago completo */}
+                      <div
+                        onClick={() => setSelectedMSI(null)}
+                        className={`py-2 px-5 border rounded-full cursor-pointer transition-colors ${
+                          selectedMSI === null
+                            ? "border-teal-500 bg-teal-50"
+                            : "border-black/50 bg-[#f9f9f9] hover:border-gray-400"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-black text-base md:text-lg">
+                              Pago completo
+                            </p>
+                            <p className="text-xs md:text-sm text-gray-600">
+                              ${totalAmount.toFixed(2)} MXN
+                            </p>
+                          </div>
+                          <div
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                              selectedMSI === null
+                                ? "border-teal-500 bg-teal-500"
+                                : "border-gray-300"
+                            }`}
+                          >
+                            {selectedMSI === null && (
+                              <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Separador */}
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                          <span className="px-2 bg-white text-gray-500">
+                            Pago a meses
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Opciones MSI */}
+                      {(() => {
+                        const availableOptions = msiOptions.filter(
+                          (option) => totalAmount >= option.minAmount,
+                        );
+                        const hasUnavailableOptions =
+                          availableOptions.length < msiOptions.length;
+                        const minAmountNeeded = msiOptions[0]?.minAmount || 0;
+
+                        return (
+                          <>
+                            {availableOptions.map((option) => {
+                              // Calcular comisión e IVA
+                              const commission =
+                                totalAmount * (option.rate / 100);
+                              const ivaCommission = commission * 0.16;
+                              const totalWithCommission =
+                                totalAmount + commission + ivaCommission;
+                              const monthlyPayment =
+                                totalWithCommission / option.months;
+
+                              return (
+                                <div
+                                  key={option.months}
+                                  onClick={() => setSelectedMSI(option.months)}
+                                  className={`py-2 px-5 border rounded-full cursor-pointer transition-colors ${
+                                    selectedMSI === option.months
+                                      ? "border-teal-500 bg-teal-50"
+                                      : "border-black/50 bg-[#f9f9f9] hover:border-gray-400"
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1">
+                                      <p className="font-medium text-black text-base md:text-lg">
+                                        ${monthlyPayment.toFixed(2)} MXN x{" "}
+                                        {option.months} meses
+                                      </p>
+                                      <p className="text-xs md:text-sm text-gray-600">
+                                        Total ${totalWithCommission.toFixed(2)}{" "}
+                                        MXN
+                                      </p>
+                                    </div>
+                                    <div
+                                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                                        selectedMSI === option.months
+                                          ? "border-teal-500 bg-teal-500"
+                                          : "border-gray-300"
+                                      }`}
+                                    >
+                                      {selectedMSI === option.months && (
+                                        <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {hasUnavailableOptions &&
+                              totalAmount < minAmountNeeded && (
+                                <p className="text-xs md:text-sm text-gray-500 text-center mt-2">
+                                  Monto mínimo ${minAmountNeeded.toFixed(2)} MXN
+                                  para pagos a meses
+                                </p>
+                              )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Footer con botón de confirmar */}
+              <div className="px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white">
+                <button
+                  onClick={() => setShowPaymentOptionsModal(false)}
+                  className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-3 rounded-full cursor-pointer transition-colors text-base"
+                >
+                  Confirmar
+                </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Modal de confirmación de cambio de sucursal */}
-      {showBranchChangeConfirmModal && (
-        <div
-          className="fixed inset-0 flex items-end justify-center"
-          style={{ zIndex: 99999 }}
-        >
-          {/* Fondo */}
+        {/* Modal de resumen del total */}
+        {showTotalModal && (
           <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => {
-              if (!isCheckingAvailability) {
-                setShowBranchChangeConfirmModal(false);
-                setPendingBranchChange(null);
-                setItemsToRemove([]);
-              }
-            }}
-          ></div>
-
-          {/* Modal */}
-          <div className="relative bg-white rounded-t-4xl w-full mx-4">
-            {isCheckingAvailability ? (
-              <div className="px-6 py-8 text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3 text-teal-600" />
-                <p className="text-gray-600 text-base">
-                  Verificando disponibilidad...
-                </p>
+            className="fixed inset-0 flex items-end justify-center"
+            style={{ zIndex: 99999 }}
+          >
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setShowTotalModal(false)}
+            ></div>
+            <div className="relative bg-white rounded-t-4xl w-full mx-4">
+              <div className="px-6 pt-4">
+                <div className="flex items-center justify-between pb-4 border-b border-[#8e8e8e]">
+                  <h3 className="text-lg font-semibold text-black">
+                    Resumen del total
+                  </h3>
+                  <button
+                    onClick={() => setShowTotalModal(false)}
+                    className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
-            ) : (
-              <>
-                {/* Content */}
-                <div className="px-6 py-4">
-                  {itemsToRemove.length > 0 ? (
-                    <>
-                      <p className="text-gray-600 text-base mb-4">
-                        Los siguientes items no están disponibles en la nueva
-                        sucursal y serán eliminados del carrito:
-                      </p>
-                      <div className="bg-red-50 rounded-lg p-4 mb-4 max-h-48 overflow-y-auto">
-                        <ul className="space-y-2 text-left">
-                          {itemsToRemove.map((item) => (
-                            <li
-                              key={item.cartItemId || item.id}
-                              className="flex items-start gap-2 text-sm"
-                            >
-                              <X className="size-4 text-red-500 flex-shrink-0 mt-0.5" />
-                              <div className="flex-1">
-                                <p className="font-medium text-gray-900">
-                                  {item.name}
-                                </p>
-                                <p className="text-gray-600 text-xs">
-                                  Cantidad: {item.quantity}
-                                </p>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <p className="text-gray-600 text-sm mb-4">
-                        Los demás items se mantendrán en tu carrito.
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-gray-600 text-base mb-4">
-                      Todos los items de tu carrito están disponibles en la
-                      nueva sucursal.
-                    </p>
+              <div className="px-6 py-4">
+                <p className="text-black mb-4">
+                  El total se obtiene de la suma de:
+                </p>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-black font-medium">+ Consumo</span>
+                    <span className="text-black font-medium">
+                      ${baseAmount.toFixed(2)} MXN
+                    </span>
+                  </div>
+                  {tipAmount > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-black font-medium">+ Propina</span>
+                      <span className="text-black font-medium">
+                        ${tipAmount.toFixed(2)} MXN
+                      </span>
+                    </div>
+                  )}
+                  {xquisitoClientCharge > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-black font-medium">
+                        + Comisión de servicio
+                      </span>
+                      <span className="text-black font-medium">
+                        ${xquisitoClientCharge.toFixed(2)} MXN
+                      </span>
+                    </div>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-                {/* Footer con botones */}
-                <div className="px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white">
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => {
-                        setShowBranchChangeConfirmModal(false);
-                        setPendingBranchChange(null);
-                        setItemsToRemove([]);
-                      }}
-                      className="flex-1 py-3 px-4 border border-gray-300 rounded-full text-black font-medium hover:bg-gray-50 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (pendingBranchChange !== null) {
-                          try {
-                            setIsCheckingAvailability(true);
+        {/* Modal de confirmación de cambio de sucursal */}
+        {showBranchChangeConfirmModal && (
+          <div
+            className="fixed inset-0 flex items-end justify-center"
+            style={{ zIndex: 99999 }}
+          >
+            {/* Fondo */}
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => {
+                if (!isCheckingAvailability) {
+                  setShowBranchChangeConfirmModal(false);
+                  setPendingBranchChange(null);
+                  setItemsToRemove([]);
+                }
+              }}
+            ></div>
 
-                            // 1. Actualizar el branch_number en el cartService (en memoria)
-                            //cartService.setBranchNumber(pendingBranchChange);
+            {/* Modal */}
+            <div className="relative bg-white rounded-t-4xl w-full mx-4">
+              {isCheckingAvailability ? (
+                <div className="px-6 py-8 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3 text-teal-600" />
+                  <p className="text-gray-600 text-base">
+                    Verificando disponibilidad...
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Content */}
+                  <div className="px-6 py-4">
+                    {itemsToRemove.length > 0 ? (
+                      <>
+                        <p className="text-gray-600 text-base mb-4">
+                          Los siguientes items no están disponibles en la nueva
+                          sucursal y serán eliminados del carrito:
+                        </p>
+                        <div className="bg-red-50 rounded-lg p-4 mb-4 max-h-48 overflow-y-auto">
+                          <ul className="space-y-2 text-left">
+                            {itemsToRemove.map((item) => (
+                              <li
+                                key={item.cartItemId || item.id}
+                                className="flex items-start gap-2 text-sm"
+                              >
+                                <X className="size-4 text-red-500 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                  <p className="font-medium text-gray-900">
+                                    {item.name}
+                                  </p>
+                                  <p className="text-gray-600 text-xs">
+                                    Cantidad: {item.quantity}
+                                  </p>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <p className="text-gray-600 text-sm mb-4">
+                          Los demás items se mantendrán en tu carrito.
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-gray-600 text-base mb-4">
+                        Todos los items de tu carrito están disponibles en la
+                        nueva sucursal.
+                      </p>
+                    )}
+                  </div>
 
-                            // 2. Eliminar solo los items no disponibles
-                            for (const item of itemsToRemove) {
-                              if (item.cartItemId) {
-                                try {
-                                  await cartService.removeFromCart(
-                                    item.cartItemId,
-                                  );
-                                } catch (error) {
-                                  console.error(
-                                    "Error removing unavailable item:",
-                                    error,
-                                  );
+                  {/* Footer con botones */}
+                  <div className="px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white">
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setShowBranchChangeConfirmModal(false);
+                          setPendingBranchChange(null);
+                          setItemsToRemove([]);
+                        }}
+                        className="flex-1 py-3 px-4 border border-gray-300 rounded-full text-black font-medium hover:bg-gray-50 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (pendingBranchChange !== null) {
+                            try {
+                              setIsCheckingAvailability(true);
+
+                              // 1. Actualizar el branch_number en el cartService (en memoria)
+                              //cartService.setBranchNumber(pendingBranchChange);
+
+                              // 2. Eliminar solo los items no disponibles
+                              for (const item of itemsToRemove) {
+                                if (item.cartItemId) {
+                                  try {
+                                    await cartService.removeFromCart(
+                                      item.cartItemId,
+                                    );
+                                  } catch (error) {
+                                    console.error(
+                                      "Error removing unavailable item:",
+                                      error,
+                                    );
+                                  }
                                 }
                               }
-                            }
 
-                            // 3. Actualizar el branch_number en la base de datos
-                            /*
+                              // 3. Actualizar el branch_number en la base de datos
+                              /*
                             const updateResult =
                               await cartService.updateCartBranch(
                                 pendingBranchChange
@@ -1669,61 +1665,64 @@ export default function CardSelectionPage() {
                               );
                             }*/
 
-                            // 4. Cambiar la sucursal
-                            changeBranch(pendingBranchChange);
+                              // 4. Cambiar la sucursal
+                              changeBranch(pendingBranchChange);
 
-                            // 5. Refrescar el carrito
-                            await refreshCart();
+                              // 5. Refrescar el carrito
+                              await refreshCart();
 
-                            // 6. Cerrar modales y limpiar estados
-                            setIsCheckingAvailability(false);
-                            setShowBranchChangeConfirmModal(false);
-                            setShowBranchModal(false);
-                            setPendingBranchChange(null);
-                            setItemsToRemove([]);
-                          } catch (error) {
-                            console.error("Error during branch change:", error);
-                            setIsCheckingAvailability(false);
-                            alert(
-                              "Hubo un error al cambiar de sucursal. Por favor intenta de nuevo.",
-                            );
+                              // 6. Cerrar modales y limpiar estados
+                              setIsCheckingAvailability(false);
+                              setShowBranchChangeConfirmModal(false);
+                              setShowBranchModal(false);
+                              setPendingBranchChange(null);
+                              setItemsToRemove([]);
+                            } catch (error) {
+                              console.error(
+                                "Error during branch change:",
+                                error,
+                              );
+                              setIsCheckingAvailability(false);
+                              alert(
+                                "Hubo un error al cambiar de sucursal. Por favor intenta de nuevo.",
+                              );
+                            }
                           }
-                        }
-                      }}
-                      className="flex-1 py-3 px-4 bg-gradient-to-r from-[#34808C] to-[#173E44] rounded-full text-white font-medium hover:opacity-90 transition-opacity"
-                    >
-                      Continuar
-                    </button>
+                        }}
+                        className="flex-1 py-3 px-4 bg-gradient-to-r from-[#34808C] to-[#173E44] rounded-full text-white font-medium hover:opacity-90 transition-opacity"
+                      >
+                        Continuar
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Modal de selección de sucursal */}
-      <BranchSelectionModal
-        isOpen={showBranchModal}
-        onClose={() => setShowBranchModal(false)}
-        onBranchChangeRequested={async (newBranchNumber) => {
-          // Guardar el cambio pendiente
-          setPendingBranchChange(newBranchNumber);
+        {/* Modal de selección de sucursal */}
+        <BranchSelectionModal
+          isOpen={showBranchModal}
+          onClose={() => setShowBranchModal(false)}
+          onBranchChangeRequested={async (newBranchNumber) => {
+            // Guardar el cambio pendiente
+            setPendingBranchChange(newBranchNumber);
 
-          // Cerrar el modal de selección
-          setShowBranchModal(false);
+            // Cerrar el modal de selección
+            setShowBranchModal(false);
 
-          // Mostrar modal de confirmación con loading
-          setShowBranchChangeConfirmModal(true);
-          setIsCheckingAvailability(true);
+            // Mostrar modal de confirmación con loading
+            setShowBranchChangeConfirmModal(true);
+            setIsCheckingAvailability(true);
 
-          // Verificar disponibilidad de items
-          await checkItemsAvailability(newBranchNumber);
+            // Verificar disponibilidad de items
+            await checkItemsAvailability(newBranchNumber);
 
-          // El loading se apaga en checkItemsAvailability
-        }}
-      />
-    </div>
+            // El loading se apaga en checkItemsAvailability
+          }}
+        />
+      </div>
     </>
   );
 }
