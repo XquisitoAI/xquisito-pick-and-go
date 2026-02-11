@@ -395,6 +395,26 @@ body {
   }
 }
 
+/* Fix para min-height en iOS/Safari - Evita espacio blanco/negro al hacer scroll */
+.min-h-new {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  position: relative;
+  overflow-x: hidden;
+}
+
+@supports (min-height: 100dvh) {
+  .min-h-new {
+    min-height: 100dvh;
+  }
+}
+
+/* Prevenir el scroll bounce en iOS que causa el espacio blanco */
+.min-h-new {
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Fix para inputs en Safari/iOS - evita deformación y zoom */
 input,
 select,

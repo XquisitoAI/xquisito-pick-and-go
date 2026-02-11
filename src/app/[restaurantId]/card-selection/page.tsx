@@ -977,21 +977,30 @@ export default function CardSelectionPage() {
         />
       )}
 
-      <div className="min-h-[100dvh] bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
-        <MenuHeaderBack />
+      <div className="min-h-new bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
+        {/* Fixed Header */}
+        <div
+          className="fixed top-0 left-0 right-0 z-50"
+          style={{ zIndex: 999 }}
+        >
+          <MenuHeaderBack />
+        </div>
 
-      <div className="flex-1 flex flex-col justify-end overflow-y-auto">
-        <div className="px-4 w-full">
-          <div className="flex flex-col relative">
-            <div className="left-4 right-4 bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
-              <div className="py-6 px-8 flex flex-col justify-center">
-                <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
-                  Selecciona tu método de pago
-                </h1>
+        {/* Spacer for fixed header */}
+        <div className="h-20"></div>
+
+        <div className="w-full flex-1 flex flex-col justify-end">
+          <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
+            <div className="flex flex-col relative mx-4 w-full">
+              <div className="left-4 right-4 bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
+                <div className="py-6 px-8 flex flex-col justify-center">
+                  <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
+                    Selecciona tu método de pago
+                  </h1>
+                </div>
               </div>
-            </div>
 
-            <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8">
+              <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8">
               {/* Sucursal seleccionada */}
               {branches.length > 0 && (
                 <div
