@@ -147,7 +147,7 @@ const OrderAnimation = ({
     <>
       {/* White circle */}
       {animationState === "circle" && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none overflow-hidden">
+        <div className="fixed inset-0 z-[9999] bg-white flex items-center justify-center pointer-events-none overflow-hidden">
           <div className="circle-animation"></div>
         </div>
       )}

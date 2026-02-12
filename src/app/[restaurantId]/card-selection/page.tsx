@@ -977,7 +977,7 @@ export default function CardSelectionPage() {
         />
       )}
 
-      <div className="min-h-new bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col overflow-y-auto">
+      <div className="h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col overflow-y-auto">
         {/* Header */}
         <MenuHeaderBack />
 
