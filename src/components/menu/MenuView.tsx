@@ -6,8 +6,11 @@ import {
   Search,
   ShoppingCart,
   Settings,
-  MapPin,
   ChevronRight,
+  X,
+  RefreshCw,
+  Loader2,
+  Utensils,
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -16,20 +19,99 @@ import { useRestaurant } from "../../context/RestaurantContext";
 import { useBranch } from "../../context/BranchContext";
 import { useNavigation } from "../../hooks/useNavigation";
 import BranchSelectionModal from "../modals/BranchSelectionModal";
+import {
+  pickAndGoService,
+  type ActiveOrderResponse,
+} from "../../services/pickandgo.service";
+import { useGuest } from "@/context/GuestContext";
 
 export default function MenuView() {
   const [filter, setFilter] = useState("Todo");
   const [searchQuery, setSearchQuery] = useState("");
   const [showBranchModal, setShowBranchModal] = useState(false);
+  const [activeOrder, setActiveOrder] =
+    useState<ActiveOrderResponse["data"]>(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { user, profile, isAuthenticated } = useAuth();
   const { state, refreshCart } = useCart();
   const { restaurant, menu, error } = useRestaurant();
   const { branches, selectedBranchNumber, fetchBranches } = useBranch();
   const { navigateWithRestaurantId, branchNumber } = useNavigation();
+  const { guestId } = useGuest();
 
   useEffect(() => {
     refreshCart();
   }, []);
+
+  // Verificar si hay orden activa con platillos pendientes
+  const checkActiveOrder = async () => {
+    const clientId = user?.id || guestId;
+    if (!clientId || !restaurant?.id) return;
+
+    try {
+      const response: any = await pickAndGoService.getActiveOrderByUser(
+        clientId,
+        restaurant.id,
+      );
+      if (response.hasActiveOrder && response.data) {
+        setActiveOrder(response.data);
+      } else {
+        setActiveOrder(null);
+      }
+    } catch (error) {
+      console.error("Error checking active order:", error);
+    }
+  };
+
+  useEffect(() => {
+    checkActiveOrder();
+  }, [user?.id, guestId, restaurant?.id]);
+
+  // Bloquear scroll cuando el modal está abierto
+  useEffect(() => {
+    if (showStatusModal) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [showStatusModal]);
+
+  // Refrescar orden
+  const handleRefreshOrder = async () => {
+    setIsRefreshing(true);
+    await checkActiveOrder();
+    setIsRefreshing(false);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-300";
+      case "cooking":
+        return "bg-orange-100 text-orange-800 border-orange-300";
+      case "delivered":
+        return "bg-green-100 text-green-800 border-green-300";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-300";
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "Pendiente";
+      case "cooking":
+        return "Preparando";
+      case "delivered":
+        return "Entregado";
+      default:
+        return status;
+    }
+  };
 
   // Cargar branches cuando el restaurante esté disponible
   useEffect(() => {
@@ -221,6 +303,16 @@ export default function MenuView() {
                 )}
               </div>
             )}
+
+            {/* Link para ver estatus de pedido activo */}
+            {activeOrder && (
+              <button
+                onClick={() => setShowStatusModal(true)}
+                className="text-[#0a8b9b] hover:text-[#087585] underline text-sm md:text-base mb-2 transition-colors"
+              >
+                Ver estatus de pedido
+              </button>
+            )}
           </div>
 
           {/* Search Input */}
@@ -299,6 +391,135 @@ export default function MenuView() {
         isOpen={showBranchModal}
         onClose={() => setShowBranchModal(false)}
       />
+
+      {/* Status Modal */}
+      {showStatusModal && activeOrder && (
+        <div
+          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999] flex items-center justify-center"
+          onClick={() => setShowStatusModal(false)}
+        >
+          <div
+            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex-shrink-0">
+              <div className="w-full flex justify-end">
+                <button
+                  onClick={() => setShowStatusModal(false)}
+                  className="p-2 md:p-3 lg:p-4 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors justify-end flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
+                >
+                  <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
+                </button>
+              </div>
+              <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-4 md:mb-5 lg:mb-6">
+                <div className="flex flex-col justify-center items-center gap-3 md:gap-4 lg:gap-5">
+                  {restaurant?.logo_url ? (
+                    <img
+                      src={restaurant.logo_url}
+                      alt={restaurant.name}
+                      className="size-20 md:size-24 lg:size-28 object-cover rounded-lg md:rounded-xl"
+                    />
+                  ) : (
+                    <Utensils className="size-20 md:size-24 lg:size-28 text-white" />
+                  )}
+                  <div className="flex flex-col items-center justify-center">
+                    <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold">
+                      Estatus de la orden
+                    </h2>
+                    <p className="text-sm md:text-base lg:text-lg text-white/80">
+                      Pick & Go
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Título con botón de refresh */}
+              <div className="px-6 md:px-8 lg:px-10 border-t border-white/20 pt-4 md:pt-5 lg:pt-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white">
+                    Items ordenados
+                  </h3>
+                  <button
+                    onClick={handleRefreshOrder}
+                    disabled={isRefreshing}
+                    className="rounded-full hover:bg-white/10 p-1 md:p-1.5 lg:p-2 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={`size-5 md:size-6 lg:size-7 text-white ${isRefreshing ? "animate-spin" : ""}`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Order Items - Scrollable */}
+            <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 pt-4 md:pt-5 lg:pt-6 pb-6 md:pb-8 lg:pb-10">
+              {isRefreshing ? (
+                <div className="flex justify-center items-center py-12 md:py-16 lg:py-20">
+                  <Loader2 className="size-8 md:size-10 lg:size-12 animate-spin text-white" />
+                </div>
+              ) : activeOrder.dishes && activeOrder.dishes.length > 0 ? (
+                <div className="space-y-3 md:space-y-4 lg:space-y-5">
+                  {activeOrder.dishes.map((dish, index) => (
+                    <div
+                      key={dish.id || index}
+                      className="flex items-start gap-3 md:gap-4 lg:gap-5 bg-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 lg:p-5 border border-white/10"
+                    >
+                      <div className="flex-shrink-0">
+                        <div className="size-16 md:size-20 lg:size-24 bg-gray-300 rounded-sm flex items-center justify-center overflow-hidden">
+                          {dish.images &&
+                          dish.images.length > 0 &&
+                          dish.images[0] ? (
+                            <img
+                              src={dish.images[0]}
+                              alt={dish.item}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <img
+                              src="/logos/logo-short-green.webp"
+                              alt="Logo Xquisito"
+                              className="size-12 md:size-14 lg:size-16 object-contain"
+                            />
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base md:text-lg lg:text-xl text-white font-medium capitalize">
+                          {dish.item}
+                        </h3>
+                        {/* Badge de estado */}
+                        <div className="mt-1 md:mt-1.5 lg:mt-2">
+                          <span
+                            className={`inline-block px-2 md:px-3 lg:px-4 py-0.5 md:py-1 lg:py-1.5 text-xs md:text-sm lg:text-base font-medium rounded-full border ${getStatusColor(dish.status)}`}
+                          >
+                            {getStatusText(dish.status)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right flex flex-col items-end">
+                        <p className="text-xs md:text-sm lg:text-base text-white/60">
+                          Cant: {dish.quantity}
+                        </p>
+                        <p className="text-base md:text-lg lg:text-xl text-white font-medium">
+                          ${(Number(dish.price) * dish.quantity).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 md:py-10 lg:py-12">
+                  <p className="text-white/70 text-base md:text-lg lg:text-xl">
+                    No se encontró información de la orden
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

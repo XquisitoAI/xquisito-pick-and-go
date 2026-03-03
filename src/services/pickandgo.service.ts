@@ -102,6 +102,33 @@ export interface CreateDishOrderRequest {
   pickAndGoOrderId?: string;
 }
 
+export interface ActiveOrderResponse {
+  hasActiveOrder: boolean;
+  data: {
+    pick_and_go_order: {
+      id: string;
+      clerk_user_id: string | null;
+      customer_name: string;
+      total_amount: number;
+      payment_status: string;
+      order_status: string;
+      restaurant_id: number;
+      branch_number: number;
+      created_at: string;
+    };
+    dishes: Array<{
+      id: string;
+      item: string;
+      quantity: number;
+      price: number;
+      status: string;
+      payment_status: string;
+      images: string[];
+    }>;
+    pending_dishes_count: number;
+  } | null;
+}
+
 export interface RecordPaymentTransactionRequest {
   payment_method_id?: string | null;
   restaurant_id: number;
@@ -392,6 +419,17 @@ class PickAndGoService {
       method: "PUT",
       body: JSON.stringify({ payment_status: paymentStatus }),
     });
+  }
+
+  // Obtener orden activa por clerk_user_id (user_id o guest_id) y restaurantId
+  async getActiveOrderByUser(
+    clerkUserId: string,
+    restaurantId: number
+  ): Promise<ApiResponse<ActiveOrderResponse>> {
+    return this.request<ActiveOrderResponse>(
+      `/pick-and-go/restaurant/${restaurantId}/active/user/${clerkUserId}`,
+      { method: "GET" }
+    );
   }
 }
 

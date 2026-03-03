@@ -202,7 +202,7 @@ export default function ProfileTab() {
             ) : (
               <div>
                 <img
-                  src="https://t4.ftcdn.net/jpg/02/15/84/43/360_F_215844325_ttX9YiIIyeaR7Ne6EaLLjMAmy4GvPC69.jpg"
+                  src="/logos/pp_default.jpg"
                   alt="Profile Pic"
                   className="w-full h-full object-cover"
                 />
