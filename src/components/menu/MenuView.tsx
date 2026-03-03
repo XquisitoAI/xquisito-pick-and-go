@@ -306,12 +306,17 @@ export default function MenuView() {
 
             {/* Link para ver estatus de pedido activo */}
             {activeOrder && (
-              <button
-                onClick={() => setShowStatusModal(true)}
-                className="text-[#0a8b9b] hover:text-[#087585] underline text-sm md:text-base mb-2 transition-colors"
+              <div
+                onClick={() => {
+                  Promise.resolve();
+                  setTimeout(() => {
+                    setShowStatusModal(true);
+                  }, 400);
+                }}
+                className="bg-[#f9f9f9] border border-[#8e8e8e] rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium text-black w-fit mx-auto active:scale-90 transition-all"
               >
-                Ver estatus de pedido
-              </button>
+                Estatus de pedido
+              </div>
             )}
           </div>
 
