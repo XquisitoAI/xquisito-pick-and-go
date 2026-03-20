@@ -13,9 +13,10 @@ import {
   Calendar,
   Utensils,
   CircleAlert,
-  ChevronDown,
   LogIn,
   UserCircle2,
+  RefreshCw,
+  Loader2,
   Clock,
 } from "lucide-react";
 import { getCardTypeIcon } from "../../../utils/cardIcons";
@@ -38,7 +39,7 @@ export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
   const isGuest = useIsGuest();
   const { guestId } = useGuest();
-  const { branches, selectedBranchNumber, fetchBranches } = useBranch();
+  const { fetchBranches } = useBranch();
   const { isAuthenticated } = useAuth();
 
   // Get payment details from URL or localStorage
@@ -55,11 +56,22 @@ export default function PaymentSuccessPage() {
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [hasRated, setHasRated] = useState(false); // Track if user has already rated
-  const [isDeliveryDetailsExpanded, setIsDeliveryDetailsExpanded] =
-    useState(false); // Control para detalles de entrega
-  const [isRegisterModalOpen, setIsRegisterModalOpen] =
-    useState(!isAuthenticated);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  // No abrir el modal si el usuario viene de auth redirect
+  const cameFromAuth =
+    typeof window !== "undefined" &&
+    sessionStorage.getItem("xquisito-post-auth-redirect");
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(
+    !isAuthenticated && !cameFromAuth,
+  );
   const { restaurant } = useRestaurant();
+
+  // Limpiar el flag de redirect después de cargar
+  useEffect(() => {
+    if (cameFromAuth) {
+      sessionStorage.removeItem("xquisito-post-auth-redirect");
+    }
+  }, [cameFromAuth]);
 
   // Handler for sign up navigation
   const handleSignUp = () => {
@@ -101,11 +113,6 @@ export default function PaymentSuccessPage() {
       fetchBranches(parseInt(restaurantId));
     }
   }, [restaurantId, fetchBranches]);
-
-  // Order progress simulation
-  const [orderTime] = useState(new Date()); // Tiempo cuando se creó el pedido
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [orderProgress, setOrderProgress] = useState(0); // Progress percentage (0-100)
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -187,34 +194,6 @@ export default function PaymentSuccessPage() {
     }
   }, [paymentId, searchParams]);
 
-  // useEffect para simular el progreso del pedido
-  useEffect(() => {
-    const updateProgress = () => {
-      const now = new Date();
-      setCurrentTime(now);
-
-      // Calcular minutos transcurridos desde que se hizo el pedido
-      const minutesElapsed = Math.floor(
-        (now.getTime() - orderTime.getTime()) / (1000 * 60),
-      );
-      const totalMinutes = 20; // 20 minutos total para completar el pedido
-
-      // Calcular el progreso como porcentaje (0-100)
-      let progress = (minutesElapsed / totalMinutes) * 100;
-      progress = Math.min(progress, 100); // No exceder 100%
-
-      setOrderProgress(progress);
-    };
-
-    // Actualizar inmediatamente
-    updateProgress();
-
-    // Actualizar cada 60 segundos (1 minuto)
-    const interval = setInterval(updateProgress, 60000);
-
-    return () => clearInterval(interval);
-  }, [orderTime]);
-
   const clearGuestSession = async () => {
     if (typeof window !== "undefined") {
       // Use authService to clear all session data (auth + guest)
@@ -254,89 +233,97 @@ export default function PaymentSuccessPage() {
   const [dishOrders, setDishOrders] = useState<any[]>([]);
   // Estado para la fecha de creación del pedido
   const [orderCreatedAt, setOrderCreatedAt] = useState<Date | null>(null);
+  // Estado para el folio del pedido
+  const [orderFolio, setOrderFolio] = useState<string | null>(null);
 
-  // Obtener dish orders desde el backend usando el orderId
-  useEffect(() => {
-    const fetchDishOrders = async () => {
-      const orderId = paymentId || paymentDetails?.orderId;
-      if (!orderId) {
-        // Fallback a los datos del storage si no hay orderId
-        setDishOrders(paymentDetails?.dishOrders || []);
-        if (paymentDetails?.createdAt) {
-          setOrderCreatedAt(new Date(paymentDetails.createdAt));
-        }
-        return;
+  // Función para obtener dish orders desde el backend
+  const fetchDishOrders = async () => {
+    const orderId = paymentId || paymentDetails?.orderId;
+    if (!orderId) {
+      // Fallback a los datos del storage si no hay orderId
+      setDishOrders(paymentDetails?.dishOrders || []);
+      if (paymentDetails?.createdAt) {
+        setOrderCreatedAt(new Date(paymentDetails.createdAt));
       }
+      return;
+    }
 
-      try {
-        console.log("🔍 Fetching order details from backend:", orderId);
-        const response = await pickAndGoService.getOrder(orderId);
+    try {
+      console.log("🔍 Fetching order details from backend:", orderId);
+      const response = await pickAndGoService.getOrder(orderId);
 
-        if (response.success && response.data) {
-          // Guardar la fecha de creación del pedido
-          if (response.data.created_at) {
-            setOrderCreatedAt(new Date(response.data.created_at));
-          }
-
-          if (response.data.items) {
-            console.log("✅ Order items fetched:", response.data.items);
-            // Transformar los items del backend al formato esperado
-            const transformedItems = response.data.items.map((item: any) => ({
-              dish_order_id: item.id,
-              item: item.item,
-              quantity: item.quantity,
-              price: item.price,
-              extra_price: item.extra_price || 0,
-              total_price: item.price * item.quantity + (item.extra_price || 0),
-              guest_name: item.guest_name,
-              custom_fields: item.custom_fields,
-              image_url: item.images?.[0] || null,
-            }));
-            setDishOrders(transformedItems);
-          }
-        } else {
-          // Fallback a los datos del storage
-          console.log("⚠️ Could not fetch from backend, using storage data");
-          setDishOrders(paymentDetails?.dishOrders || []);
-          if (paymentDetails?.createdAt) {
-            setOrderCreatedAt(new Date(paymentDetails.createdAt));
-          }
+      if (response.success && response.data) {
+        // Guardar la fecha de creación del pedido
+        if (response.data.created_at) {
+          setOrderCreatedAt(new Date(response.data.created_at));
         }
-      } catch (error) {
-        console.error("❌ Error fetching order details:", error);
+
+        // Guardar el folio del pedido
+        if (response.data.folio) {
+          setOrderFolio(response.data.folio);
+        }
+
+        if (response.data.items) {
+          console.log("✅ Order items fetched:", response.data.items);
+          // Transformar los items del backend al formato esperado
+          const transformedItems = response.data.items.map((item: any) => ({
+            dish_order_id: item.id,
+            item: item.item,
+            quantity: item.quantity,
+            price: item.price,
+            extra_price: item.extra_price || 0,
+            total_price: item.price * item.quantity + (item.extra_price || 0),
+            guest_name: item.guest_name,
+            custom_fields: item.custom_fields,
+            image_url: item.images?.[0] || null,
+            status: item.status || "pending",
+          }));
+          setDishOrders(transformedItems);
+        }
+      } else {
         // Fallback a los datos del storage
+        console.log("⚠️ Could not fetch from backend, using storage data");
         setDishOrders(paymentDetails?.dishOrders || []);
         if (paymentDetails?.createdAt) {
           setOrderCreatedAt(new Date(paymentDetails.createdAt));
         }
       }
-    };
+    } catch (error) {
+      console.error("❌ Error fetching order details:", error);
+      // Fallback a los datos del storage
+      setDishOrders(paymentDetails?.dishOrders || []);
+      if (paymentDetails?.createdAt) {
+        setOrderCreatedAt(new Date(paymentDetails.createdAt));
+      }
+    }
+  };
 
+  // Cargar dish orders al inicio
+  useEffect(() => {
     fetchDishOrders();
   }, [paymentId, paymentDetails]);
 
-  // Función para determinar el estado de cada paso basado en el progreso
-  const getStepStatus = (stepNumber: number) => {
-    if (stepNumber === 1) return "completed"; // Siempre completado (Recibido)
-    if (stepNumber === 2) return orderProgress > 25 ? "active" : "pending";
-    if (stepNumber === 3)
-      return orderProgress > 75
-        ? "completed"
-        : orderProgress > 50
-          ? "active"
-          : "pending";
-    if (stepNumber === 4) return orderProgress >= 100 ? "completed" : "pending";
-    return "pending";
+  // Función para refrescar los dish orders
+  const handleRefreshOrders = async () => {
+    setIsRefreshing(true);
+    await fetchDishOrders();
+    setIsRefreshing(false);
   };
 
-  // Función para calcular el ancho de las líneas de progreso
-  const getProgressLineWidth = (lineNumber: number) => {
-    if (lineNumber === 1) return Math.min(orderProgress * 4, 100); // 0-25% del progreso total
-    if (lineNumber === 2)
-      return Math.max(0, Math.min((orderProgress - 25) * 4, 100)); // 25-50%
-    if (lineNumber === 3)
-      return Math.max(0, Math.min((orderProgress - 50) * 4, 100)); // 50-75%
-    return 0;
+  // Función para calcular el estatus general del pedido basado en los items
+  const getOverallStatus = (): "pending" | "ready" | "delivered" => {
+    if (!dishOrders || dishOrders.length === 0) return "pending";
+
+    const statuses = dishOrders.map((item) => item.status);
+
+    // Si TODOS están entregados
+    if (statuses.every((s) => s === "delivered")) return "delivered";
+
+    // Si TODOS están en cooking (ninguno pending)
+    if (statuses.every((s) => s === "cooking")) return "ready";
+
+    // Al menos uno pending
+    return "pending";
   };
 
   const handleBackToMenu = () => {
@@ -813,83 +800,120 @@ export default function PaymentSuccessPage() {
       {/* Status Modal */}
       {isStatusModalOpen && (
         <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-center justify-center"
+          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-[999] flex items-center justify-center"
           onClick={() => setIsStatusModalOpen(false)}
         >
           <div
-            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl max-h-[85vh] overflow-y-auto"
+            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-6 md:px-8 lg:px-10 pt-6 md:pt-8 lg:pt-10 pb-4 md:pb-5 lg:pb-6">
-              <div className="flex items-center justify-between mb-6 md:mb-8">
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white">
-                  Pedido creado
-                </h2>
+            <div className="flex-shrink-0">
+              <div className="w-full flex justify-end">
                 <button
                   onClick={() => setIsStatusModalOpen(false)}
-                  className="p-2 md:p-3 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors"
+                  className="p-2 md:p-3 lg:p-4 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors justify-end flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
                 >
                   <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
                 </button>
               </div>
-
-              {/* Estimated time */}
-              <div className="mb-8 md:mb-10">
-                {paymentDetails?.scheduledPickupTime ? (
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
-                      <Clock className="w-5 h-5 md:w-6 md:h-6 text-white/80" />
-                      <p className="text-white/80 text-base md:text-lg lg:text-xl">
-                        Recolección programada:
-                      </p>
-                    </div>
-                    <p className="font-semibold text-white text-lg md:text-xl lg:text-2xl">
-                      {new Date(
-                        paymentDetails.scheduledPickupTime,
-                      ).toLocaleTimeString("es-MX", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}
-                    </p>
+              <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-4 md:mb-5 lg:mb-6">
+                <div className="flex flex-col justify-center items-center gap-3 md:gap-4 lg:gap-5">
+                  {restaurant?.logo_url ? (
+                    <img
+                      src={restaurant.logo_url}
+                      alt={restaurant?.name}
+                      className="size-20 md:size-24 lg:size-28 object-cover rounded-lg md:rounded-xl"
+                    />
+                  ) : (
+                    <Utensils className="size-20 md:size-24 lg:size-28 text-white" />
+                  )}
+                  <div className="flex flex-col items-center justify-center">
+                    <h2 className="text-2xl md:text-3xl lg:text-4xl text-white font-semibold">
+                      Pedido #{orderFolio || "---"}
+                    </h2>
+                    {/*<p className="text-sm md:text-base lg:text-lg text-white/80 mt-1">
+                      Pick & Go
+                    </p>*/}
                   </div>
-                ) : (
-                  <p className="text-white/80 text-base md:text-lg lg:text-xl mb-2 flex items-center justify-center gap-2 md:gap-3">
-                    Entrega estimada:
-                    <span className="font-semibold text-white">
-                      {orderTime.toLocaleTimeString("es-MX", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}{" "}
-                      -{" "}
-                      {new Date(
-                        orderTime.getTime() + 20 * 60 * 1000,
-                      ).toLocaleTimeString("es-MX", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}
-                    </span>
-                  </p>
-                )}
+                </div>
               </div>
 
-              {/* Progress bar */}
-              <div className="mb-8 md:mb-10">
-                <div className="flex items-center justify-between">
-                  {/* Step 1: Order received */}
-                  <div className="flex flex-col items-center gap-2">
+              {/* Estatus General - 3 pasos */}
+              <div className="px-6 md:px-8 lg:px-10 mb-4 md:mb-5 lg:mb-6">
+                <div className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8">
+                  {/* Recibido - siempre activo porque el pedido ya fue recibido */}
+                  <div className="flex flex-col items-center gap-1.5 md:gap-2">
+                    <div className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 bg-yellow-100 border border-yellow-300">
+                      <Clock className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-yellow-800" />
+                    </div>
+                    <span className="text-xs md:text-sm font-medium text-yellow-100">
+                      Recibido
+                    </span>
+                  </div>
+
+                  {/* Línea de progreso - siempre llena porque recibido siempre está completo */}
+                  <div className="flex-1 max-w-12 md:max-w-16 lg:max-w-20 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full w-full rounded-full bg-gradient-to-r from-yellow-300 to-orange-300"></div>
+                  </div>
+
+                  {/* Listo */}
+                  <div className="flex flex-col items-center gap-1.5 md:gap-2">
                     <div
-                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
-                        getStepStatus(1) === "completed"
-                          ? "bg-green-500 ring-4 ring-green-500/30"
+                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
+                        getOverallStatus() === "ready" ||
+                        getOverallStatus() === "delivered"
+                          ? "bg-orange-100 text-orange-800 border border-orange-300"
+                          : "bg-white/10"
+                      }`}
+                    >
+                      <Utensils
+                        className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 ${
+                          getOverallStatus() === "ready" ||
+                          getOverallStatus() === "delivered"
+                            ? "text-orange-800"
+                            : "text-white"
+                        }`}
+                      />
+                    </div>
+                    <span
+                      className={`text-xs md:text-sm font-medium ${
+                        getOverallStatus() === "ready" ||
+                        getOverallStatus() === "delivered"
+                          ? "text-orange-100"
+                          : "text-white/60"
+                      }`}
+                    >
+                      Listo
+                    </span>
+                  </div>
+
+                  {/* Línea de progreso */}
+                  <div className="flex-1 max-w-12 md:max-w-16 lg:max-w-20 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        getOverallStatus() === "delivered"
+                          ? "w-full bg-gradient-to-r from-orange-300 to-green-300"
+                          : "w-0"
+                      }`}
+                    ></div>
+                  </div>
+
+                  {/* Entregado */}
+                  <div className="flex flex-col items-center gap-1.5 md:gap-2">
+                    <div
+                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
+                        getOverallStatus() === "delivered"
+                          ? "bg-green-100 text-green-800 border border-green-300"
                           : "bg-white/10"
                       }`}
                     >
                       <svg
-                        className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white"
+                        className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 ${
+                          getOverallStatus() === "delivered"
+                            ? "text-green-800"
+                            : "text-white"
+                        }`}
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
@@ -900,144 +924,109 @@ export default function PaymentSuccessPage() {
                         />
                       </svg>
                     </div>
-                    <span className="text-xs md:text-sm text-white/90 font-medium">
-                      Recibido
-                    </span>
-                  </div>
-
-                  {/* Progress line */}
-                  <div className="flex-1 h-1.5 bg-white/10 mx-2 md:mx-3 relative rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000"
-                      style={{ width: `${getProgressLineWidth(1)}%` }}
-                    ></div>
-                  </div>
-
-                  {/* Step 2: Cooking */}
-                  <div className="flex flex-col items-center gap-2">
-                    <div
-                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
-                        getStepStatus(2) === "active"
-                          ? "bg-orange-500 ring-4 ring-orange-500/30 animate-pulse"
-                          : getStepStatus(2) === "completed"
-                            ? "bg-green-500 ring-4 ring-green-500/30"
-                            : "bg-white/10"
+                    <span
+                      className={`text-xs md:text-sm font-medium ${
+                        getOverallStatus() === "delivered"
+                          ? "text-green-100"
+                          : "text-white/60"
                       }`}
                     >
-                      <Utensils className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
-                    </div>
-                    <span className="text-xs md:text-sm text-white/90 font-medium">
-                      Preparando
-                    </span>
-                  </div>
-
-                  {/* Progress line */}
-                  <div className="flex-1 h-1.5 bg-white/10 mx-2 md:mx-3 relative rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000"
-                      style={{ width: `${getProgressLineWidth(2)}%` }}
-                    ></div>
-                  </div>
-
-                  {/* Step 3: Ready for pickup */}
-                  <div className="flex flex-col items-center gap-2">
-                    <div
-                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
-                        getStepStatus(3) === "active"
-                          ? "bg-blue-500 ring-4 ring-blue-500/30 animate-pulse"
-                          : getStepStatus(3) === "completed"
-                            ? "bg-green-500 ring-4 ring-green-500/30"
-                            : "bg-white/10"
-                      }`}
-                    >
-                      <div className="text-2xl md:text-3xl">📦</div>
-                    </div>
-                    <span className="text-xs md:text-sm text-white/90 font-medium">
-                      Listo
-                    </span>
-                  </div>
-
-                  {/* Progress line */}
-                  <div className="flex-1 h-1.5 bg-white/10 mx-2 md:mx-3 relative rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-1000"
-                      style={{ width: `${getProgressLineWidth(3)}%` }}
-                    ></div>
-                  </div>
-
-                  {/* Step 4: Delivered */}
-                  <div className="flex flex-col items-center gap-2">
-                    <div
-                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${
-                        getStepStatus(4) === "completed"
-                          ? "bg-green-500 ring-4 ring-green-500/30"
-                          : "bg-white/10"
-                      }`}
-                    >
-                      <div className="text-2xl md:text-3xl">🏠</div>
-                    </div>
-                    <span className="text-xs md:text-sm text-white/90 font-medium">
                       Entregado
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Order details - Collapsible */}
-              <div className="border-t border-white/20 pt-6 md:pt-8">
-                {/* Header clickeable */}
-                <button
-                  onClick={() =>
-                    setIsDeliveryDetailsExpanded(!isDeliveryDetailsExpanded)
-                  }
-                  className="w-full flex items-center justify-between text-left hover:bg-white/5 rounded-lg md:rounded-xl p-3 md:p-4 -mx-3 md:-mx-4 transition-all duration-300"
-                >
-                  <h3 className="text-lg md:text-xl lg:text-2xl font-semibold text-white">
-                    Detalles de la entrega
+              {/* Título con botón de refresh */}
+              <div className="px-6 md:px-8 lg:px-10 border-t border-white/20 pt-4 md:pt-5 lg:pt-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white">
+                    Items ordenados
                   </h3>
-                  <ChevronDown
-                    className={`w-5 h-5 md:w-6 md:h-6 text-white transition-transform duration-300 ${
-                      isDeliveryDetailsExpanded ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                {/* Contenido expandible con animación */}
-                <div
-                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    isDeliveryDetailsExpanded
-                      ? "max-h-96 opacity-100 mt-4 md:mt-5"
-                      : "max-h-0 opacity-0"
-                  }`}
-                >
-                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-5 lg:p-6 space-y-2.5 md:space-y-3">
-                    <p className="text-white/90 text-sm md:text-base lg:text-lg">
-                      <span className="font-medium text-white">
-                        Restaurante:
-                      </span>{" "}
-                      {restaurant?.name}
-                    </p>
-                    <p className="text-white/90 text-sm md:text-base lg:text-lg">
-                      <span className="font-medium text-white">
-                        Dirección de entrega:
-                      </span>{" "}
-                      {branches.find(
-                        (b) => b.branch_number === selectedBranchNumber,
-                      )?.address || restaurant?.address}
-                    </p>
-                  </div>
+                  <button
+                    onClick={handleRefreshOrders}
+                    disabled={isRefreshing}
+                    className="rounded-full hover:bg-white/10 p-1 md:p-1.5 lg:p-2 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={`size-5 md:size-6 lg:size-7 text-white ${isRefreshing ? "animate-spin" : ""}`}
+                    />
+                  </button>
                 </div>
               </div>
+            </div>
 
-              {/* Action button */}
-              <div className="mt-8 md:mt-10 pb-6 md:pb-8">
-                <button
-                  onClick={() => setIsStatusModalOpen(false)}
-                  className="w-full text-white py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-gradient-to-r from-[#34808C] to-[#173E44] text-base md:text-lg lg:text-xl"
-                >
-                  Entendido
-                </button>
-              </div>
+            {/* Order Items - Scrollable */}
+            <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 pt-4 md:pt-5 lg:pt-6 pb-6 md:pb-8 lg:pb-10">
+              {isRefreshing ? (
+                <div className="flex justify-center items-center py-12 md:py-16 lg:py-20">
+                  <Loader2 className="size-8 md:size-10 lg:size-12 animate-spin text-white" />
+                </div>
+              ) : dishOrders && dishOrders.length > 0 ? (
+                <div className="space-y-3 md:space-y-4 lg:space-y-5">
+                  {dishOrders.map((item, index) => (
+                    <div
+                      key={item.dish_order_id || index}
+                      className="flex items-start gap-3 md:gap-4 lg:gap-5 bg-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 lg:p-5 border border-white/10"
+                    >
+                      <div className="flex-shrink-0">
+                        <div className="size-16 md:size-20 lg:size-24 bg-gray-300 rounded-sm flex items-center justify-center overflow-hidden">
+                          {item.image_url ? (
+                            <img
+                              src={item.image_url}
+                              alt={item.item}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <img
+                              src="/logos/logo-short-green.webp"
+                              alt="Logo Xquisito"
+                              className="size-12 md:size-14 lg:size-16 object-contain"
+                            />
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base md:text-lg lg:text-xl text-white font-medium capitalize">
+                          {item.item}
+                        </h3>
+                        {/* Badge de estado */}
+                        <div className="mt-1 md:mt-1.5 lg:mt-2">
+                          <span
+                            className={`inline-block px-2 md:px-3 lg:px-4 py-0.5 md:py-1 lg:py-1.5 text-xs md:text-sm lg:text-base font-medium rounded-full border ${
+                              item.status === "pending"
+                                ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                : item.status === "cooking"
+                                  ? "bg-orange-100 text-orange-800 border-orange-300"
+                                  : "bg-green-100 text-green-800 border-green-300"
+                            }`}
+                          >
+                            {item.status === "pending"
+                              ? "Recibido"
+                              : item.status === "cooking"
+                                ? "Listo"
+                                : "Entregado"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right flex flex-col items-end">
+                        <p className="text-xs md:text-sm lg:text-base text-white/60">
+                          Cant: {item.quantity}
+                        </p>
+                        <p className="text-base md:text-lg lg:text-xl text-white font-medium">
+                          ${(Number(item.price) * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 md:py-10 lg:py-12">
+                  <p className="text-white/70 text-base md:text-lg lg:text-xl">
+                    No se encontró información de la orden
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -429,10 +429,10 @@ export default function MenuView() {
                     <Utensils className="size-20 md:size-24 lg:size-28 text-white" />
                   )}
                   <div className="flex flex-col items-center justify-center">
-                    <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold">
-                      Estatus de la orden
+                    <h2 className="text-2xl md:text-3xl lg:text-4xl text-white font-semibold">
+                      Pedido #{activeOrder.pick_and_go_order?.folio || "---"}
                     </h2>
-                    <p className="text-sm md:text-base lg:text-lg text-white/80">
+                    <p className="text-sm md:text-base lg:text-lg text-white/80 mt-1">
                       Pick & Go
                     </p>
                   </div>

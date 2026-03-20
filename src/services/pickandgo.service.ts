@@ -2,6 +2,7 @@ import { requestWithAuth, type ApiResponse } from "./request-helper";
 
 export interface PickAndGoOrder {
   id: string;
+  folio?: string;
   clerk_user_id?: string | null;
   customer_name: string;
   customer_phone?: string;
@@ -107,6 +108,7 @@ export interface ActiveOrderResponse {
   data: {
     pick_and_go_order: {
       id: string;
+      folio?: string | null;
       clerk_user_id: string | null;
       customer_name: string;
       total_amount: number;
