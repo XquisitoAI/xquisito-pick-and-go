@@ -288,7 +288,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col justify-center items-center px-4">
+    <div className="min-h-new bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col justify-center items-center px-4">
       {/* Back Button */}
       <button
         onClick={() => {
@@ -562,7 +562,9 @@ export default function AuthPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || !firstName || !lastName || !birthDate || !gender}
+              disabled={
+                loading || !firstName || !lastName || !birthDate || !gender
+              }
               className="w-full bg-black hover:bg-stone-950 text-white py-3 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
             >
               {loading ? "Guardando..." : "Continuar"}

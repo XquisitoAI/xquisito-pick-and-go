@@ -409,7 +409,6 @@ body {
   }
 }
 
-/* Prevenir el scroll bounce en iOS que causa el espacio blanco */
 .min-h-new {
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
