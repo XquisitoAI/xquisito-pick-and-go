@@ -30,7 +30,7 @@ export interface PickAndGoItem {
   item: string;
   quantity: number;
   price: number;
-  status: "pending" | "cooking" | "delivered";
+  status: "preparing" | "ready" | "delivered";
   payment_status: "not_paid" | "paid";
   images: string[];
   custom_fields: Record<string, any>;
@@ -74,7 +74,7 @@ export interface DishOrder {
   item: string;
   quantity: number;
   price: number;
-  status: "pending" | "cooking" | "delivered";
+  status: "preparing" | "ready" | "delivered";
   payment_status: "not_paid" | "paid";
   user_id?: string | null;
   guest_id?: string | null;
@@ -173,21 +173,22 @@ class PickAndGoService {
 
   private async request<T>(
     endpoint: string,
-    options?: RequestInit
+    options?: RequestInit,
   ): Promise<ApiResponse<T>> {
     return requestWithAuth<T>(endpoint, options);
   }
 
   // Crear nueva orden Pick & Go
   async createOrder(
-    orderData: CreateOrderRequest
+    orderData: CreateOrderRequest,
   ): Promise<ApiResponse<PickAndGoOrder>> {
     console.log("🆕 Creating Pick & Go order:", orderData);
 
     // Si clerk_user_id ya viene en orderData, usarlo; si no, usar el interno
-    const finalUserId = orderData.clerk_user_id !== undefined
-      ? orderData.clerk_user_id
-      : (this.supabaseUserId || null);
+    const finalUserId =
+      orderData.clerk_user_id !== undefined
+        ? orderData.clerk_user_id
+        : this.supabaseUserId || null;
 
     const body = {
       clerk_user_id: finalUserId,
@@ -221,7 +222,7 @@ class PickAndGoService {
       order_status?: string;
       payment_status?: string;
       limit?: number;
-    }
+    },
   ): Promise<ApiResponse<PickAndGoOrder[]>> {
     console.log("👤 Getting user orders for:", userId);
 
@@ -240,24 +241,21 @@ class PickAndGoService {
   // Agregar item a la orden
   async addItemToOrder(
     orderId: string,
-    itemData: AddItemRequest
+    itemData: AddItemRequest,
   ): Promise<ApiResponse<PickAndGoItem>> {
     console.log("🍽️ Adding item to order:", orderId, itemData);
 
-    return this.request<PickAndGoItem>(
-      `/pick-and-go/orders/${orderId}/items`,
-      {
-        method: "POST",
-        body: JSON.stringify(itemData),
-      }
-    );
+    return this.request<PickAndGoItem>(`/pick-and-go/orders/${orderId}/items`, {
+      method: "POST",
+      body: JSON.stringify(itemData),
+    });
   }
 
   // Actualizar estado de la orden
   async updateOrderStatus(
     orderId: string,
     orderStatus: string,
-    prepMetadata?: Record<string, any>
+    prepMetadata?: Record<string, any>,
   ): Promise<ApiResponse<PickAndGoOrder>> {
     console.log("🔄 Updating order status:", orderId, "to", orderStatus);
 
@@ -269,14 +267,14 @@ class PickAndGoService {
           order_status: orderStatus,
           prep_metadata: prepMetadata,
         }),
-      }
+      },
     );
   }
 
   // Actualizar estado de pago
   async updatePaymentStatus(
     orderId: string,
-    paymentStatus: "pending" | "paid"
+    paymentStatus: "pending" | "paid",
   ): Promise<ApiResponse<PickAndGoOrder>> {
     console.log("💳 Updating payment status:", orderId, "to", paymentStatus);
 
@@ -287,14 +285,14 @@ class PickAndGoService {
         body: JSON.stringify({
           payment_status: paymentStatus,
         }),
-      }
+      },
     );
   }
 
   // Calcular tiempo estimado de preparación
   async estimatePrepTime(
     items: Array<{ item: string; quantity: number }>,
-    restaurantId?: number
+    restaurantId?: number,
   ): Promise<ApiResponse<{ estimated_minutes: number }>> {
     console.log("⏰ Estimating prep time for", items.length, "items");
 
@@ -306,7 +304,7 @@ class PickAndGoService {
           items,
           restaurant_id: restaurantId || this.restaurantId,
         }),
-      }
+      },
     );
   }
 
@@ -318,7 +316,7 @@ class PickAndGoService {
       branch_number?: number;
       date_from?: string;
       date_to?: string;
-    }
+    },
   ): Promise<ApiResponse<PickAndGoOrder[]>> {
     console.log("🏪 Getting restaurant orders for:", restaurantId);
 
@@ -343,10 +341,10 @@ class PickAndGoService {
       order_status?: string;
       date_from?: string;
       date_to?: string;
-    }
+    },
   ): Promise<ApiResponse<PickAndGoOrder[]>> {
     console.log(
-      `🏢 Getting branch orders for restaurant ${restaurantId}, branch ${branchNumber}`
+      `🏢 Getting branch orders for restaurant ${restaurantId}, branch ${branchNumber}`,
     );
 
     const queryParams = new URLSearchParams();
@@ -363,7 +361,7 @@ class PickAndGoService {
   // Crear una orden de platillo (dish order) vinculada a Pick & Go
   async createDishOrder(
     pickAndGoOrderId: string,
-    orderData: CreateDishOrderRequest
+    orderData: CreateDishOrderRequest,
   ): Promise<ApiResponse<DishOrder>> {
     console.log("🍽️ Creating Pick & Go dish order:", {
       pickAndGoOrderId,
@@ -376,13 +374,13 @@ class PickAndGoService {
       {
         method: "POST",
         body: JSON.stringify(orderData),
-      }
+      },
     );
   }
 
   // Registrar una transacción de pago
   async recordPaymentTransaction(
-    transactionData: RecordPaymentTransactionRequest
+    transactionData: RecordPaymentTransactionRequest,
   ): Promise<ApiResponse<any>> {
     console.log("💰 Recording payment transaction:", transactionData);
 
@@ -395,7 +393,7 @@ class PickAndGoService {
   // Actualizar estado de un platillo
   async updateDishStatus(
     dishId: string,
-    status: DishOrder["status"]
+    status: DishOrder["status"],
   ): Promise<ApiResponse<DishOrder>> {
     console.log("🔄 Updating dish status:", dishId, "to", status);
 
@@ -408,13 +406,13 @@ class PickAndGoService {
   // Actualizar estado de pago de un platillo
   async updateDishPaymentStatus(
     dishId: string,
-    paymentStatus: DishOrder["payment_status"]
+    paymentStatus: DishOrder["payment_status"],
   ): Promise<ApiResponse<DishOrder>> {
     console.log(
       "💳 Updating dish payment status:",
       dishId,
       "to",
-      paymentStatus
+      paymentStatus,
     );
 
     return this.request<DishOrder>(`/dishes/${dishId}/payment-status`, {
@@ -426,11 +424,11 @@ class PickAndGoService {
   // Obtener orden activa por clerk_user_id (user_id o guest_id) y restaurantId
   async getActiveOrderByUser(
     clerkUserId: string,
-    restaurantId: number
+    restaurantId: number,
   ): Promise<ApiResponse<ActiveOrderResponse>> {
     return this.request<ActiveOrderResponse>(
       `/pick-and-go/restaurant/${restaurantId}/active/user/${clerkUserId}`,
-      { method: "GET" }
+      { method: "GET" },
     );
   }
 }

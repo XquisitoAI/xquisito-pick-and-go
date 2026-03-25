@@ -276,7 +276,7 @@ export default function PaymentSuccessPage() {
             guest_name: item.guest_name,
             custom_fields: item.custom_fields,
             image_url: item.images?.[0] || null,
-            status: item.status || "pending",
+            status: item.status || "preparing",
           }));
           setDishOrders(transformedItems);
         }
@@ -311,19 +311,19 @@ export default function PaymentSuccessPage() {
   };
 
   // Función para calcular el estatus general del pedido basado en los items
-  const getOverallStatus = (): "pending" | "ready" | "delivered" => {
-    if (!dishOrders || dishOrders.length === 0) return "pending";
+  const getOverallStatus = (): "preparing" | "ready" | "delivered" => {
+    if (!dishOrders || dishOrders.length === 0) return "preparing";
 
     const statuses = dishOrders.map((item) => item.status);
 
     // Si TODOS están entregados
     if (statuses.every((s) => s === "delivered")) return "delivered";
 
-    // Si TODOS están en cooking (ninguno pending)
-    if (statuses.every((s) => s === "cooking")) return "ready";
+    // Si TODOS están en ready (ninguno preparing)
+    if (statuses.every((s) => s === "ready")) return "ready";
 
-    // Al menos uno pending
-    return "pending";
+    // Al menos uno preparing
+    return "preparing";
   };
 
   const handleBackToMenu = () => {
@@ -994,16 +994,16 @@ export default function PaymentSuccessPage() {
                         <div className="mt-1 md:mt-1.5 lg:mt-2">
                           <span
                             className={`inline-block px-2 md:px-3 lg:px-4 py-0.5 md:py-1 lg:py-1.5 text-xs md:text-sm lg:text-base font-medium rounded-full border ${
-                              item.status === "pending"
+                              item.status === "preparing"
                                 ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                                : item.status === "cooking"
+                                : item.status === "ready"
                                   ? "bg-orange-100 text-orange-800 border-orange-300"
                                   : "bg-green-100 text-green-800 border-green-300"
                             }`}
                           >
-                            {item.status === "pending"
+                            {item.status === "preparing"
                               ? "Preparando"
-                              : item.status === "cooking"
+                              : item.status === "ready"
                                 ? "Listo"
                                 : "Entregado"}
                           </span>

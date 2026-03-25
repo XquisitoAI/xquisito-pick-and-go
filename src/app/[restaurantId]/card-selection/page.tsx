@@ -968,8 +968,17 @@ export default function CardSelectionPage() {
             }
 
             console.log("🔍 Final orderId for navigation:", orderId);
+
+            // Si no hay orderId válido, no navegar (hubo un error en el proceso)
+            if (!orderId || orderId === "unknown") {
+              console.log(
+                "❌ No valid orderId found, not navigating to payment-success",
+              );
+              return;
+            }
+
             navigateWithRestaurantId(
-              `/payment-success?orderId=${orderId || "unknown"}&success=true`,
+              `/payment-success?orderId=${orderId}&success=true`,
             );
           }}
           onCancel={handleCancelPayment}
