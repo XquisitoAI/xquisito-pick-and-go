@@ -103,9 +103,9 @@ export default function MenuView() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "pending":
-        return "Pendiente";
-      case "cooking":
         return "Preparando";
+      case "cooking":
+        return "Listo";
       case "delivered":
         return "Entregado";
       default:

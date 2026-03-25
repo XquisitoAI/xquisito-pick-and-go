@@ -844,17 +844,17 @@ export default function PaymentSuccessPage() {
                 <div className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8">
                   {/* Recibido - siempre activo porque el pedido ya fue recibido */}
                   <div className="flex flex-col items-center gap-1.5 md:gap-2">
-                    <div className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 bg-yellow-100 border border-yellow-300">
-                      <Clock className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-yellow-800" />
+                    <div className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 bg-white border border-green-200">
+                      <Clock className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-green-600" />
                     </div>
-                    <span className="text-xs md:text-sm font-medium text-yellow-100">
-                      Recibido
+                    <span className="text-xs md:text-sm font-medium text-green-100">
+                      Preparando
                     </span>
                   </div>
 
                   {/* Línea de progreso - siempre llena porque recibido siempre está completo */}
                   <div className="flex-1 max-w-12 md:max-w-16 lg:max-w-20 h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full w-full rounded-full bg-gradient-to-r from-yellow-300 to-orange-300"></div>
+                    <div className="h-full w-full rounded-full bg-gradient-to-r from-white to-green-200"></div>
                   </div>
 
                   {/* Listo */}
@@ -863,7 +863,7 @@ export default function PaymentSuccessPage() {
                       className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
                         getOverallStatus() === "ready" ||
                         getOverallStatus() === "delivered"
-                          ? "bg-orange-100 text-orange-800 border border-orange-300"
+                          ? "bg-green-100 text-green-600 border border-green-100"
                           : "bg-white/10"
                       }`}
                     >
@@ -871,7 +871,7 @@ export default function PaymentSuccessPage() {
                         className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 ${
                           getOverallStatus() === "ready" ||
                           getOverallStatus() === "delivered"
-                            ? "text-orange-800"
+                            ? "text-green-600"
                             : "text-white"
                         }`}
                       />
@@ -880,7 +880,7 @@ export default function PaymentSuccessPage() {
                       className={`text-xs md:text-sm font-medium ${
                         getOverallStatus() === "ready" ||
                         getOverallStatus() === "delivered"
-                          ? "text-orange-100"
+                          ? "text-green-100"
                           : "text-white/60"
                       }`}
                     >
@@ -893,7 +893,7 @@ export default function PaymentSuccessPage() {
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
                         getOverallStatus() === "delivered"
-                          ? "w-full bg-gradient-to-r from-orange-300 to-green-300"
+                          ? "w-full bg-gradient-to-r from-green-200 to-green-300"
                           : "w-0"
                       }`}
                     ></div>
@@ -904,7 +904,7 @@ export default function PaymentSuccessPage() {
                     <div
                       className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
                         getOverallStatus() === "delivered"
-                          ? "bg-green-100 text-green-800 border border-green-300"
+                          ? "bg-green-200 text-green-800 border border-green-300"
                           : "bg-white/10"
                       }`}
                     >
@@ -1002,7 +1002,7 @@ export default function PaymentSuccessPage() {
                             }`}
                           >
                             {item.status === "pending"
-                              ? "Recibido"
+                              ? "Preparando"
                               : item.status === "cooking"
                                 ? "Listo"
                                 : "Entregado"}

@@ -100,7 +100,7 @@ export default function MenuItem({ item }: MenuItemProps) {
             addItem(lastItem);
           }
         } catch (error) {
-          console.error('Error parsing last item:', error);
+          console.error("Error parsing last item:", error);
           navigateToDish(adaptedItem.id);
         }
       } else {
@@ -153,7 +153,7 @@ export default function MenuItem({ item }: MenuItemProps) {
 
     // Si hay múltiples variaciones, navegar al carrito
     const itemsWithSameName = state.items.filter(
-      (item) => item.name === adaptedItem.name
+      (item) => item.name === adaptedItem.name,
     );
     if (itemsWithSameName.length > 1) {
       navigateToCart();
@@ -214,7 +214,7 @@ export default function MenuItem({ item }: MenuItemProps) {
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex justify-between">
-              <h3 className="text-lg md:text-xl lg:text-2xl font-medium text-black leading-tight capitalize">
+              <h3 className="text-lg md:text-xl lg:text-2xl font-medium text-black leading-tight capitalize line-clamp-2 break-words">
                 {adaptedItem.name}
               </h3>
               <div
