@@ -977,9 +977,15 @@ export default function CardSelectionPage() {
               return;
             }
 
-            navigateWithRestaurantId(
-              `/payment-success?orderId=${orderId}&success=true`,
-            );
+            // If authenticated, go directly to payment-success
+            // If not authenticated, go to phone-capture first
+            if (user) {
+              navigateWithRestaurantId(
+                `/payment-success?orderId=${orderId}&success=true`,
+              );
+            } else {
+              navigateWithRestaurantId(`/phone-capture?orderId=${orderId}`);
+            }
           }}
           onCancel={handleCancelPayment}
           onConfirm={handleConfirmPayment}

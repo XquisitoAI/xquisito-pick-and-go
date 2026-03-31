@@ -289,6 +289,26 @@ class PickAndGoService {
     );
   }
 
+  // Link order to customer (after phone verification)
+  async linkOrderToCustomer(
+    orderId: string,
+    customerPhone: string,
+    customerId?: string,
+  ): Promise<ApiResponse<PickAndGoOrder>> {
+    console.log("🔗 Linking order to customer:", orderId, customerPhone);
+
+    return this.request<PickAndGoOrder>(
+      `/pick-and-go/orders/${orderId}/link-customer`,
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          customer_phone: customerPhone,
+          customer_id: customerId,
+        }),
+      },
+    );
+  }
+
   // Calcular tiempo estimado de preparación
   async estimatePrepTime(
     items: Array<{ item: string; quantity: number }>,

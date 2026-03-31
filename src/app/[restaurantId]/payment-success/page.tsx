@@ -13,8 +13,6 @@ import {
   Calendar,
   Utensils,
   CircleAlert,
-  LogIn,
-  UserCircle2,
   RefreshCw,
   Loader2,
   Clock,
@@ -57,40 +55,11 @@ export default function PaymentSuccessPage() {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [hasRated, setHasRated] = useState(false); // Track if user has already rated
   const [isRefreshing, setIsRefreshing] = useState(false);
-  // No abrir el modal si el usuario viene de auth redirect
-  const cameFromAuth =
-    typeof window !== "undefined" &&
-    sessionStorage.getItem("xquisito-post-auth-redirect");
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(
-    !isAuthenticated && !cameFromAuth,
-  );
   const { restaurant } = useRestaurant();
-
-  // Limpiar el flag de redirect después de cargar
-  useEffect(() => {
-    if (cameFromAuth) {
-      sessionStorage.removeItem("xquisito-post-auth-redirect");
-    }
-  }, [cameFromAuth]);
-
-  // Handler for sign up navigation
-  const handleSignUp = () => {
-    // Save the current URL to redirect back after registration
-    const currentUrl = window.location.pathname + window.location.search;
-    sessionStorage.setItem("xquisito-post-auth-redirect", currentUrl);
-
-    // Navigate to auth page
-    navigateWithRestaurantId("/auth");
-  };
 
   // Block scroll when any modal is open
   useEffect(() => {
-    if (
-      isTicketModalOpen ||
-      isBreakdownModalOpen ||
-      isStatusModalOpen ||
-      isRegisterModalOpen
-    ) {
+    if (isTicketModalOpen || isBreakdownModalOpen || isStatusModalOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "unset";
@@ -100,12 +69,7 @@ export default function PaymentSuccessPage() {
     return () => {
       document.body.style.overflow = "unset";
     };
-  }, [
-    isTicketModalOpen,
-    isBreakdownModalOpen,
-    isStatusModalOpen,
-    isRegisterModalOpen,
-  ]);
+  }, [isTicketModalOpen, isBreakdownModalOpen, isStatusModalOpen]);
 
   // Cargar branches cuando el restaurante esté disponible
   useEffect(() => {
@@ -1027,87 +991,6 @@ export default function PaymentSuccessPage() {
                   </p>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Register Modal */}
-      {isRegisterModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-center justify-center animate-fade-in"
-          onClick={() => setIsRegisterModalOpen(false)}
-        >
-          <div
-            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 flex flex-col justify-center py-12 md:py-16 lg:py-20 min-h-[70vh] animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close Button */}
-            <div className="absolute top-3 md:top-4 lg:top-5 right-3 md:right-4 lg:right-5">
-              <button
-                onClick={() => setIsRegisterModalOpen(false)}
-                className="p-2 md:p-3 lg:p-4 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors"
-              >
-                <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
-              </button>
-            </div>
-
-            {/* Logo */}
-            <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-6 md:mb-8 lg:mb-10">
-              <img
-                src="/logos/logo-short-white.webp"
-                alt="Xquisito Logo"
-                className="size-20 md:size-24 lg:size-28"
-              />
-            </div>
-
-            {/* Title */}
-            <div className="px-6 md:px-8 lg:px-10 text-center mb-6 md:mb-8 lg:mb-10">
-              <h1 className="text-white text-xl md:text-2xl lg:text-3xl font-medium mb-2 md:mb-3 lg:mb-4">
-                ¡Tu pedido fue creado con éxito!
-              </h1>
-              <p className="text-white/80 text-sm md:text-base lg:text-lg">
-                Crea una cuenta para hacer pedidos más rápido la próxima vez
-              </p>
-            </div>
-
-            {/* Options */}
-            <div className="px-6 md:px-8 lg:px-10 space-y-3 md:space-y-4 lg:space-y-5">
-              {/* Sign Up Option */}
-              <button
-                onClick={handleSignUp}
-                className="w-full bg-white hover:bg-gray-50 text-black py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6 rounded-xl md:rounded-2xl transition-all duration-200 flex items-center gap-3 md:gap-4 lg:gap-5 active:scale-95"
-              >
-                <div className="bg-gradient-to-r from-[#34808C] to-[#173E44] p-2 md:p-2.5 lg:p-3 rounded-full group-hover:scale-110 transition-transform">
-                  <LogIn className="size-5 md:size-6 lg:size-7 text-white" />
-                </div>
-                <div className="flex-1 text-left">
-                  <h2 className="text-base md:text-lg lg:text-xl font-medium mb-0.5 md:mb-1">
-                    Crear cuenta
-                  </h2>
-                  <p className="text-xs md:text-sm lg:text-base text-gray-600">
-                    Registrate y ahorra tiempo en futuros pedidos
-                  </p>
-                </div>
-              </button>
-
-              {/* Continue as Guest Option */}
-              <button
-                onClick={() => setIsRegisterModalOpen(false)}
-                className="w-full bg-white/10 hover:bg-white/20 border-2 border-white text-white py-4 md:py-5 lg:py-6 px-4 md:px-5 lg:px-6 rounded-xl md:rounded-2xl transition-all duration-200 flex items-center gap-3 md:gap-4 lg:gap-5 group active:scale-95"
-              >
-                <div className="bg-white/20 p-2 md:p-2.5 lg:p-3 rounded-full group-hover:scale-110 transition-transform">
-                  <UserCircle2 className="size-5 md:size-6 lg:size-7 text-white" />
-                </div>
-                <div className="flex-1 text-left">
-                  <h2 className="text-base md:text-lg lg:text-xl font-medium mb-0.5 md:mb-1">
-                    Continuar sin registrarme
-                  </h2>
-                  <p className="text-xs md:text-sm lg:text-base text-white/80">
-                    Ver el estado de mi pedido
-                  </p>
-                </div>
-              </button>
             </div>
           </div>
         </div>
