@@ -10,6 +10,7 @@ import { CartProvider } from "@/context/CartContext";
 import { PickAndGoProvider } from "@/context/PickAndGoContext";
 import { UserDataProvider } from "@/context/userDataContext";
 import { PaymentProvider } from "@/context/PaymentContext";
+import { PepperProvider } from "@/context/PepperContext";
 
 const helveticaNeue = localFont({
   src: [
@@ -124,11 +125,13 @@ export default async function RootLayout({
             <BranchProvider>
               <RestaurantProvider>
                 <CartProvider>
-                  <PickAndGoProvider>
-                    <PaymentProvider>
-                      <UserDataProvider>{children}</UserDataProvider>
-                    </PaymentProvider>
-                  </PickAndGoProvider>
+                  <PepperProvider>
+                    <PickAndGoProvider>
+                      <PaymentProvider>
+                        <UserDataProvider>{children}</UserDataProvider>
+                      </PaymentProvider>
+                    </PickAndGoProvider>
+                  </PepperProvider>
                 </CartProvider>
               </RestaurantProvider>
             </BranchProvider>

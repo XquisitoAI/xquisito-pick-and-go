@@ -24,6 +24,7 @@ import {
   type ActiveOrderResponse,
 } from "../../services/pickandgo.service";
 import { useGuest } from "@/context/GuestContext";
+import ChatView from "../ChatView";
 
 export default function MenuView() {
   const [filter, setFilter] = useState("Todo");
@@ -39,6 +40,28 @@ export default function MenuView() {
   const { branches, selectedBranchNumber, fetchBranches } = useBranch();
   const { navigateWithRestaurantId, branchNumber } = useNavigation();
   const { guestId } = useGuest();
+  const [showPepperChat, setShowPepperChat] = useState(false);
+  const [isPepperClosing, setIsPepperClosing] = useState(false);
+
+  const closePepperChat = () => {
+    setIsPepperClosing(true);
+    setTimeout(() => {
+      setShowPepperChat(false);
+      setIsPepperClosing(false);
+    }, 380);
+  };
+
+  // Bloquear scroll del body cuando el chat está abierto
+  useEffect(() => {
+    if (showPepperChat) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [showPepperChat]);
 
   useEffect(() => {
     refreshCart();
@@ -111,6 +134,25 @@ export default function MenuView() {
       default:
         return status;
     }
+  };
+
+  const handleSettingsClick = () => {
+    if (isAuthenticated) {
+      navigateWithRestaurantId("/dashboard");
+    } else {
+      sessionStorage.removeItem("signupFromOrder");
+      sessionStorage.removeItem("signupFromPaymentFlow");
+      sessionStorage.setItem("signInFromMenu", "true");
+      navigateWithRestaurantId("/auth");
+    }
+  };
+
+  const handlePepperClick = () => {
+    setShowPepperChat(true);
+  };
+
+  const handleCartClick = () => {
+    navigateWithRestaurantId("/cart");
   };
 
   // Cargar branches cuando el restaurante esté disponible
@@ -222,14 +264,7 @@ export default function MenuView() {
           <div className="mt-6 md:mt-8 flex items-start justify-between w-full">
             {/* Settings Icon */}
             <div
-              onClick={() => {
-                if (isAuthenticated) {
-                  navigateWithRestaurantId("/dashboard");
-                } else {
-                  sessionStorage.setItem("signInFromMenu", "true");
-                  navigateWithRestaurantId("/auth");
-                }
-              }}
+              onClick={handleSettingsClick}
               className="bg-white rounded-full p-1.5 md:p-2 lg:p-2.5 border border-gray-400 shadow-sm cursor-pointer hover:bg-gray-50 transition-all active:scale-90"
             >
               <Settings
@@ -240,7 +275,7 @@ export default function MenuView() {
 
             {/* Assistent Icon */}
             <div
-              onClick={() => navigateWithRestaurantId("/pepper")}
+              onClick={handlePepperClick}
               className="bg-white rounded-full text-black border border-gray-400 size-10 md:size-12 lg:size-14 cursor-pointer shadow-sm"
             >
               <video
@@ -249,6 +284,9 @@ export default function MenuView() {
                 loop
                 muted
                 playsInline
+                disablePictureInPicture
+                controls={false}
+                controlsList="nodownload nofullscreen noremoteplayback"
                 className="w-full h-full object-cover rounded-full"
               />
             </div>
@@ -380,7 +418,7 @@ export default function MenuView() {
       {totalItems > 0 && (
         <div className="fixed bottom-6 md:bottom-8 lg:bottom-10 left-0 right-0 z-50 flex justify-center">
           <div
-            onClick={() => navigateWithRestaurantId("/cart")}
+            onClick={handleCartClick}
             className="bg-gradient-to-r from-[#34808C] to-[#173E44] text-white rounded-full px-6 md:px-8 lg:px-10 py-4 md:py-5 lg:py-6 shadow-lg flex items-center gap-3 md:gap-4 cursor-pointer transition-all hover:scale-105 animate-bounce-in active:scale-90"
           >
             <ShoppingCart className="size-5 md:size-6 lg:size-7" />
@@ -524,6 +562,59 @@ export default function MenuView() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Pepper Chat Modal */}
+      {showPepperChat && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+            style={{
+              animation: isPepperClosing
+                ? "fadeOut 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
+                : "fadeIn 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
+            }}
+            onClick={closePepperChat}
+          />
+          <div
+            className="fixed inset-x-0 z-50 flex flex-col rounded-t-3xl overflow-hidden shadow-2xl border-t border-white/30"
+            style={{
+              top: "12%",
+              bottom: 0,
+              paddingBottom: "env(safe-area-inset-bottom)",
+              background: "rgba(255, 255, 255, 0.82)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              animation: isPepperClosing
+                ? "slideDown 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
+                : "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
+            }}
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-gray-300/80" />
+            </div>
+            <ChatView onBack={closePepperChat} />
+          </div>
+          <style>{`
+            @keyframes slideUp {
+              from { transform: translateY(100%); opacity: 0.6; }
+              to   { transform: translateY(0);    opacity: 1; }
+            }
+            @keyframes slideDown {
+              from { transform: translateY(0);    opacity: 1; }
+              to   { transform: translateY(100%); opacity: 0.6; }
+            }
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to   { opacity: 1; }
+            }
+            @keyframes fadeOut {
+              from { opacity: 1; }
+              to   { opacity: 0; }
+            }
+          `}</style>
+        </>
       )}
     </div>
   );

@@ -1,10 +1,11 @@
 "use client";
 
-import { ChevronLeft, Mic, Plus, SendHorizontal } from "lucide-react";
+import { ChevronDown, SendHorizontal } from "lucide-react";
 import { useState, useRef, useEffect, memo } from "react";
 import { useRestaurant } from "../context/RestaurantContext";
 import { useGuest } from "../context/GuestContext";
 import { useAuth } from "../context/AuthContext";
+import { usePepper } from "../context/PepperContext";
 
 interface ChatViewProps {
   onBack: () => void;
@@ -36,6 +37,7 @@ interface StreamEvent {
 async function streamFromAgent(
   message: string,
   sessionId: string | null = null,
+  userContext: string | null = null,
   onToken: (token: string) => void,
   onSessionId: (sessionId: string) => void,
   onToolStart: (toolName: string) => void,
@@ -43,7 +45,7 @@ async function streamFromAgent(
   onFinalResponse?: (content: string) => void,
 ): Promise<void> {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/ai-agent/chat/stream`,
+    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/ai-agent/chat/stream`,
     {
       method: "POST",
       headers: {
@@ -52,6 +54,7 @@ async function streamFromAgent(
       body: JSON.stringify({
         message,
         session_id: sessionId,
+        user_context: userContext,
       }),
     },
   );
@@ -115,6 +118,7 @@ async function streamFromAgent(
 
 // Mapeo de nombres de herramientas a nombres amigables
 const toolDisplayNames: Record<string, string> = {
+  thinking: "Pensando",
   extracts_image_urls: "Obteniendo imagen",
   retrieves_restaurant_information: "Obteniendo información del restaurante",
   extract_restaurant_dish: "Obteniendo estadísticas del platillo",
@@ -193,6 +197,23 @@ const ToolIndicator = memo(({ toolName }: { toolName: string }) => {
 
 ToolIndicator.displayName = "ToolIndicator";
 
+// Función para renderizar texto con negritas (**texto**)
+const renderBoldText = (text: string): React.ReactNode => {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  if (parts.length === 1) return text;
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith("**") && part.endsWith("**") ? (
+          <strong key={i}>{part.slice(2, -2)}</strong>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+};
+
 // Función para detectar si hay una URL de imagen incompleta al final del contenido
 const hasIncompleteImageUrl = (text: string): boolean => {
   // Detectar markdown de imagen incompleto: ![...] o ![...]( o ![...](url incompleta
@@ -205,7 +226,9 @@ const hasIncompleteImageUrl = (text: string): boolean => {
     if (urlMatch) {
       const partialUrl = urlMatch[0];
       // Si parece que está escribiendo una URL de imagen pero no está completa
-      if (!/\.(jpg|jpeg|png|gif|webp|svg|avif)(\?[^\s)]*)?$/i.test(partialUrl)) {
+      if (
+        !/\.(jpg|jpeg|png|gif|webp|svg|avif)(\?[^\s)]*)?$/i.test(partialUrl)
+      ) {
         return true;
       }
     }
@@ -213,175 +236,189 @@ const hasIncompleteImageUrl = (text: string): boolean => {
   return false;
 };
 
-// Componente para renderizar mensajes con imágenes (memoizado para evitar re-renders innecesarios)
-const MessageContent = memo(
-  ({
-    content,
-    isStreaming,
-    activeTool,
-  }: {
-    content: string;
-    isStreaming?: boolean;
-    activeTool?: string | null;
-  }) => {
-    // Si el contenido está vacío, mostrar herramienta o puntos de carga
-    if (!content) {
-      if (activeTool) {
-        return (
-          <div className="flex items-center gap-2">
-            <Spinner />
-            <span className="text-gray-500">
-              {toolDisplayNames[activeTool] || activeTool}
-            </span>
-          </div>
+// Componente para renderizar mensajes con imágenes (sin memo para garantizar re-render con nuevas URLs)
+const MessageContent = ({
+  content,
+  isStreaming,
+  activeTool,
+}: {
+  content: string;
+  isStreaming?: boolean;
+  activeTool?: string | null;
+}) => {
+  // Si el contenido está vacío, mostrar herramienta o puntos de carga
+  if (!content) {
+    if (activeTool) {
+      return (
+        <div className="flex items-center gap-2">
+          <Spinner />
+          <span className="text-gray-500">
+            {toolDisplayNames[activeTool] || activeTool}
+          </span>
+        </div>
+      );
+    }
+    return <LoadingDots />;
+  }
+
+  // Si está en streaming, reemplazar URLs de imagen con LoadingDots inline
+  if (isStreaming) {
+    const IMAGE_PLACEHOLDER = "\u0000IMG\u0000";
+    let processed = content
+      .replace(
+        /!\[[^\]]*\]\(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?\)/gi,
+        IMAGE_PLACEHOLDER,
+      )
+      .replace(/!\[[^\]]*\]?\(?https?:\/\/[^\s)]*$/, IMAGE_PLACEHOLDER)
+      .replace(
+        /(?<![(\[])(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?)/gi,
+        IMAGE_PLACEHOLDER,
+      );
+    if (hasIncompleteImageUrl(processed)) {
+      processed = processed.replace(/https?:\/\/[^\s)]*$/, IMAGE_PLACEHOLDER);
+    }
+
+    const parts = processed.split(IMAGE_PLACEHOLDER);
+    const elements: React.ReactNode[] = [];
+    parts.forEach((part, i) => {
+      if (part) {
+        elements.push(
+          <span key={`t${i}`} className="whitespace-pre-wrap">
+            {renderBoldText(part)}
+          </span>,
         );
       }
-      return <LoadingDots />;
-    }
-
-    // Si está en streaming, reemplazar URLs de imagen con LoadingDots inline
-    if (isStreaming) {
-      const IMAGE_PLACEHOLDER = '\u0000IMG\u0000';
-      let processed = content
-        .replace(/!\[[^\]]*\]\(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?\)/gi, IMAGE_PLACEHOLDER)
-        .replace(/!\[[^\]]*\]?\(?https?:\/\/[^\s)]*$/, IMAGE_PLACEHOLDER)
-        .replace(/(?<![(\[])(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?)/gi, IMAGE_PLACEHOLDER);
-      if (hasIncompleteImageUrl(processed)) {
-        processed = processed.replace(/https?:\/\/[^\s)]*$/, IMAGE_PLACEHOLDER);
+      if (i < parts.length - 1) {
+        elements.push(<LoadingDots key={`d${i}`} />);
       }
+    });
 
-      const parts = processed.split(IMAGE_PLACEHOLDER);
-      const elements: React.ReactNode[] = [];
-      parts.forEach((part, i) => {
-        if (part) {
-          elements.push(<span key={`t${i}`} className="whitespace-pre-wrap">{part}</span>);
-        }
-        if (i < parts.length - 1) {
-          elements.push(<LoadingDots key={`d${i}`} />);
-        }
-      });
+    return <div>{elements}</div>;
+  }
 
-      return <div>{elements}</div>;
-    }
+  // Regex para detectar imágenes en formato Markdown: ![alt](url)
+  const markdownImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
 
-    // Regex para detectar imágenes en formato Markdown: ![alt](url)
-    const markdownImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  // Regex para detectar URLs directas de imágenes
+  const directImageRegex =
+    /(?<![(\[])(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?)/gi;
 
-    // Regex para detectar URLs directas de imágenes
-    const directImageRegex =
-      /(?<![(\[])(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?)/gi;
+  // Procesar el contenido
+  const elements: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
 
-    // Procesar el contenido
-    const elements: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let key = 0;
+  // Primero, encontrar todas las imágenes Markdown
+  const matches: Array<{
+    index: number;
+    length: number;
+    type: "markdown" | "direct";
+    url: string;
+    alt?: string;
+  }> = [];
 
-    // Primero, encontrar todas las imágenes Markdown
-    const matches: Array<{
-      index: number;
-      length: number;
-      type: "markdown" | "direct";
-      url: string;
-      alt?: string;
-    }> = [];
+  let match;
+  while ((match = markdownImageRegex.exec(content)) !== null) {
+    matches.push({
+      index: match.index,
+      length: match[0].length,
+      type: "markdown",
+      alt: match[1],
+      url: match[2],
+    });
+  }
 
-    let match;
-    while ((match = markdownImageRegex.exec(content)) !== null) {
+  // Luego, encontrar URLs directas (que no estén dentro de Markdown)
+  while ((match = directImageRegex.exec(content)) !== null) {
+    // Verificar que no esté dentro de un match de Markdown
+    const isInsideMarkdown = matches.some(
+      (m) => match!.index >= m.index && match!.index < m.index + m.length,
+    );
+    if (!isInsideMarkdown) {
       matches.push({
         index: match.index,
         length: match[0].length,
-        type: "markdown",
-        alt: match[1],
-        url: match[2],
+        type: "direct",
+        url: match[0],
       });
     }
+  }
 
-    // Luego, encontrar URLs directas (que no estén dentro de Markdown)
-    while ((match = directImageRegex.exec(content)) !== null) {
-      // Verificar que no esté dentro de un match de Markdown
-      const isInsideMarkdown = matches.some(
-        (m) => match!.index >= m.index && match!.index < m.index + m.length,
-      );
-      if (!isInsideMarkdown) {
-        matches.push({
-          index: match.index,
-          length: match[0].length,
-          type: "direct",
-          url: match[0],
-        });
-      }
-    }
+  // Ordenar por posición
+  matches.sort((a, b) => a.index - b.index);
 
-    // Ordenar por posición
-    matches.sort((a, b) => a.index - b.index);
-
-    // Construir los elementos
-    for (const m of matches) {
-      // Agregar texto antes de la imagen
-      if (m.index > lastIndex) {
-        const text = content.slice(lastIndex, m.index);
-        if (text.trim()) {
-          elements.push(
-            <p key={key++} className="whitespace-pre-wrap">
-              {text}
-            </p>,
-          );
-        }
-      }
-
-      // Agregar la imagen
-      elements.push(
-        <img
-          key={key++}
-          src={m.url}
-          alt={m.alt || "Imagen del agente"}
-          className="rounded-lg max-w-full h-auto"
-          loading="lazy"
-        />,
-      );
-
-      lastIndex = m.index + m.length;
-    }
-
-    // Agregar texto restante
-    if (lastIndex < content.length) {
-      const text = content.slice(lastIndex);
+  // Construir los elementos
+  for (const m of matches) {
+    // Agregar texto antes de la imagen
+    if (m.index > lastIndex) {
+      const text = content.slice(lastIndex, m.index);
       if (text.trim()) {
         elements.push(
           <p key={key++} className="whitespace-pre-wrap">
-            {text}
+            {renderBoldText(text)}
           </p>,
         );
       }
     }
 
-    // Si no hay elementos (solo espacios), mostrar el contenido original
-    if (elements.length === 0) {
-      return <p className="whitespace-pre-wrap">{content}</p>;
+    // Agregar la imagen con key basada en URL y timestamp para evitar caché
+    const imageUrl = m.url.includes("?")
+      ? `${m.url}&t=${Date.now()}`
+      : `${m.url}?t=${Date.now()}`;
+    elements.push(
+      <img
+        key={m.url}
+        src={imageUrl}
+        alt={m.alt || "Imagen del agente"}
+        className="rounded-lg max-w-full h-auto"
+        loading="lazy"
+      />,
+    );
+
+    lastIndex = m.index + m.length;
+  }
+
+  // Agregar texto restante
+  if (lastIndex < content.length) {
+    const text = content.slice(lastIndex);
+    if (text.trim()) {
+      elements.push(
+        <p key={key++} className="whitespace-pre-wrap">
+          {renderBoldText(text)}
+        </p>,
+      );
     }
+  }
 
-    return <div className="space-y-2">{elements}</div>;
-  },
-);
+  // Si no hay elementos (solo espacios), mostrar el contenido original
+  if (elements.length === 0) {
+    return <p className="whitespace-pre-wrap">{renderBoldText(content)}</p>;
+  }
 
-MessageContent.displayName = "MessageContent";
+  return <div className="space-y-2">{elements}</div>;
+};
 
 export default function ChatView({ onBack }: ChatViewProps) {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<
-    Array<{ role: "user" | "pepper"; content: string }>
-  >([]);
-  const [hasStartedChat, setHasStartedChat] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Estado persistente de la conversación
+  const {
+    messages,
+    setMessages,
+    sessionId,
+    setSessionId,
+    hasStartedChat,
+    setHasStartedChat,
+  } = usePepper();
+
   // Obtener contextos
   const { restaurantId } = useRestaurant();
   const { guestId, isGuest } = useGuest();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   // Auto-scroll cuando cambian los mensajes, durante streaming, o cuando hay tool activa
   useEffect(() => {
@@ -399,7 +436,11 @@ export default function ChatView({ onBack }: ChatViewProps) {
       }
 
       const userMessage = message;
-      setMessages([...messages, { role: "user", content: userMessage }]);
+      const userMessageId = crypto.randomUUID();
+      setMessages([
+        ...messages,
+        { id: userMessageId, role: "user", content: userMessage },
+      ]);
       setMessage("");
       setIsLoading(true);
 
@@ -412,18 +453,25 @@ export default function ChatView({ onBack }: ChatViewProps) {
         const userId = user?.id || null;
         const currentGuestId = isGuest ? guestId : null;
 
+        const userContext = profile?.userContext || null;
+
         // Construir el mensaje con el contexto separado
-        const contextualMessage = `[CONTEXT: service=pick_and_go, restaurant_id=${restaurantId || "null"}, user_id=${userId || "null"}, guest_id=${currentGuestId || "null"}, branch_number=null]
-[USER_MESSAGE: ${userMessage}]`;
+        const contextualMessage = `[CONTEXT: restaurant_id=${restaurantId || "null"}, user_id=${userId || "null"}, guest_id=${currentGuestId || "null"}, branch_number=null]
+        [USER_MESSAGE: ${userMessage}]`;
 
         // Agregar mensaje vacío de Pepper mientras se procesa
-        setMessages((prev) => [...prev, { role: "pepper", content: "" }]);
+        const pepperMessageId = crypto.randomUUID();
+        setMessages((prev) => [
+          ...prev,
+          { id: pepperMessageId, role: "pepper", content: "" },
+        ]);
         setIsStreaming(true);
 
         // Llamar al agente con streaming
         await streamFromAgent(
           contextualMessage,
           sessionId,
+          userContext,
           // Callback para cada token recibido - mostrar en tiempo real
           (token) => {
             setMessages((prev) => {
@@ -496,15 +544,15 @@ export default function ChatView({ onBack }: ChatViewProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-white flex flex-col">
+    <div className="flex flex-col h-full">
       {/* Header */}
       {hasStartedChat ? (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gray-100 border-b border-gray-200 backdrop-blur-sm p-4 md:p-5 lg:p-6 flex items-center gap-3 md:gap-4">
+        <div className="p-4 md:p-5 lg:p-6 flex items-center gap-3 md:gap-4 shrink-0">
           <button
             onClick={onBack}
             className="text-gray-400 hover:text-gray-700 rounded-full p-1 md:p-1.5 lg:p-2 transition-colors cursor-pointer"
           >
-            <ChevronLeft className="size-6 md:size-7 lg:size-8" />
+            <ChevronDown className="size-6 md:size-7 lg:size-8" />
           </button>
           <div className="flex items-center gap-3 md:gap-4">
             <div className="bg-white rounded-full border border-black/20 size-10 md:size-12 lg:size-14">
@@ -524,25 +572,57 @@ export default function ChatView({ onBack }: ChatViewProps) {
               <h2 className="text-black/90 font-medium text-lg md:text-xl lg:text-2xl">
                 Pepper
               </h2>
-              {/*<p className="text-black/80 text-sm md:text-base">Siempre disponible</p>*/}
             </div>
           </div>
         </div>
       ) : (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-white p-4 md:p-5 lg:p-6 flex items-center gap-3 md:gap-4">
+        <div className="p-4 md:p-5 lg:p-6 flex items-center shrink-0">
           <button
             onClick={onBack}
             className="text-gray-400 hover:text-gray-700 rounded-full py-2 md:py-2.5 lg:py-3 transition-colors cursor-pointer"
           >
-            <ChevronLeft className="size-6 md:size-7 lg:size-8" />
+            <ChevronDown className="size-6 md:size-7 lg:size-8" />
           </button>
         </div>
       )}
 
       {/* Mensajes */}
       <div
-        className={`${hasStartedChat ? "pt-[90px] md:pt-[115px] lg:pt-[130px] pb-[90px] md:pb-[110px] lg:pb-[130px] p-4 md:p-6 lg:p-8 space-y-3 md:space-y-4 lg:space-y-5 overflow-y-auto" : "fixed inset-0 flex items-center justify-center"}`}
+        className={`flex-1 overflow-y-auto ${
+          hasStartedChat
+            ? "p-4 md:p-6 lg:p-8"
+            : "flex items-center justify-center"
+        }`}
       >
+        {hasStartedChat && (
+          <div className="min-h-full flex flex-col justify-end gap-3 md:gap-4 lg:gap-5">
+            {messages.map((msg, index) => {
+              const isLastPepperMessage =
+                msg.role === "pepper" && index === messages.length - 1;
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex ${
+                    msg.role === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-xl md:rounded-2xl px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-black text-base md:text-lg lg:text-xl ${
+                      msg.role === "user" ? "bg-[#ebb2f4]" : "bg-white/60"
+                    }`}
+                  >
+                    <MessageContent
+                      content={msg.content}
+                      isStreaming={isLastPepperMessage && isStreaming}
+                      activeTool={isLastPepperMessage ? activeTool : null}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
         {!hasStartedChat && (
           <div className="text-center max-w-md px-8 md:px-10 lg:px-12">
             <div className="mb-8 md:mb-10 lg:mb-12 flex justify-center">
@@ -564,43 +644,15 @@ export default function ChatView({ onBack }: ChatViewProps) {
               Pepper
             </h2>
             <p className="text-gray-600 text-lg md:text-xl lg:text-2xl">
-              En qué te puedo ayudar hoy?
+              ¿En qué te puedo ayudar hoy?
             </p>
           </div>
         )}
-        {messages.map((msg, index) => {
-          const isLastPepperMessage =
-            msg.role === "pepper" && index === messages.length - 1;
-          return (
-            <div
-              key={index}
-              className={`flex ${
-                msg.role === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
-              <div
-                className={`max-w-[80%] rounded-xl md:rounded-2xl px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-black text-base md:text-lg lg:text-xl ${
-                  msg.role === "user" ? "bg-[#ebb2f4]" : "bg-gray-100"
-                }`}
-              >
-                <MessageContent
-                  content={msg.content}
-                  isStreaming={isLastPepperMessage && isStreaming}
-                  activeTool={isLastPepperMessage ? activeTool : null}
-                />
-              </div>
-            </div>
-          );
-        })}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center py-4 md:py-5 lg:py-6">
-        <div className="flex items-center gap-2 md:gap-3 lg:gap-4 bg-gray-100 rounded-full px-6 md:px-8 lg:px-10 py-4 md:py-5 lg:py-6 border border-gray-200 mx-4 md:mx-6 lg:mx-8 w-full">
-          <button className="text-gray-400 hover:text-gray-600 cursor-pointer">
-            <Plus className="size-6 md:size-7 lg:size-8" />
-          </button>
+      <div className="shrink-0 flex justify-center pb-6 px-4 md:px-6 lg:px-8">
+        <div className="flex items-center gap-2 md:gap-3 lg:gap-4 bg-white/90 backdrop-blur-md rounded-full px-6 md:px-8 lg:px-10 py-4 md:py-5 lg:py-6 border border-white/40 w-full max-w-2xl shadow-lg">
           <input
             type="text"
             value={message}
@@ -608,13 +660,8 @@ export default function ChatView({ onBack }: ChatViewProps) {
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
             placeholder="Pregunta lo que necesites..."
             className="flex-1 min-w-0 bg-transparent text-black placeholder-gray-500 focus:outline-none text-base md:text-lg lg:text-xl"
-            style={{
-              textOverflow: "ellipsis",
-            }}
+            style={{ textOverflow: "ellipsis" }}
           />
-          <button className="text-gray-400 hover:text-gray-600 cursor-pointer">
-            <Mic className="size-6 md:size-7 lg:size-8" />
-          </button>
           <button
             onClick={handleSend}
             className="text-[#ebb2f4] rounded-full transition-colors disabled:text-gray-400"
