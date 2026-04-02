@@ -8,7 +8,7 @@ export default function AuthSelectionPage() {
   const { navigateWithRestaurantId } = useNavigation();
 
   const handleSignUp = () => {
-    sessionStorage.setItem("signupFromCart", "true");
+    sessionStorage.setItem("authFromPaymentFlow", "true");
     navigateWithRestaurantId("/auth");
   };
 

@@ -17,19 +17,15 @@ export default function Home() {
 
     // Check if user just signed in/up and has context
     const storedRestaurant = sessionStorage.getItem("pendingRestaurantId");
-    const isFromPaymentFlow = sessionStorage.getItem("signupFromPaymentFlow");
-    const isFromPaymentSuccess = sessionStorage.getItem(
-      "signupFromPaymentSuccess"
-    );
-    const isFromMenu = sessionStorage.getItem("signInFromMenu");
+    const authFromPaymentFlow = sessionStorage.getItem("authFromPaymentFlow");
+    const authFromMenu = sessionStorage.getItem("authFromMenu");
 
     console.log("🔍 Root page debugging:", {
       isLoading,
       user,
       storedRestaurant,
-      isFromPaymentFlow,
-      isFromPaymentSuccess,
-      isFromMenu,
+      authFromPaymentFlow,
+      authFromMenu,
       currentPath: window.location.pathname,
     });
 
@@ -38,35 +34,27 @@ export default function Home() {
     const restaurantId =
       restaurantParam || storedRestaurant || DEFAULT_RESTAURANT_ID;
 
-    if (user && isFromMenu) {
+    if (user && authFromMenu) {
       // User signed in from MenuView settings, redirect to dashboard (Pick & Go - no table)
-      sessionStorage.removeItem("signInFromMenu");
+      sessionStorage.removeItem("authFromMenu");
       sessionStorage.removeItem("pendingTableRedirect");
       sessionStorage.removeItem("pendingRestaurantId");
       router.replace(`/${restaurantId}/dashboard`);
       return;
     }
 
-    if (user && isFromPaymentFlow) {
+    if (user && authFromPaymentFlow) {
       // User signed up during payment flow, redirect to payment-options with table
       sessionStorage.removeItem("pendingTableRedirect");
-      sessionStorage.removeItem("signupFromPaymentFlow");
+      sessionStorage.removeItem("authFromPaymentFlow");
       sessionStorage.removeItem("pendingRestaurantId");
       router.replace(`/${restaurantId}/payment-options`);
       return;
     }
 
-    if (user && isFromPaymentSuccess) {
-      // User signed up from payment-success, redirect to dashboard
-      sessionStorage.removeItem("signupFromPaymentSuccess");
-      sessionStorage.removeItem("pendingRestaurantId");
-      router.replace(`/${restaurantId}/dashboard`);
-      return;
-    }
-
     // Default redirect to restaurant 3 menu for Pick & Go (no table needed)
     console.log(
-      `✅ Default redirect to /${DEFAULT_RESTAURANT_ID}/menu (Pick & Go)`
+      `✅ Default redirect to /${DEFAULT_RESTAURANT_ID}/menu (Pick & Go)`,
     );
     router.replace(`/${DEFAULT_RESTAURANT_ID}/menu`);
   }, [router, searchParams, user, isLoading]);

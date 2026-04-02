@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft, Phone, User, ChevronDown } from "lucide-react";
 import Flag from "react-world-flags";
 import { authService } from "@/services/auth.service";
@@ -53,6 +53,7 @@ export default function AuthPage() {
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const authCompletedRef = useRef(false);
 
   // Formatear número de teléfono para mostrar
   const formatPhoneNumber = (phoneNumber: string) => {
@@ -126,34 +127,77 @@ export default function AuthPage() {
     }
   }, [countdown]);
 
+  // Clean up session storage when leaving page without completing auth
+  useEffect(() => {
+    const cleanup = () => {
+      if (!authCompletedRef.current) {
+        sessionStorage.removeItem("authFromPaymentFlow");
+        sessionStorage.removeItem("authFromMenu");
+        sessionStorage.removeItem("xquisito-post-auth-redirect");
+        sessionStorage.removeItem("pendingRestaurantId");
+      }
+    };
+
+    // Push a state to intercept back navigation (only if not already added)
+    if (!window.history.state?.xquisitoAuth) {
+      window.history.pushState({ xquisitoAuth: true }, "");
+    }
+
+    const handlePopState = () => {
+      cleanup();
+      // Remove listener to prevent loop, then complete the back navigation
+      window.removeEventListener("popstate", handlePopState);
+      // Check if there's history to go back to, otherwise go to menu
+      if (window.history.length > 2) {
+        window.history.back();
+      } else {
+        // No previous history, navigate to menu
+        router.replace(`/${restaurantId}/menu`);
+      }
+    };
+
+    // For browser back/forward navigation
+    window.addEventListener("popstate", handlePopState);
+    // For page unload (close tab, refresh)
+    window.addEventListener("beforeunload", cleanup);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("beforeunload", cleanup);
+    };
+  }, []);
+
   // Helper function to handle post-auth redirects
   const handleAuthRedirect = () => {
-    // Check for saved redirect URL (from payment-success modal)
-    const savedRedirect = sessionStorage.getItem("xquisito-post-auth-redirect");
+    // Mark auth as completed so cleanup doesn't remove session items
+    authCompletedRef.current = true;
 
-    if (savedRedirect) {
-      // Clear the saved redirect
+    const postAuthRedirect = sessionStorage.getItem(
+      "xquisito-post-auth-redirect",
+    );
+
+    if (postAuthRedirect) {
       sessionStorage.removeItem("xquisito-post-auth-redirect");
-
-      // Redirect to the saved URL
-      console.log("🔄 Redirecting to saved URL:", savedRedirect);
-      window.location.href = savedRedirect;
+      // Navigate directly to the saved URL
+      router.push(postAuthRedirect);
       return;
     }
 
-    const isFromCart = sessionStorage.getItem("signupFromCart");
-    const isFromMenu = sessionStorage.getItem("signInFromMenu");
+    const authFromPaymentFlow = sessionStorage.getItem("authFromPaymentFlow");
+    const authFromMenu = sessionStorage.getItem("authFromMenu");
 
     // Clear all session flags
-    sessionStorage.removeItem("signupFromCart");
-    sessionStorage.removeItem("signInFromMenu");
+    sessionStorage.removeItem("pendingRestaurantId");
+    sessionStorage.removeItem("authFromPaymentFlow");
+    sessionStorage.removeItem("authFromMenu");
+    sessionStorage.removeItem("xquisito-post-auth-redirect");
 
-    if (isFromCart) {
-      // User signed in/up from cart, redirect to card-selection
-      navigateWithRestaurantId("/card-selection");
-    } else if (isFromMenu) {
+    if (authFromMenu) {
       // User signed in from MenuView settings, redirect to dashboard
       navigateWithRestaurantId("/dashboard");
+    } else if (authFromPaymentFlow) {
+      // User signed up during payment flow, redirect to payment-options
+      navigateWithRestaurantId("/card-selection");
     } else {
       // Default redirect to menu
       navigateWithRestaurantId("/menu");
@@ -288,7 +332,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-new bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col justify-center items-center px-4">
+    <div className="min-h-new bg-linear-to-br from-[#0a8b9b] to-[#153f43] flex flex-col justify-center items-center px-4">
       {/* Back Button */}
       <button
         onClick={() => {
@@ -300,11 +344,15 @@ export default function AuthPage() {
             // Can't go back from profile, user is already authenticated
             return;
           } else {
+            sessionStorage.removeItem("authFromPaymentFlow");
+            sessionStorage.removeItem("authFromMenu");
+            sessionStorage.removeItem("xquisito-post-auth-redirect");
+            sessionStorage.removeItem("pendingRestaurantId");
             router.back();
           }
         }}
         disabled={step === "profile"}
-        className={`absolute top-4 md:top-6 lg:top-8 left-4 md:left-6 lg:left-8 p-2 md:p-3 text-white rounded-full transition-colors z-20 ${
+        className={`absolute top-4 md:top-6 lg:top-8 left-4 md:left-6 lg:left-8 p-2 md:p-3 text-white rounded-full transition-all active:bg-white/10 z-20 ${
           step === "profile"
             ? "opacity-50 cursor-not-allowed"
             : "hover:bg-white/10"
@@ -367,7 +415,7 @@ export default function AuthPage() {
                       />
                       <span className="text-sm">{countryCode}</span>
                     </div>
-                    <ChevronDown className="size-3 text-gray-500 flex-shrink-0" />
+                    <ChevronDown className="size-3 text-gray-500 shrink-0" />
                   </button>
 
                   {isDropdownOpen && (
@@ -548,7 +596,7 @@ export default function AuthPage() {
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
-                className="w-full px-3 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a8b9b] cursor-pointer"
+                className="h-[48px] w-full px-3 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a8b9b] cursor-pointer appearance-none"
                 disabled={loading}
                 required
               >

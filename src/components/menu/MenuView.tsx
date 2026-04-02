@@ -140,9 +140,8 @@ export default function MenuView() {
     if (isAuthenticated) {
       navigateWithRestaurantId("/dashboard");
     } else {
-      sessionStorage.removeItem("signupFromOrder");
-      sessionStorage.removeItem("signupFromPaymentFlow");
-      sessionStorage.setItem("signInFromMenu", "true");
+      sessionStorage.removeItem("authFromPaymentFlow");
+      sessionStorage.setItem("authFromMenu", "true");
       navigateWithRestaurantId("/auth");
     }
   };
