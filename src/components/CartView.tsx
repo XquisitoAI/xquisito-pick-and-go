@@ -14,11 +14,11 @@ export default function CartView() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOrder = async () => {
-    // Si el usuario está loggeado, ir directamente a card-selection
+    // Si el usuario está loggeado, ir a confirmar pedido
     if (!isLoading && user) {
       setIsSubmitting(true);
       try {
-        navigateWithRestaurantId("/card-selection");
+        navigateWithRestaurantId("/order-confirm");
       } catch (error) {
         console.error("Error navigating to payment:", error);
       } finally {

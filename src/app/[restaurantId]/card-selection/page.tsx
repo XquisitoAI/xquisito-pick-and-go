@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useNavigation } from "@/hooks/useNavigation";
 import { usePayment } from "@/context/PaymentContext";
@@ -15,22 +15,18 @@ import {
   Loader2,
   CircleAlert,
   X,
-  ChevronRight,
 } from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
 import { useBranch } from "@/context/BranchContext";
-import BranchSelectionModal from "@/components/modals/BranchSelectionModal";
 import Loader from "@/components/UI/Loader";
 import OrderAnimation from "@/components/UI/OrderAnimation";
 import { pickAndGoService } from "@/services/pickandgo.service";
 import { paymentService } from "@/services/payment.service";
 import { calculateCommissions } from "@/utils/commissionCalculator";
-import { restaurantService } from "@/services/restaurant.service";
-import { cartService } from "@/services/cart.service";
-import PickupTimeSelector from "@/components/UI/PickupTimeSelector";
 
 export default function CardSelectionPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const { setRestaurantId } = useRestaurant();
   const restaurantId = params?.restaurantId as string;
 
@@ -40,13 +36,16 @@ export default function CardSelectionPage() {
     }
   }, [restaurantId, setRestaurantId]);
 
-  const { state: cartState, clearCart, refreshCart } = useCart();
-  const { navigateWithRestaurantId, branchNumber, changeBranch } =
-    useNavigation();
+  // Tip y pickup time vienen de la página anterior vía URL params
+  const tipAmountFromParam = parseFloat(searchParams.get("tipAmount") || "0");
+  const scheduledPickupTime = searchParams.get("scheduledPickupTime") || null;
+
+  const { state: cartState, clearCart } = useCart();
+  const { navigateWithRestaurantId, branchNumber } = useNavigation();
   const { paymentMethods, deletePaymentMethod } = usePayment();
   const { user, profile } = useAuth();
   const { guestId } = useGuest();
-  const { branches, selectedBranchNumber, fetchBranches } = useBranch();
+  const { selectedBranchNumber } = useBranch();
 
   // Tarjeta por defecto del sistema para todos los usuarios
   const defaultSystemCard = {
@@ -65,40 +64,11 @@ export default function CardSelectionPage() {
   const baseAmount = cartState.totalPrice;
 
   // Validación de compra mínima
-  const MINIMUM_AMOUNT = 20; // Mínimo de compra requerido
+  const MINIMUM_AMOUNT = 20;
 
-  // Debug: Log cart state
-  useEffect(() => {
-    console.log("🛒 Cart state in card-selection:", {
-      items: cartState.items,
-      totalItems: cartState.totalItems,
-      totalPrice: cartState.totalPrice,
-      isLoading: cartState.isLoading,
-    });
-  }, [cartState]);
-
-  // Estados para propina
-  const [tipPercentage, setTipPercentage] = useState(0);
-  const [customTip, setCustomTip] = useState("");
   const [showTotalModal, setShowTotalModal] = useState(false);
-  const [showCustomTipInput, setShowCustomTipInput] = useState(false);
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
   const [selectedMSI, setSelectedMSI] = useState<number | null>(null);
-  const [showBranchModal, setShowBranchModal] = useState(false);
-  const [showBranchChangeConfirmModal, setShowBranchChangeConfirmModal] =
-    useState(false);
-  const [pendingBranchChange, setPendingBranchChange] = useState<number | null>(
-    null,
-  );
-  const [itemsToRemove, setItemsToRemove] = useState<typeof cartState.items>(
-    [],
-  );
-  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
-
-  // Estado para hora de recolección programada
-  const [scheduledPickupTime, setScheduledPickupTime] = useState<string | null>(
-    null,
-  );
 
   // Estados para tarjetas
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
@@ -116,15 +86,7 @@ export default function CardSelectionPage() {
   >([]);
   const [completedUserName, setCompletedUserName] = useState<string>("");
 
-  // Calcular propina
-  const calculateTipAmount = () => {
-    if (customTip && parseFloat(customTip) > 0) {
-      return parseFloat(customTip);
-    }
-    return (baseAmount * tipPercentage) / 100;
-  };
-
-  const tipAmount = calculateTipAmount();
+  const tipAmount = tipAmountFromParam;
 
   // Usar el calculador de comisiones centralizado
   const commissions = calculateCommissions(baseAmount, tipAmount);
@@ -142,16 +104,6 @@ export default function CardSelectionPage() {
     rates,
   } = commissions;
 
-  const handleTipPercentage = (percentage: number) => {
-    setTipPercentage(percentage);
-    setCustomTip("");
-  };
-
-  const handleCustomTipChange = (value: string) => {
-    setCustomTip(value);
-    setTipPercentage(0);
-  };
-
   // Set default payment method when payment methods are loaded
   useEffect(() => {
     // Siempre hay al menos la tarjeta del sistema disponible
@@ -167,22 +119,9 @@ export default function CardSelectionPage() {
     }
   }, [allPaymentMethods.length, selectedPaymentMethodId, cartState.isLoading]);
 
-  // Cargar branches cuando el restaurante esté disponible
-  useEffect(() => {
-    if (restaurantId) {
-      fetchBranches(parseInt(restaurantId));
-    }
-  }, [restaurantId, fetchBranches]);
-
   const handleInitiatePayment = (): void => {
     if (!selectedPaymentMethodId) {
       alert("Por favor selecciona una tarjeta de pago");
-      return;
-    }
-
-    if (branches.length > 1 && !selectedBranchNumber) {
-      alert("Por favor selecciona una sucursal");
-      setShowBranchModal(true);
       return;
     }
 
@@ -807,41 +746,6 @@ export default function CardSelectionPage() {
     }
   };
 
-  // Función para verificar disponibilidad de items en nueva sucursal
-  const checkItemsAvailability = async (newBranchNumber: number) => {
-    setIsCheckingAvailability(true);
-    try {
-      // Obtener el menú de la nueva sucursal
-      const menuData = await restaurantService.getRestaurantWithMenuByBranch(
-        parseInt(restaurantId),
-        newBranchNumber,
-      );
-
-      // Crear un Set con todos los menu_item_id disponibles en la nueva sucursal
-      const availableMenuItemIds = new Set<number>();
-      menuData.menu.forEach((section) => {
-        section.items.forEach((item) => {
-          availableMenuItemIds.add(item.id);
-        });
-      });
-
-      // Verificar qué items del carrito NO están disponibles
-      const unavailableItems = cartState.items.filter(
-        (cartItem) => !availableMenuItemIds.has(cartItem.id),
-      );
-
-      setItemsToRemove(unavailableItems);
-      return unavailableItems;
-    } catch (error) {
-      console.error("Error checking items availability:", error);
-      // En caso de error, asumir que todos los items están disponibles
-      setItemsToRemove([]);
-      return [];
-    } finally {
-      setIsCheckingAvailability(false);
-    }
-  };
-
   // Calcular el total a mostrar según la opción MSI seleccionada
   const getDisplayTotal = () => {
     if (selectedMSI === null) {
@@ -986,151 +890,38 @@ export default function CardSelectionPage() {
         />
       )}
 
-      <div className="h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col overflow-y-auto">
-        {/* Header */}
-        <MenuHeaderBack />
+      <div className="min-h-dvh bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
+        {/* Header fijo */}
+        <div className="fixed top-0 left-0 right-0 z-50">
+          <MenuHeaderBack />
+        </div>
+        <div className="h-20" />
 
-        <div className="w-full flex-1 flex flex-col justify-end">
-          <div className="w-full flex justify-center">
-            <div className="flex flex-col relative mx-4 w-full">
-              <div className="left-4 right-4 bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
-                <div className="py-6 px-8 flex flex-col justify-center">
-                  <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
-                    Selecciona tu método de pago
-                  </h1>
-                </div>
+        {/* Tarjeta anclada al fondo */}
+        <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
+          <div className="flex flex-col relative w-full">
+            <div className="bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
+              <div className="py-6 px-8 flex flex-col justify-center">
+                <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
+                  Selecciona tu método de pago
+                </h1>
               </div>
+            </div>
 
-              <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8">
-                {/* Sucursal seleccionada */}
-                {branches.length > 0 && (
-                  <div
-                    className={`mb-4 flex items-center justify-between w-full ${branches.length > 1 ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
-                    onClick={() =>
-                      branches.length > 1 && setShowBranchModal(true)
-                    }
-                  >
-                    {selectedBranchNumber ? (
-                      <p className="text-gray-600 text-base">
-                        Sucursal:{" "}
-                        <span className="font-medium text-black">
-                          {branches.find(
-                            (b) => b.branch_number === selectedBranchNumber,
-                          )?.name || "Principal"}
-                        </span>
-                      </p>
-                    ) : (
-                      <p className="text-gray-600 text-sm md:text-base font-medium">
-                        Selecciona una sucursal
-                      </p>
-                    )}
-                    {branches.length > 1 && (
-                      <ChevronRight className="size-4 md:size-5 text-gray-600 flex-shrink-0" />
-                    )}
+            <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8 overflow-y-auto max-h-[calc(100dvh-8rem)]">
+                {/* Resumen compacto del pedido */}
+                <div className="bg-gray-50 rounded-2xl px-5 py-4 mb-6 space-y-2">
+                  <div className="flex justify-between items-center text-sm text-gray-600">
+                    <span>Subtotal</span>
+                    <span>${baseAmount.toFixed(2)} MXN</span>
                   </div>
-                )}
-                {/* Selector de hora de recolección */}
-                <PickupTimeSelector
-                  selectedTime={scheduledPickupTime}
-                  onTimeChange={setScheduledPickupTime}
-                  estimatedMinutes={25}
-                />
-
-                {/* Resumen del pedido */}
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-black font-medium">Subtotal</span>
-                    <span className="text-black font-medium">
-                      ${baseAmount.toFixed(2)} MXN
-                    </span>
-                  </div>
-                </div>
-
-                {/* Selección de propina */}
-                <div className="mb-4">
-                  {/* Propina label y botones de porcentaje */}
-                  <div className="flex items-center gap-4 mb-3">
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl whitespace-nowrap">
-                      Propina
-                    </span>
-                    {/* Tip Percentage Buttons */}
-                    <div className="grid grid-cols-5 gap-2 flex-1">
-                      {[0, 10, 15, 20].map((percentage) => (
-                        <button
-                          key={percentage}
-                          onClick={() => {
-                            handleTipPercentage(percentage);
-                            setShowCustomTipInput(false);
-                          }}
-                          className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-[#8e8e8e]/40 text-black transition-colors cursor-pointer ${
-                            tipPercentage === percentage && !showCustomTipInput
-                              ? "bg-[#eab3f4] text-white"
-                              : "bg-[#f9f9f9] hover:border-gray-400"
-                          }`}
-                        >
-                          {percentage === 0 ? "0%" : `${percentage}%`}
-                        </button>
-                      ))}
-                      {/* Custom Tip Button */}
-                      <button
-                        onClick={() => {
-                          setShowCustomTipInput(true);
-                          setTipPercentage(0);
-                        }}
-                        className={`py-1 md:py-1.5 lg:py-2 rounded-full border border-[#8e8e8e]/40 text-black transition-colors cursor-pointer ${
-                          showCustomTipInput
-                            ? "bg-[#eab3f4] text-white"
-                            : "bg-[#f9f9f9] hover:border-gray-400"
-                        }`}
-                      >
-                        $
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Custom Tip Input - Solo se muestra cuando showCustomTipInput es true */}
-                  {showCustomTipInput && (
-                    <div className="flex flex-col gap-2 mb-3">
-                      <div className="relative w-full">
-                        <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black text-sm">
-                          $
-                        </span>
-                        <input
-                          type="number"
-                          value={customTip}
-                          onChange={(e) =>
-                            handleCustomTipChange(e.target.value)
-                          }
-                          placeholder="0.00"
-                          step="0.01"
-                          min="0"
-                          autoFocus
-                          className="w-full pl-8 pr-4 py-1 md:py-1.5 lg:py-2 border border-[#8e8e8e]/40 rounded-full focus:outline-none focus:ring focus:ring-gray-400 focus:border-transparent text-black text-center bg-[#f9f9f9] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                        />
-                      </div>
-                    </div>
-                  )}
-
                   {tipAmount > 0 && (
-                    <div className="flex justify-end items-center mt-2 text-sm">
-                      <span className="text-[#eab3f4] font-medium">
-                        +${tipAmount.toFixed(2)} MXN
-                      </span>
+                    <div className="flex justify-between items-center text-sm text-gray-600">
+                      <span>Propina</span>
+                      <span>${tipAmount.toFixed(2)} MXN</span>
                     </div>
                   )}
                 </div>
-
-                {/* Alerta de mínimo de compra */}
-                {isUnderMinimum && totalAmount > 0 && (
-                  <div className="bg-gradient-to-br from-red-50 to-red-100 px-6 py-3 -mx-8  rounded-lg">
-                    <div className="flex justify-center items-center gap-3">
-                      <X className="size-6 text-red-500 flex-shrink-0" />
-                      <p className="text-red-700 font-medium text-base md:text-lg">
-                        ¡El mínimo de compra es de ${MINIMUM_AMOUNT.toFixed(2)}!
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 {/* Comisión e IVA */}
                 <div className="space-y-2 mb-4">
@@ -1266,17 +1057,9 @@ export default function CardSelectionPage() {
                 {/* Botón de pago */}
                 <button
                   onClick={handleInitiatePayment}
-                  disabled={
-                    isProcessing ||
-                    !selectedPaymentMethodId ||
-                    (branches.length > 1 && !selectedBranchNumber) ||
-                    isUnderMinimum
-                  }
+                  disabled={isProcessing || !selectedPaymentMethodId}
                   className={`w-full text-white py-3 rounded-full cursor-pointer transition-all active:scale-90 ${
-                    isProcessing ||
-                    !selectedPaymentMethodId ||
-                    (branches.length > 1 && !selectedBranchNumber) ||
-                    isUnderMinimum
+                    isProcessing || !selectedPaymentMethodId
                       ? "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
                       : "bg-gradient-to-r from-[#34808C] to-[#173E44]"
                   }`}
@@ -1288,13 +1071,10 @@ export default function CardSelectionPage() {
                     </div>
                   ) : !selectedPaymentMethodId ? (
                     "Selecciona una tarjeta"
-                  ) : branches.length > 1 && !selectedBranchNumber ? (
-                    "Selecciona una sucursal"
                   ) : (
                     "Pagar y ordenar"
                   )}
                 </button>
-              </div>
             </div>
           </div>
         </div>
@@ -1549,188 +1329,6 @@ export default function CardSelectionPage() {
           </div>
         )}
 
-        {/* Modal de confirmación de cambio de sucursal */}
-        {showBranchChangeConfirmModal && (
-          <div
-            className="fixed inset-0 flex items-end justify-center"
-            style={{ zIndex: 99999 }}
-          >
-            {/* Fondo */}
-            <div
-              className="absolute inset-0 bg-black/40"
-              onClick={() => {
-                if (!isCheckingAvailability) {
-                  setShowBranchChangeConfirmModal(false);
-                  setPendingBranchChange(null);
-                  setItemsToRemove([]);
-                }
-              }}
-            ></div>
-
-            {/* Modal */}
-            <div className="relative bg-white rounded-t-4xl w-full mx-4">
-              {isCheckingAvailability ? (
-                <div className="px-6 py-8 text-center">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3 text-teal-600" />
-                  <p className="text-gray-600 text-base">
-                    Verificando disponibilidad...
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* Content */}
-                  <div className="px-6 py-4">
-                    {itemsToRemove.length > 0 ? (
-                      <>
-                        <p className="text-gray-600 text-base mb-4">
-                          Los siguientes items no están disponibles en la nueva
-                          sucursal y serán eliminados del carrito:
-                        </p>
-                        <div className="bg-red-50 rounded-lg p-4 mb-4 max-h-48 overflow-y-auto">
-                          <ul className="space-y-2 text-left">
-                            {itemsToRemove.map((item) => (
-                              <li
-                                key={item.cartItemId || item.id}
-                                className="flex items-start gap-2 text-sm"
-                              >
-                                <X className="size-4 text-red-500 flex-shrink-0 mt-0.5" />
-                                <div className="flex-1">
-                                  <p className="font-medium text-gray-900">
-                                    {item.name}
-                                  </p>
-                                  <p className="text-gray-600 text-xs">
-                                    Cantidad: {item.quantity}
-                                  </p>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <p className="text-gray-600 text-sm mb-4">
-                          Los demás items se mantendrán en tu carrito.
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-gray-600 text-base mb-4">
-                        Todos los items de tu carrito están disponibles en la
-                        nueva sucursal.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Footer con botones */}
-                  <div className="px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white">
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => {
-                          setShowBranchChangeConfirmModal(false);
-                          setPendingBranchChange(null);
-                          setItemsToRemove([]);
-                        }}
-                        className="flex-1 py-3 px-4 border border-gray-300 rounded-full text-black font-medium hover:bg-gray-50 transition-colors"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        onClick={async () => {
-                          if (pendingBranchChange !== null) {
-                            try {
-                              setIsCheckingAvailability(true);
-
-                              // 1. Actualizar el branch_number en el cartService (en memoria)
-                              //cartService.setBranchNumber(pendingBranchChange);
-
-                              // 2. Eliminar solo los items no disponibles
-                              for (const item of itemsToRemove) {
-                                if (item.cartItemId) {
-                                  try {
-                                    await cartService.removeFromCart(
-                                      item.cartItemId,
-                                    );
-                                  } catch (error) {
-                                    console.error(
-                                      "Error removing unavailable item:",
-                                      error,
-                                    );
-                                  }
-                                }
-                              }
-
-                              // 3. Actualizar el branch_number en la base de datos
-                              /*
-                            const updateResult =
-                              await cartService.updateCartBranch(
-                                pendingBranchChange
-                              );
-
-                            if (updateResult.success) {
-                              console.log(
-                                `✅ Cart branch updated in DB: ${updateResult.data?.items_updated || 0} items updated`
-                              );
-                            } else {
-                              console.error(
-                                "⚠️ Error updating cart branch in DB:",
-                                updateResult.error
-                              );
-                            }*/
-
-                              // 4. Cambiar la sucursal
-                              changeBranch(pendingBranchChange);
-
-                              // 5. Refrescar el carrito
-                              await refreshCart();
-
-                              // 6. Cerrar modales y limpiar estados
-                              setIsCheckingAvailability(false);
-                              setShowBranchChangeConfirmModal(false);
-                              setShowBranchModal(false);
-                              setPendingBranchChange(null);
-                              setItemsToRemove([]);
-                            } catch (error) {
-                              console.error(
-                                "Error during branch change:",
-                                error,
-                              );
-                              setIsCheckingAvailability(false);
-                              alert(
-                                "Hubo un error al cambiar de sucursal. Por favor intenta de nuevo.",
-                              );
-                            }
-                          }
-                        }}
-                        className="flex-1 py-3 px-4 bg-gradient-to-r from-[#34808C] to-[#173E44] rounded-full text-white font-medium hover:opacity-90 transition-opacity"
-                      >
-                        Continuar
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Modal de selección de sucursal */}
-        <BranchSelectionModal
-          isOpen={showBranchModal}
-          onClose={() => setShowBranchModal(false)}
-          onBranchChangeRequested={async (newBranchNumber) => {
-            // Guardar el cambio pendiente
-            setPendingBranchChange(newBranchNumber);
-
-            // Cerrar el modal de selección
-            setShowBranchModal(false);
-
-            // Mostrar modal de confirmación con loading
-            setShowBranchChangeConfirmModal(true);
-            setIsCheckingAvailability(true);
-
-            // Verificar disponibilidad de items
-            await checkItemsAvailability(newBranchNumber);
-
-            // El loading se apaga en checkItemsAvailability
-          }}
-        />
       </div>
     </>
   );
