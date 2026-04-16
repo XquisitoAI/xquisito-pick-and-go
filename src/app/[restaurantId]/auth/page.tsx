@@ -196,8 +196,8 @@ export default function AuthPage() {
       // User signed in from MenuView settings, redirect to dashboard
       navigateWithRestaurantId("/dashboard");
     } else if (authFromPaymentFlow) {
-      // User signed up during payment flow, redirect to payment-options
-      navigateWithRestaurantId("/card-selection");
+      // User signed up during payment flow, redirect to order confirmation
+      navigateWithRestaurantId("/order-confirm");
     } else {
       // Default redirect to menu
       navigateWithRestaurantId("/menu");

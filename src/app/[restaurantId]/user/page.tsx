@@ -68,8 +68,8 @@ export default function UserPage() {
         setOrderUserName(userName.trim());
         // Guardar el nombre del usuario en el contexto del carrito
         setCartUserName(userName.trim());
-        // Navegar a card-selection
-        navigateWithRestaurantId("/card-selection");
+        // Navegar a confirmar pedido
+        navigateWithRestaurantId("/order-confirm");
       } catch (error) {
         console.error("Error submitting order:", error);
         // Si hay error, ocultar la animación

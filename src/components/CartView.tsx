@@ -14,11 +14,11 @@ export default function CartView() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOrder = async () => {
-    // Si el usuario está loggeado, ir directamente a card-selection
+    // Si el usuario está loggeado, ir a confirmar pedido
     if (!isLoading && user) {
       setIsSubmitting(true);
       try {
-        navigateWithRestaurantId("/card-selection");
+        navigateWithRestaurantId("/order-confirm");
       } catch (error) {
         console.error("Error navigating to payment:", error);
       } finally {
@@ -154,7 +154,7 @@ export default function CartView() {
                               <p className="text-base md:text-lg lg:text-xl text-black">
                                 $
                                 {(item.price + (item.extraPrice || 0)).toFixed(
-                                  2
+                                  2,
                                 )}
                               </p>
                             </div>
@@ -176,7 +176,10 @@ export default function CartView() {
                       placeholder="Alergias, instrucciones especiales, comentarios..."
                       onFocus={(e) => {
                         setTimeout(() => {
-                          e.target.scrollIntoView({ behavior: "smooth", block: "center" });
+                          e.target.scrollIntoView({
+                            behavior: "smooth",
+                            block: "center",
+                          });
                         }, 300);
                       }}
                     ></textarea>
