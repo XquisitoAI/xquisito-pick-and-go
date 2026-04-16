@@ -9,14 +9,16 @@ export function middleware(request: NextRequest) {
     "https://xquisito-backend-production.up.railway.app";
   const isDev = process.env.NODE_ENV === "development";
   const devUrls = isDev ? " http://localhost:5000 ws://localhost:5000" : "";
+  const backendHost = backendUrl.replace(/https?:\/\//, "");
+  const wsProtocol = isDev ? "ws" : "wss";
 
   const cspHeader = `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}';
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: blob: ${backendUrl} https://*.supabase.co;
-    font-src 'self';
-    connect-src 'self' ${backendUrl} wss://${backendUrl.replace("https://", "")}${devUrls};
+    font-src 'self' https://applepay.cdn-apple.com;
+    connect-src 'self' ${backendUrl} ${wsProtocol}://${backendHost} https://*.ecartpay.com https://checkoutdev.ecartpay.com;
     frame-src 'none';
     object-src 'none';
     base-uri 'self';
@@ -46,7 +48,7 @@ export function middleware(request: NextRequest) {
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=()",
+    "camera=(), microphone=(), geolocation=()",
   );
   response.headers.set("X-DNS-Prefetch-Control", "off");
   response.headers.set("X-Permitted-Cross-Domain-Policies", "none");

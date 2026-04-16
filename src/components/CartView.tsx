@@ -121,14 +121,21 @@ export default function CartView() {
                                   <div className="text-xs md:text-sm lg:text-base text-gray-400 space-y-0.5">
                                     {item.customFields.map((field, idx) => (
                                       <div key={idx}>
-                                        {field.selectedOptions
-                                          .filter((opt) => opt.price > 0)
-                                          .map((opt, optIdx) => (
+                                        {field.selectedOptions.map(
+                                          (opt, optIdx) => (
                                             <p key={optIdx}>
-                                              {opt.optionName} $
-                                              {opt.price.toFixed(2)}
+                                              {optIdx === 0 &&
+                                                (opt.quantity ?? 0) > 1 && (
+                                                  <span className="ml-1">
+                                                    x{item.quantity}
+                                                  </span>
+                                                )}{" "}
+                                              {opt.optionName}
+                                              {opt.price > 0 &&
+                                                ` $${opt.price.toFixed(2)}`}
                                             </p>
-                                          ))}
+                                          ),
+                                        )}
                                       </div>
                                     ))}
                                   </div>

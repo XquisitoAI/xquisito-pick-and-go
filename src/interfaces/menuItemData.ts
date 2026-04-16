@@ -46,6 +46,7 @@ export interface MenuItemData {
       optionId: string;
       optionName: string;
       price: number;
+      quantity: number;
     }>;
   }>;
   extraPrice?: number;

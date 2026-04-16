@@ -17,12 +17,14 @@ import OrderAnimation from "@/components/UI/OrderAnimation";
 import { pickAndGoService } from "@/services/pickandgo.service";
 import { paymentService } from "@/services/payment.service";
 import { calculateCommissions } from "@/utils/commissionCalculator";
+import { usePaymentProvider } from "@/hooks/usePaymentProvider";
 
 export default function CardSelectionPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { setRestaurantId } = useRestaurant();
   const restaurantId = params?.restaurantId as string;
+  const { provider, isLoadingProvider } = usePaymentProvider(restaurantId);
 
   useEffect(() => {
     if (restaurantId && !isNaN(parseInt(restaurantId))) {
@@ -121,6 +123,33 @@ export default function CardSelectionPage() {
 
   // Cargar el SDK de Ecart Pay para Apple Pay
   useEffect(() => {
+    if (!isLoadingProvider) {
+      console.log(
+        `[PaymentProvider] Proveedor activo: ${provider ?? "null"} (restaurantId: ${restaurantId})`,
+      );
+      if (provider === "clip") {
+        console.warn(
+          "[PaymentProvider] Clip seleccionado — flujo no implementado aún, usando eCartPay como fallback",
+        );
+      }
+    }
+  }, [provider, isLoadingProvider, restaurantId]);
+
+  // Verificar soporte de Apple Pay y cargar el SDK solo si aplica
+  useEffect(() => {
+    if (isLoadingProvider) return; // esperar a que se resuelva el proveedor
+
+    // Apple Pay solo aplica cuando el proveedor es eCartPay (o null como fallback)
+    if (provider !== null && provider !== "ecartpay") return;
+
+    const ApplePaySession = (window as any).ApplePaySession;
+    if (!ApplePaySession || !ApplePaySession.canMakePayments?.()) {
+      // Dispositivo/navegador no soporta Apple Pay — mantener oculto
+      return;
+    }
+
+    // Dispositivo compatible y proveedor es eCartPay — revelar sección y cargar SDK
+    setApplePayUnavailable(false);
     const src =
       process.env.NEXT_PUBLIC_ENV === "production"
         ? "https://ecartpay.com/sdk/pay.js"
@@ -131,7 +160,7 @@ export default function CardSelectionPage() {
       script.async = true;
       document.head.appendChild(script);
     }
-  }, []);
+  }, [provider, isLoadingProvider]);
 
   const handleInitiatePayment = (): void => {
     if (!selectedPaymentMethodId) {
@@ -168,7 +197,8 @@ export default function CardSelectionPage() {
         restaurantId: restaurantId?.toString(),
       });
 
-      if (!orderResult.success || !orderResult.data?.orderId) {
+      const appleOrderId = (orderResult as any).orderId ?? orderResult.data?.orderId;
+      if (!orderResult.success || !appleOrderId) {
         console.warn("⚠️ Apple Pay: no se pudo crear la orden", orderResult);
         return;
       }
@@ -179,46 +209,46 @@ export default function CardSelectionPage() {
         return;
       }
 
-      applePaySDK
-        .create({
-          container: "#apple-pay-container",
-          orderId: orderResult.data.orderId,
-          amount: totalAmount,
-          currency: "MXN",
-          countryCode: "MX",
-          supportedNetworks: ["visa", "masterCard", "amex"],
-          merchantCapabilities: ["supports3DS"],
-          buttonStyle: "black",
-          buttonType: "pay",
-        })
-        .on("ready", () => {
-          console.log("✅ Apple Pay botón listo");
-          setApplePayReady(true);
-        })
-        .on("unavailable", () => {
-          console.log("ℹ️ Apple Pay no disponible en este dispositivo/cuenta");
-          setApplePayUnavailable(true);
-        })
-        .on("cancel", () => {
-          console.log("🚫 Apple Pay cancelado por el usuario");
-          setIsApplePayProcessing(false);
-        })
-        .on("error", (err: any) => {
-          console.error("❌ Apple Pay error:", err);
-          setIsApplePayProcessing(false);
-        })
-        .on("success", async () => {
-          console.log("💳 Apple Pay: pago autorizado");
-          const applePayId = `apple-pay-${Date.now()}`;
-          setApplePayPaymentId(applePayId);
-          setIsApplePayProcessing(true);
-          // Guardar datos antes de mostrar animación
-          setCompletedOrderItems([...cartState.items]);
-          const userName =
-            profile?.firstName || cartState.userName || "Usuario";
-          setCompletedUserName(userName);
-          setShowAnimation(true);
-        });
+      // Register listeners before render (SDK dispatches to window, not returned object)
+      applePaySDK.on("ready", () => {
+        console.log("✅ Apple Pay botón listo");
+        setApplePayReady(true);
+      });
+      applePaySDK.on("unavailable", () => {
+        console.log("ℹ️ Apple Pay no disponible en este dispositivo/cuenta");
+        setApplePayUnavailable(true);
+      });
+      applePaySDK.on("cancel", () => {
+        console.log("🚫 Apple Pay cancelado por el usuario");
+        setIsApplePayProcessing(false);
+      });
+      applePaySDK.on("error", (err: any) => {
+        console.error("❌ Apple Pay error:", err);
+        setIsApplePayProcessing(false);
+        setApplePayUnavailable(true);
+      });
+      applePaySDK.on("success", async () => {
+        console.log("💳 Apple Pay: pago autorizado");
+        const applePayId = `apple-pay-${Date.now()}`;
+        setApplePayPaymentId(applePayId);
+        setIsApplePayProcessing(true);
+        setCompletedOrderItems([...cartState.items]);
+        const userName = profile?.firstName || cartState.userName || "Usuario";
+        setCompletedUserName(userName);
+        setShowAnimation(true);
+      });
+
+      applePaySDK.render({
+        container: "#apple-pay-container",
+        orderId: appleOrderId,
+        amount: totalAmount,
+        currency: "MXN",
+        countryCode: "MX",
+        supportedNetworks: ["visa", "masterCard", "amex"],
+        merchantCapabilities: ["supports3DS"],
+        buttonStyle: "black",
+        buttonType: "pay",
+      });
     } catch (err) {
       console.error("❌ Error inicializando Apple Pay:", err);
     }
@@ -883,7 +913,7 @@ export default function CardSelectionPage() {
   // Calcular si está bajo el mínimo usando el total con propina, comisiones, etc.
   const isUnderMinimum = totalAmount < MINIMUM_AMOUNT;
 
-  if (isLoadingInitial) {
+  if (isLoadingInitial || isLoadingProvider) {
     return <Loader />;
   }
 

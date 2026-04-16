@@ -656,8 +656,34 @@ export default function PaymentSuccessPage() {
                           <p className="text-white font-medium text-base md:text-lg lg:text-xl">
                             {dish.quantity}x {dish.item}
                           </p>
+                          {dish.custom_fields &&
+                            dish.custom_fields.length > 0 && (
+                              <div className="text-xs md:text-sm text-white/60 space-y-0.5 mt-0.5">
+                                {dish.custom_fields.map(
+                                  (field: any, idx: number) => (
+                                    <div key={idx}>
+                                      {field.selectedOptions.map(
+                                        (opt: any, optIdx: number) => (
+                                          <p key={optIdx}>
+                                            {optIdx === 0 &&
+                                              (opt.quantity ?? 0) > 1 && (
+                                                <span className="mr-1">
+                                                  x{dish.quantity}
+                                                </span>
+                                              )}
+                                            {opt.optionName}
+                                            {opt.price > 0 &&
+                                              ` $${opt.price.toFixed(2)}`}
+                                          </p>
+                                        ),
+                                      )}
+                                    </div>
+                                  ),
+                                )}
+                              </div>
+                            )}
                           {dish.guest_name && (
-                            <p className="text-xs md:text-sm lg:text-base text-white/60 uppercase">
+                            <p className="text-xs md:text-sm lg:text-base font-semibold text-white/80 uppercase">
                               {dish.guest_name}
                             </p>
                           )}
