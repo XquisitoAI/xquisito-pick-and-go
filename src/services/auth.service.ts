@@ -362,12 +362,14 @@ class AuthService {
       // Limpiar localStorage
       localStorage.removeItem("xquisito_access_token");
       localStorage.removeItem("xquisito_refresh_token");
+      localStorage.removeItem("xquisito_expires_at");
       localStorage.removeItem("xquisito_user");
     } catch (error) {
       console.error("Error logging out:", error);
       // Limpiar localStorage de todos modos
       localStorage.removeItem("xquisito_access_token");
       localStorage.removeItem("xquisito_refresh_token");
+      localStorage.removeItem("xquisito_expires_at");
       localStorage.removeItem("xquisito_user");
     }
   }

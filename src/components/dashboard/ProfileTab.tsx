@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { authService } from "@/services/auth.service";
 import { useAuth } from "@/context/AuthContext";
 import { User, Camera, Loader2, Phone, X, LogOut, LogIn } from "lucide-react";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -12,9 +11,15 @@ interface ProfileTabProps {
 
 export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
   const { navigateWithRestaurantId } = useNavigation();
-  const { logout: contextLogout } = useAuth();
+  const {
+    user,
+    profile,
+    isLoading,
+    logout: contextLogout,
+    refreshProfile,
+    updateProfile,
+  } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(true);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -22,7 +27,7 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const isAuthenticated = !!user;
 
   // Formatear número de teléfono
   const formatPhoneNumber = (phoneNumber: string) => {
@@ -46,57 +51,27 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
     return phoneNumber;
   };
 
-  // Load profile data from AuthContext
+  // Sincronizar campos con el profile del AuthContext
   useEffect(() => {
-    const loadUserData = async () => {
-      setIsLoadingData(true);
-
-      const currentUser = authService.getCurrentUser();
-
-      if (!currentUser) {
-        setIsAuthenticated(false);
-        setIsLoadingData(false);
-        return;
-      }
-
-      setIsAuthenticated(true);
-
-      try {
-        const response = await authService.getMyProfile();
-        console.log("📊 getMyProfile response:", response);
-
-        // El backend puede devolver data.data.profile o data.profile
-        const responseData = (response as any).data;
-        const profileData =
-          responseData?.data?.profile || responseData?.profile;
-
-        if (response.success && profileData) {
-          console.log("✅ Profile data loaded:", profileData);
-          setFirstName(profileData.firstName || "");
-          setLastName(profileData.lastName || "");
-          setPhone(profileData.phone || "");
-          setBirthDate(profileData.birthDate || "");
-          setGender(profileData.gender || "");
-          setPhotoUrl(profileData.photoUrl || "");
-        } else {
-          console.warn("⚠️ No profile data in response:", response);
-        }
-      } catch (error) {
-        console.error("❌ Error loading user data:", error);
-      } finally {
-        setIsLoadingData(false);
-      }
-    };
-
-    loadUserData();
-  }, []);
+    if (profile) {
+      setFirstName(profile.firstName || "");
+      setLastName(profile.lastName || "");
+      setPhone(profile.phone || "");
+      setBirthDate(profile.birthDate || "");
+      setGender(profile.gender || "");
+      setPhotoUrl(profile.photoUrl || "");
+    } else if (!isLoading && user) {
+      // Usuario autenticado pero sin perfil - intentar cargar de nuevo
+      refreshProfile();
+    }
+  }, [profile, isLoading, user]);
 
   const handleUpdateProfile = async () => {
     if (!isAuthenticated) return;
 
     setIsUpdating(true);
     try {
-      const response = await authService.updateMyProfile({
+      const response = await updateProfile({
         firstName,
         lastName,
         birthDate: birthDate || undefined,
@@ -187,7 +162,7 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
     }
   };
 
-  if (isLoadingData) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12 md:py-16 lg:py-20">
         <Loader2 className="size-8 md:size-10 lg:size-12 animate-spin text-teal-600" />
