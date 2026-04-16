@@ -96,13 +96,16 @@ export default function CartView() {
                               <div className="size-16 md:size-20 lg:size-24 bg-gray-300 rounded-sm md:rounded-md flex items-center justify-center hover:scale-105 transition-transform duration-200">
                                 {item.images && item.images.length > 0 ? (
                                   <img
-                                    src={item.images[0]}
+                                    src={
+                                      item.images[0] ||
+                                      "/logos/logo-short-green.webp"
+                                    }
                                     alt="Dish preview"
                                     className="w-full h-full object-cover rounded-sm md:rounded-md"
                                   />
                                 ) : (
                                   <img
-                                    src={"/logos/logo-short-green.webp"}
+                                    src="/logos/logo-short-green.webp"
                                     alt="Logo Xquisito"
                                     className="size-18 md:size-20 lg:size-22 object-contain"
                                   />
