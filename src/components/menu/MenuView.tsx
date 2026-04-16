@@ -6,8 +6,8 @@ import {
   Search,
   ShoppingCart,
   Settings,
-  ReceiptText,
   X,
+  UserCircle,
   Utensils,
   RefreshCw,
   Loader2,
@@ -307,12 +307,24 @@ export default function MenuView() {
             {/* Settings Icon */}
             <div
               onClick={handleSettingsClick}
-              className="bg-white rounded-full p-1.5 md:p-2 lg:p-2.5 border border-gray-400 shadow-sm cursor-pointer hover:bg-gray-50 transition-all active:scale-90"
+              className="bg-white rounded-full border border-gray-400 shadow-sm cursor-pointer hover:bg-gray-50 transition-all active:scale-95 size-9 md:size-10 lg:size-12 overflow-hidden flex items-center justify-center"
             >
-              <Settings
-                className="size-5 md:size-6 lg:size-7 text-stone-800"
-                strokeWidth={1.5}
-              />
+              {isAuthenticated && profile?.photoUrl ? (
+                <img
+                  src={profile.photoUrl}
+                  alt="Perfil"
+                  className="w-full h-full object-cover"
+                />
+              ) : isAuthenticated && profile?.firstName ? (
+                <span className="text-stone-800 font-semibold text-base md:text-lg lg:text-xl select-none">
+                  {profile.firstName.charAt(0).toUpperCase()}
+                </span>
+              ) : (
+                <UserCircle
+                  className="size-6 md:size-7 lg:size-8 text-stone-500"
+                  strokeWidth={1.2}
+                />
+              )}
             </div>
 
             {/* Assistent Icon */}
@@ -626,12 +638,24 @@ export default function MenuView() {
           {/* Settings */}
           <div
             onClick={handleSettingsClick}
-            className="size-11 md:size-12 rounded-full flex items-center justify-center bg-white/60 border border-gray-200 cursor-pointer hover:bg-white transition-colors active:scale-95"
+            className="size-11 md:size-12 rounded-full overflow-hidden flex items-center justify-center bg-white/60 border border-gray-200 cursor-pointer hover:bg-white transition-colors active:scale-95"
           >
-            <Settings
-              className="size-5 md:size-6 text-stone-700"
-              strokeWidth={1.5}
-            />
+            {isAuthenticated && profile?.photoUrl ? (
+              <img
+                src={profile.photoUrl}
+                alt="Perfil"
+                className="w-full h-full object-cover"
+              />
+            ) : isAuthenticated && profile?.firstName ? (
+              <span className="text-stone-700 font-semibold text-base md:text-lg select-none">
+                {profile.firstName.charAt(0).toUpperCase()}
+              </span>
+            ) : (
+              <UserCircle
+                className="size-6 md:size-7 text-stone-500"
+                strokeWidth={1.2}
+              />
+            )}
           </div>
 
           {/* Carrito */}
