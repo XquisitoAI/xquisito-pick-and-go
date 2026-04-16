@@ -9,7 +9,7 @@ import {
 class PaymentService {
   private async request<T>(
     endpoint: string,
-    options?: RequestInit
+    options?: RequestInit,
   ): Promise<ApiResponse<T>> {
     return await requestWithAuth<T>(endpoint, options);
   }
@@ -18,7 +18,7 @@ class PaymentService {
    * Añadir método de pago
    */
   async addPaymentMethod(
-    paymentData: AddPaymentMethodRequest
+    paymentData: AddPaymentMethodRequest,
   ): Promise<ApiResponse<{ paymentMethod: PaymentMethod }>> {
     return this.request("/payment-methods", {
       method: "POST",
@@ -41,7 +41,7 @@ class PaymentService {
    * Eliminar método de pago
    */
   async deletePaymentMethod(
-    paymentMethodId: string
+    paymentMethodId: string,
   ): Promise<ApiResponse<{ message: string }>> {
     return this.request(`/payment-methods/${paymentMethodId}`, {
       method: "DELETE",
@@ -52,7 +52,7 @@ class PaymentService {
    * Establecer método de pago como predeterminado
    */
   async setDefaultPaymentMethod(
-    paymentMethodId: string
+    paymentMethodId: string,
   ): Promise<ApiResponse<{ message: string }>> {
     return this.request(`/payment-methods/${paymentMethodId}/default`, {
       method: "PUT",
@@ -63,7 +63,7 @@ class PaymentService {
    * Procesar pago
    */
   async processPayment(
-    paymentData: ProcessPaymentRequest
+    paymentData: ProcessPaymentRequest,
   ): Promise<ApiResponse<any>> {
     return this.request("/payments", {
       method: "POST",
@@ -85,7 +85,7 @@ class PaymentService {
    */
   async payDishOrder(
     dishId: string,
-    paymentMethodId?: string | null
+    paymentMethodId?: string | null,
   ): Promise<ApiResponse<any>> {
     return this.request(`/dishes/${dishId}/pay`, {
       method: "POST",
@@ -99,7 +99,7 @@ class PaymentService {
   async payPickAndGoOrder(
     orderId: string,
     paymentMethodId?: string | null,
-    amount?: number
+    amount?: number,
   ): Promise<ApiResponse<any>> {
     return this.request(`/pick-and-go/orders/${orderId}/pay`, {
       method: "POST",
@@ -107,11 +107,23 @@ class PaymentService {
     });
   }
 
+  // Crea una orden en Ecart Pay para Apple Pay y regresa el orderId
+  async createApplePayOrder(params: {
+    amount: number;
+    currency: string;
+    tableNumber?: string;
+    restaurantId?: string;
+  }): Promise<ApiResponse<{ orderId: string }>> {
+    return this.request("/payments/apple-pay/order", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
   /**
    * Migrar métodos de pago de guest a usuario autenticado
    */
   async migrateGuestPaymentMethods(
-    guestId: string
+    guestId: string,
   ): Promise<ApiResponse<{ migratedCount: number }>> {
     return this.request("/payment-methods/migrate-from-guest", {
       method: "POST",

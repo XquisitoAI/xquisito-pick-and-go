@@ -5,7 +5,7 @@ import { useCart } from "@/context/CartContext";
 import { useNavigation } from "@/hooks/useNavigation";
 import { usePayment } from "@/context/PaymentContext";
 import { useRestaurant } from "@/context/RestaurantContext";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useGuest } from "@/context/GuestContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
@@ -63,6 +63,12 @@ export default function CardSelectionPage() {
   const [showTotalModal, setShowTotalModal] = useState(false);
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
   const [selectedMSI, setSelectedMSI] = useState<number | null>(null);
+  const [applePayReady, setApplePayReady] = useState(false);
+  const [applePayUnavailable, setApplePayUnavailable] = useState(false);
+  const [isApplePayProcessing, setIsApplePayProcessing] = useState(false);
+  const [applePayPaymentId, setApplePayPaymentId] = useState<string | null>(
+    null,
+  );
 
   // Estados para tarjetas
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
@@ -113,6 +119,20 @@ export default function CardSelectionPage() {
     }
   }, [allPaymentMethods.length, selectedPaymentMethodId, cartState.isLoading]);
 
+  // Cargar el SDK de Ecart Pay para Apple Pay
+  useEffect(() => {
+    const src =
+      process.env.NEXT_PUBLIC_ENV === "production"
+        ? "https://ecartpay.com/sdk/pay.js"
+        : "https://sandbox.ecartpay.com/sdk/pay.js";
+    if (!document.querySelector(`script[src="${src}"]`)) {
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }, []);
+
   const handleInitiatePayment = (): void => {
     if (!selectedPaymentMethodId) {
       alert("Por favor selecciona una tarjeta de pago");
@@ -134,6 +154,81 @@ export default function CardSelectionPage() {
     setCompletedOrderItems([]);
     setCompletedUserName("");
   };
+
+  // Inicializar Apple Pay SDK cuando los datos estén listos
+  const initApplePay = useCallback(async () => {
+    if (typeof window === "undefined" || !totalAmount) return;
+
+    try {
+      // Crear orden en Ecart Pay para obtener orderId
+      const orderResult = await paymentService.createApplePayOrder({
+        amount: totalAmount,
+        currency: "MXN",
+        tableNumber: undefined, // Pick & Go no tiene número de mesa
+        restaurantId: restaurantId?.toString(),
+      });
+
+      if (!orderResult.success || !orderResult.data?.orderId) {
+        console.warn("⚠️ Apple Pay: no se pudo crear la orden", orderResult);
+        return;
+      }
+
+      const applePaySDK = (window as any).Pay?.ApplePay;
+      if (!applePaySDK) {
+        console.warn("⚠️ Apple Pay SDK no disponible en window.Pay.ApplePay");
+        return;
+      }
+
+      applePaySDK
+        .create({
+          container: "#apple-pay-container",
+          orderId: orderResult.data.orderId,
+          amount: totalAmount,
+          currency: "MXN",
+          countryCode: "MX",
+          supportedNetworks: ["visa", "masterCard", "amex"],
+          merchantCapabilities: ["supports3DS"],
+          buttonStyle: "black",
+          buttonType: "pay",
+        })
+        .on("ready", () => {
+          console.log("✅ Apple Pay botón listo");
+          setApplePayReady(true);
+        })
+        .on("unavailable", () => {
+          console.log("ℹ️ Apple Pay no disponible en este dispositivo/cuenta");
+          setApplePayUnavailable(true);
+        })
+        .on("cancel", () => {
+          console.log("🚫 Apple Pay cancelado por el usuario");
+          setIsApplePayProcessing(false);
+        })
+        .on("error", (err: any) => {
+          console.error("❌ Apple Pay error:", err);
+          setIsApplePayProcessing(false);
+        })
+        .on("success", async () => {
+          console.log("💳 Apple Pay: pago autorizado");
+          const applePayId = `apple-pay-${Date.now()}`;
+          setApplePayPaymentId(applePayId);
+          setIsApplePayProcessing(true);
+          // Guardar datos antes de mostrar animación
+          setCompletedOrderItems([...cartState.items]);
+          const userName =
+            profile?.firstName || cartState.userName || "Usuario";
+          setCompletedUserName(userName);
+          setShowAnimation(true);
+        });
+    } catch (err) {
+      console.error("❌ Error inicializando Apple Pay:", err);
+    }
+  }, [totalAmount, restaurantId, cartState.items, cartState.userName, profile]);
+
+  useEffect(() => {
+    if (!isLoadingInitial && totalAmount > 0) {
+      initApplePay();
+    }
+  }, [isLoadingInitial, totalAmount, initApplePay]);
 
   const handleConfirmPayment = async (): Promise<void> => {
     // Esta función se ejecuta después de que expira el período de cancelación
@@ -978,7 +1073,7 @@ export default function CardSelectionPage() {
               </div>
 
               {/* Métodos de pago guardados - Mostrar siempre (incluye tarjeta del sistema) */}
-              <div className="mb-4">
+              <div className="mb-2.5">
                 <h3 className="text-black font-medium mb-3">Métodos de pago</h3>
                 <div className="space-y-2.5">
                   {allPaymentMethods.map((method) => (
@@ -1032,11 +1127,24 @@ export default function CardSelectionPage() {
                       )}
                     </div>
                   ))}
+
+                  {/* Apple Pay Button */}
+                  {!applePayUnavailable && (
+                    <div>
+                      <div id="apple-pay-container" className="w-full" />
+                      {!applePayReady && (
+                        <div className="border border-white/50 flex justify-center items-center gap-1 w-full text-black py-3 rounded-full bg-black text-base md:text-lg lg:text-xl">
+                          {/*<Loader2 className="size-4 animate-spin" />*/}
+                          <img src="" className="h-6" />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Botón agregar tarjeta */}
-              <div className="mb-4">
+              <div className="mb-2.5">
                 <button
                   onClick={handleAddCard}
                   className="border border-black/50 flex justify-center items-center gap-1 w-full text-black py-3 rounded-full cursor-pointer transition-colors bg-[#f9f9f9] hover:bg-gray-100"
