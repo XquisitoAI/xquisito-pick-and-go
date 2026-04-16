@@ -120,7 +120,7 @@ function convertApiItemToCartItem(apiItem: ApiCartItem): CartItem {
 // Contexto del carrito con funciones
 interface CartContextType {
   state: CartState;
-  addItem: (item: MenuItemData) => Promise<void>;
+  addItem: (item: MenuItemData, quantity?: number) => Promise<void>;
   removeItem: (itemId: number) => Promise<void>;
   updateQuantity: (itemId: number, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -134,7 +134,11 @@ const CartContext = createContext<CartContextType | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const { user, isLoading: authLoading } = useAuth();
-  const { guestId, restaurantId: guestRestaurantId, branchNumber: guestBranchNumber } = useGuest();
+  const {
+    guestId,
+    restaurantId: guestRestaurantId,
+    branchNumber: guestBranchNumber,
+  } = useGuest();
   const { restaurantId } = useRestaurant();
 
   // Establecer user_id y restaurant_id en cartService cuando cambien
@@ -184,20 +188,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
           try {
             const response = await cartService.migrateGuestCart(
               storedGuestId,
-              user.id
+              user.id,
             );
             console.log("📦 Migration response:", response);
 
             if (response.success && response.data) {
               console.log(
-                `✅ Cart migrated successfully: ${response.data.items_migrated || 0} items`
+                `✅ Cart migrated successfully: ${response.data.items_migrated || 0} items`,
               );
 
               // IMPORTANT: DO NOT remove guest-id immediately
               // It's needed for payment methods migration which happens in PaymentContext
               // The guest-id will be removed by PaymentContext after all migrations complete
               console.log(
-                "ℹ️ Cart migration completed - preserving guest-id for payment methods migration"
+                "ℹ️ Cart migration completed - preserving guest-id for payment methods migration",
               );
 
               // Refrescar el carrito después de la migración
@@ -205,7 +209,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             } else {
               console.warn(
                 "⚠️ Migration completed but no data returned:",
-                response
+                response,
               );
             }
           } catch (error) {
@@ -219,7 +223,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     migrateCartIfNeeded();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, authLoading, restaurantId, guestRestaurantId, guestBranchNumber]);
+  }, [
+    user?.id,
+    authLoading,
+    restaurantId,
+    guestRestaurantId,
+    guestBranchNumber,
+  ]);
 
   // Función para refrescar el carrito desde el backend
   const refreshCart = async () => {
@@ -248,7 +258,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   // Agregar item al carrito
-  const addItem = async (item: MenuItemData) => {
+  const addItem = async (item: MenuItemData, quantity: number = 1) => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
 
@@ -257,7 +267,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         1,
         item.customFields || [],
         item.extraPrice || 0,
-        item.price // Pasar el precio base (ya con descuento aplicado si lo hay)
+        item.price, // Pasar el precio base (ya con descuento aplicado si lo hay)
       );
 
       if (response.success) {
@@ -315,7 +325,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       const response = await cartService.updateCartItemQuantity(
         item.cartItemId,
-        quantity
+        quantity,
       );
 
       if (response.success) {

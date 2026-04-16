@@ -8,7 +8,6 @@ import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { ChevronDown, X, Home } from "lucide-react";
 import MenuHeaderDish from "@/components/headers/MenuHeaderDish";
-import Loader from "@/components/UI/Loader";
 import RestaurantClosedModal from "@/components/RestaurantClosedModal";
 import {
   MenuItem as MenuItemDB,
@@ -21,6 +20,7 @@ import {
   ReviewStats,
 } from "@/services/reviews.service";
 import { useAuth } from "@/context/AuthContext";
+import Loader from "@/components/UI/Loader";
 
 export default function DishDetailPage() {
   const params = useParams();
@@ -33,9 +33,10 @@ export default function DishDetailPage() {
   const { navigateWithRestaurantId } = useNavigation();
   const { restaurant, menu, loading, isOpen } = useRestaurant();
   const [localQuantity, setLocalQuantity] = useState(0);
+  const [dishQuantity, setDishQuantity] = useState(1);
   const [isPulsing, setIsPulsing] = useState(false);
   const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>(
-    {}
+    {},
   );
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState(0);
@@ -240,7 +241,7 @@ export default function DishDetailPage() {
   const handleCheckboxChange = (
     fieldId: string,
     optionId: string,
-    field?: CustomField
+    field?: CustomField,
   ) => {
     setCustomFieldSelections((prev) => {
       const current = (prev[fieldId] as string[]) || [];
@@ -259,7 +260,7 @@ export default function DishDetailPage() {
       if (current.length >= maxSelections) {
         // Mostrar feedback visual o sonoro si se excede el límite
         console.log(
-          `Máximo ${maxSelections} opción${maxSelections > 1 ? "es" : ""} permitida${maxSelections > 1 ? "s" : ""}`
+          `Máximo ${maxSelections} opción${maxSelections > 1 ? "es" : ""} permitida${maxSelections > 1 ? "s" : ""}`,
         );
         return prev; // No agregar la nueva selección
       }
@@ -275,7 +276,7 @@ export default function DishDetailPage() {
   const handleQuantityChange = (
     fieldId: string,
     optionId: string,
-    quantity: number
+    quantity: number,
   ) => {
     setCustomFieldSelections((prev) => {
       const current = (prev[fieldId] as Record<string, number>) || {};
@@ -313,7 +314,7 @@ export default function DishDetailPage() {
     if (distance > 0) {
       // Swipe left - siguiente imagen
       setCurrentImageIndex((prev) =>
-        prev < dishData.dish.images.length - 1 ? prev + 1 : prev
+        prev < dishData.dish.images.length - 1 ? prev + 1 : prev,
       );
     } else {
       // Swipe right - imagen anterior
@@ -373,7 +374,7 @@ export default function DishDetailPage() {
       const response = await reviewsService.getMyReview(
         dishId,
         userId,
-        guestId
+        guestId,
       );
       console.log("My review response:", response);
 
@@ -425,7 +426,7 @@ export default function DishDetailPage() {
           myReview.id,
           reviewRating,
           userId,
-          guestId
+          guestId,
         );
       } else {
         response = await reviewsService.createReview({
@@ -603,12 +604,12 @@ export default function DishDetailPage() {
           sum +
           field.selectedOptions.reduce(
             (s, opt) => s + opt.price * (opt.quantity || 1),
-            0
+            0,
           ),
-        0
+        0,
       ) || 0;
 
-    setLocalQuantity((prev) => prev + 1);
+    setLocalQuantity((prev) => prev + dishQuantity);
     setIsPulsing(true);
 
     const itemToAdd = {
@@ -618,7 +619,7 @@ export default function DishDetailPage() {
       extraPrice,
     };
 
-    await addItem(itemToAdd);
+    await addItem(itemToAdd, dishQuantity);
 
     // Guardar en localStorage como el último item agregado
     const lastItemKey = `lastItem_${dishData.dish.id}`;
@@ -710,12 +711,12 @@ export default function DishDetailPage() {
           sum +
           field.selectedOptions.reduce(
             (s, opt) => s + opt.price * (opt.quantity || 1),
-            0
+            0,
           ),
-        0
+        0,
       ) || 0;
 
-    setLocalQuantity((prev) => prev + 1);
+    setLocalQuantity((prev) => prev + dishQuantity);
     setIsPulsing(true);
 
     const itemToAdd = {
@@ -725,7 +726,7 @@ export default function DishDetailPage() {
       extraPrice,
     };
 
-    await addItem(itemToAdd);
+    await addItem(itemToAdd, dishQuantity);
 
     // Guardar en localStorage como el último item agregado
     const lastItemKey = `lastItem_${dishData.dish.id}`;
@@ -743,7 +744,7 @@ export default function DishDetailPage() {
     setLocalQuantity((prev) => Math.max(0, prev - 1));
 
     const cartItem = cartState.items.find(
-      (cartItem) => cartItem.id === dishData.dish.id
+      (cartItem) => cartItem.id === dishData.dish.id,
     );
     if (cartItem) {
       await updateQuantity(dishData.dish.id, cartItem.quantity - 1);
@@ -1046,7 +1047,7 @@ export default function DishDetailPage() {
                                 ] as string[] | undefined;
                                 if (selection && selection.length > 0) {
                                   const selectedOption = field.options?.find(
-                                    (opt) => opt.id === selection[0]
+                                    (opt) => opt.id === selection[0],
                                   );
                                   return (
                                     <span className="text-black text-sm md:text-base mt-1">
@@ -1080,7 +1081,7 @@ export default function DishDetailPage() {
 
                               if (isValidQuantitySelection) {
                                 const totalQuantity = Object.values(
-                                  quantitySelection as Record<string, number>
+                                  quantitySelection as Record<string, number>,
                                 ).reduce((sum, qty) => sum + qty, 0);
                                 if (totalQuantity > 0) {
                                   return (
@@ -1103,7 +1104,7 @@ export default function DishDetailPage() {
                                   Array.isArray(quantitySelection) ||
                                   typeof quantitySelection !== "object" ||
                                   Object.keys(
-                                    quantitySelection as Record<string, number>
+                                    quantitySelection as Record<string, number>,
                                   ).length === 0);
 
                               if (shouldShowPlaceholder) {
@@ -1232,7 +1233,7 @@ export default function DishDetailPage() {
                                           handleQuantityChange(
                                             field.id,
                                             option.id,
-                                            Math.max(0, currentQuantity - 1)
+                                            Math.max(0, currentQuantity - 1),
                                           )
                                         }
                                         className="w-8 h-8 md:w-9 md:h-9 bg-[#f9f9f9] hover:bg-[#eab3f4]/20 rounded-full flex items-center justify-center border border-[#8e8e8e]/50 transition-colors duration-200"
@@ -1250,7 +1251,7 @@ export default function DishDetailPage() {
                                           handleQuantityChange(
                                             field.id,
                                             option.id,
-                                            currentQuantity + 1
+                                            currentQuantity + 1,
                                           )
                                         }
                                         className="w-8 h-8 md:w-9 md:h-9 bg-[#f9f9f9] hover:bg-[#eab3f4]/20 rounded-full flex items-center justify-center border border-[#8e8e8e]/50 transition-colors duration-200"
@@ -1267,15 +1268,15 @@ export default function DishDetailPage() {
                           )}
                         {field.type === "checkboxes" && field.options && (
                           <div>
-                            <div className="divide-y divide-[8e8e8e]">
-                              {field.options.map((option) => {
+                            <div className="bg-white rounded-lg border border-[#8e8e8e]/30 shadow-lg overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                              {field.options.map((option, index) => {
                                 const currentSelections =
                                   (customFieldSelections[
                                     field.id
                                   ] as string[]) || [];
                                 const maxSelections = field.maxSelections || 1;
                                 const isSelected = currentSelections.includes(
-                                  option.id
+                                  option.id,
                                 );
                                 const isDisabled =
                                   !isSelected &&
@@ -1284,11 +1285,13 @@ export default function DishDetailPage() {
                                 return (
                                   <label
                                     key={option.id}
-                                    className={`flex items-center justify-between gap-2 md:gap-3 py-6 md:py-7 ${
+                                    className={`flex items-center justify-between gap-2 md:gap-3 py-4 md:py-5 px-4 md:px-6 hover:bg-[#f9f9f9] transition-colors duration-200 ${
+                                      isSelected ? "bg-[#eab3f4]/10" : ""
+                                    } ${
                                       isDisabled
                                         ? "cursor-not-allowed opacity-50"
                                         : "cursor-pointer"
-                                    }`}
+                                    } ${index !== (field.options?.length ?? 0) - 1 ? "border-b border-[#8e8e8e]/20" : ""}`}
                                   >
                                     <div className="flex flex-col">
                                       <span className="text-black text-base md:text-lg lg:text-xl">
@@ -1308,7 +1311,7 @@ export default function DishDetailPage() {
                                         handleCheckboxChange(
                                           field.id,
                                           option.id,
-                                          field
+                                          field,
                                         )
                                       }
                                       className="mycheckbox md:scale-125 lg:scale-150"
@@ -1339,18 +1342,46 @@ export default function DishDetailPage() {
               ></textarea>
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 mx-4 md:mx-6 lg:mx-8 px-6 md:px-8 lg:px-10 p-6 md:p-7 lg:p-8 z-10">
+            <div
+              className="fixed bottom-0 left-0 right-0 z-10 flex items-center gap-3 px-4 md:px-6 lg:px-8 pt-4 md:pt-5"
+              style={{
+                paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+                background: "rgba(255, 255, 255, 0.75)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
+              }}
+            >
+              {/* Contador - 1 + */}
+              <div className="flex items-center bg-white border border-gray-300 rounded-2xl shadow-sm shrink-0">
+                <button
+                  onClick={() => setDishQuantity((q) => Math.max(1, q - 1))}
+                  className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-black text-xl font-light cursor-pointer active:scale-90 transition-transform"
+                >
+                  −
+                </button>
+                <span className="w-8 text-center text-base md:text-lg font-medium text-black select-none">
+                  {dishQuantity}
+                </span>
+                <button
+                  onClick={() => setDishQuantity((q) => q + 1)}
+                  className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-black text-xl font-light cursor-pointer active:scale-90 transition-transform"
+                >
+                  +
+                </button>
+              </div>
+
+              {/* Botón agregar */}
               <button
                 onClick={handleAddToCartAndReturn}
                 disabled={!isFormValid()}
-                className={`w-full text-white py-4 md:py-5 lg:py-6 rounded-full transition-all flex items-center justify-center gap-2 ${
+                className={`flex-1 text-white py-3.5 md:py-4 lg:py-5 rounded-2xl transition-colors flex items-center justify-center ${
                   isFormValid()
-                    ? "bg-gradient-to-r from-[#34808C] to-[#173E44] cursor-pointer animate-pulse-button active:scale-95"
+                    ? "bg-gradient-to-r from-[#34808C] to-[#173E44] cursor-pointer active:scale-95 transition-transform"
                     : "bg-gray-400 cursor-not-allowed opacity-60"
                 }`}
               >
-                <span className="text-base md:text-lg lg:text-xl font-medium">
-                  Agregar al carrito • ${calculateTotalPrice().toFixed(2)} MXN
+                <span className="text-base md:text-lg font-medium">
+                  Agregar • ${(calculateTotalPrice() * dishQuantity).toFixed(2)}
                 </span>
               </button>
             </div>
