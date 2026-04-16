@@ -101,6 +101,7 @@ export interface CreateDishOrderRequest {
   customFields?: Record<string, any>;
   extraPrice?: number;
   pickAndGoOrderId?: string;
+  menuItemId: string;
 }
 
 export interface ActiveOrderResponse {

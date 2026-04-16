@@ -35,9 +35,9 @@ export default function DashboardView({
   // Loading state
   if (isLoading) {
     <div
-      className={`flex flex-col ${onClose ? "h-full" : "h-dvh bg-gradient-to-br from-[#0a8b9b] to-[#153f43]"}`}
+      className={`flex flex-col overflow-y-auto ${onClose ? "h-full" : "h-dvh bg-gradient-to-br from-[#0a8b9b] to-[#153f43]"}`}
     >
-      <div className="flex-1 flex flex-col items-center justify-center px-5 md:px-8 lg:px-10 pb-12 md:py-10 lg:py-12">
+      <div className="flex-1 flex flex-col overflow-y-auto items-center justify-center px-5 md:px-8 lg:px-10 pb-12 md:py-10 lg:py-12">
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="mb-6 md:mb-8 lg:mb-10 text-center">
@@ -178,7 +178,7 @@ export default function DashboardView({
 
   return (
     <div
-      className={`flex flex-col overflow-hidden ${onClose ? "h-full" : "h-dvh bg-gradient-to-br from-[#0a8b9b] to-[#153f43]"}`}
+      className={`flex flex-col overflow-y-auto ${onClose ? "h-full" : "h-dvh bg-gradient-to-br from-[#0a8b9b] to-[#153f43]"}`}
     >
       <DashboardHeader onClose={onClose} />
 
@@ -196,7 +196,7 @@ export default function DashboardView({
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col">
           <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-7 lg:px-8 min-h-0">
             {/* Tabs */}
             <div className="relative grid grid-cols-4 gap-2 my-6 md:my-7 lg:my-8 w-full">
@@ -261,7 +261,7 @@ export default function DashboardView({
 
             {/* Tab Content */}
             <div
-              className={`flex-1 flex flex-col pb-6 overflow-y-scroll min-h-0 ${activeTab === "support" || activeTab === "cards" ? "relative" : ""}`}
+              className={`flex-1 flex flex-col overflow-y-auto pb-6 min-h-0 ${activeTab === "support" || activeTab === "cards" ? "relative" : ""}`}
             >
               {activeTab === "profile" && <ProfileTab onLogout={onLogout} />}
               {activeTab === "cards" && <CardsTab />}

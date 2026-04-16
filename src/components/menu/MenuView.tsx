@@ -6,13 +6,14 @@ import {
   Search,
   ShoppingCart,
   Settings,
-  ChevronRight,
+  ReceiptText,
   X,
+  Utensils,
   RefreshCw,
   Loader2,
-  Utensils,
+  ChevronRight,
 } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
@@ -44,6 +45,10 @@ export default function MenuView() {
   const { guestId } = useGuest();
   const [showPepperChat, setShowPepperChat] = useState(false);
   const [isPepperClosing, setIsPepperClosing] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [isSettingsClosing, setIsSettingsClosing] = useState(false);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const stickyTriggerRef = useRef<HTMLDivElement>(null);
 
   const closePepperChat = () => {
     setIsPepperClosing(true);
@@ -52,18 +57,33 @@ export default function MenuView() {
       setIsPepperClosing(false);
     }, 380);
   };
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [isSettingsClosing, setIsSettingsClosing] = useState(false);
 
   // Bloquear scroll del body cuando el modal está abierto
   useEffect(() => {
     if (showPepperChat || showSettingsModal) {
+      // Bloquear scroll en body para móviles
+      const scrollY = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
       document.body.style.overflow = "hidden";
     } else {
+      // Restaurar scroll
+      const scrollY = parseInt(document.body.style.top || "0") * -1;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
       document.body.style.overflow = "";
+      window.scrollTo(0, scrollY);
     }
     return () => {
+      // Restaurar scroll
+      const scrollY = parseInt(document.body.style.top || "0") * -1;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
       document.body.style.overflow = "";
+      window.scrollTo(0, scrollY);
     };
   }, [showPepperChat, showSettingsModal]);
 
@@ -175,6 +195,18 @@ export default function MenuView() {
     }
   }, [branchNumber, selectedBranchNumber]);
 
+  // Mostrar barra sticky al hacer scroll past el trigger
+  useEffect(() => {
+    const trigger = stickyTriggerRef.current;
+    if (!trigger) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { threshold: 0 },
+    );
+    observer.observe(trigger);
+    return () => observer.disconnect();
+  }, []);
+
   // Obtener categorías únicas del menú de la BD
   const categorias = useMemo(() => {
     const categories = ["Todo"];
@@ -266,6 +298,11 @@ export default function MenuView() {
 
       <main className="mt-[9rem] md:mt-64 lg:mt-80 relative z-10">
         <div className="bg-white rounded-t-4xl flex flex-col items-center px-6 md:px-8 lg:px-10">
+          {/* Trigger invisible para IntersectionObserver */}
+          <div
+            ref={stickyTriggerRef}
+            className="absolute top-0 h-px w-px pointer-events-none"
+          />
           <div className="mt-6 md:mt-8 flex items-start justify-between w-full">
             {/* Settings Icon */}
             <div
@@ -569,6 +606,72 @@ export default function MenuView() {
         </div>
       )}
 
+      {/* Sticky Bar — aparece al hacer scroll down */}
+      <div
+        className="fixed top-0 inset-x-0 z-40 flex justify-center px-4 pt-4 pb-3"
+        style={{
+          opacity: showStickyBar ? 1 : 0,
+          transition: "opacity 120ms ease",
+          pointerEvents: showStickyBar ? "auto" : "none",
+        }}
+      >
+        <div
+          className="flex items-center gap-4 md:gap-5 rounded-full px-6 md:px-7 py-3 md:py-3.5 shadow-lg border border-white/40"
+          style={{
+            background: "rgba(255, 255, 255, 0.82)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+          }}
+        >
+          {/* Settings */}
+          <div
+            onClick={handleSettingsClick}
+            className="size-11 md:size-12 rounded-full flex items-center justify-center bg-white/60 border border-gray-200 cursor-pointer hover:bg-white transition-colors active:scale-95"
+          >
+            <Settings
+              className="size-5 md:size-6 text-stone-700"
+              strokeWidth={1.5}
+            />
+          </div>
+
+          {/* Carrito */}
+          <div className="relative group">
+            <div
+              onClick={handleCartClick}
+              className="size-11 md:size-12 rounded-full flex items-center justify-center bg-white/60 border border-gray-200 cursor-pointer hover:bg-white transition-colors active:scale-95"
+            >
+              <ShoppingCart
+                className="size-5 md:size-6 text-stone-700"
+                strokeWidth={1.5}
+              />
+            </div>
+            {state.totalItems > 0 && (
+              <div className="absolute -top-1 -right-1 bg-[#eab3f4] text-white rounded-full size-5 flex items-center justify-center text-xs font-normal">
+                {state.totalItems}
+              </div>
+            )}
+          </div>
+
+          {/* Pepper */}
+          <div
+            onClick={handlePepperClick}
+            className="size-11 md:size-12 rounded-full border border-gray-200 bg-white/60 cursor-pointer overflow-hidden hover:bg-white transition-colors active:scale-95"
+          >
+            <video
+              src="/videos/video-icon-pepper.webm"
+              autoPlay
+              loop
+              muted
+              playsInline
+              disablePictureInPicture
+              controls={false}
+              controlsList="nodownload nofullscreen noremoteplayback"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Pepper Chat Modal */}
       {showPepperChat && (
         <>
@@ -617,7 +720,7 @@ export default function MenuView() {
             onClick={closeSettingsModal}
           />
           <div
-            className="fixed inset-x-0 z-50 flex flex-col rounded-t-3xl overflow-hidden shadow-2xl border-t border-white/20"
+            className="fixed inset-x-0 z-50 flex flex-col rounded-t-3xl shadow-2xl border-t border-white/20"
             style={{
               top: "5%",
               bottom: 0,
@@ -635,7 +738,7 @@ export default function MenuView() {
               <div className="w-10 h-1 rounded-full bg-white/30" />
             </div>
             {isAuthenticated ? (
-              <div className="flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 min-h-0">
                 <DashboardView
                   onClose={closeSettingsModal}
                   onLogout={closeSettingsModal}

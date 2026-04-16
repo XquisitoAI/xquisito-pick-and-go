@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2, ChevronRight, X, Calendar, Utensils } from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
@@ -73,7 +74,7 @@ export default function HistoryTab() {
   };
 
   // Bloquear scroll cuando el modal está abierto
-  useEffect(() => {
+  /*useEffect(() => {
     if (selectedOrderDetails) {
       // Bloquear scroll en body y html para móviles
       const scrollY = window.scrollY;
@@ -93,7 +94,7 @@ export default function HistoryTab() {
         window.scrollTo(0, scrollY);
       };
     }
-  }, [selectedOrderDetails]);
+  }, [selectedOrderDetails]);*/
 
   useEffect(() => {
     const fetchOrderHistory = async () => {
@@ -240,12 +241,14 @@ export default function HistoryTab() {
                       }`}
                     >
                       {order.orderType === "tap-order-and-pay"
-                        ? "Pick & Go"
-                        : order.orderType === "room-service"
-                          ? "Room Service"
-                          : order.orderType === "tap-and-pay"
-                            ? "Tap & Pay"
-                            : "Flex Bill"}
+                        ? "Tap Order & Pay"
+                        : order.orderType === "pick-and-go"
+                          ? "Pick & Go"
+                          : order.orderType === "room-service"
+                            ? "Room Service"
+                            : order.orderType === "tap-and-pay"
+                              ? "Tap & Pay"
+                              : "Flex Bill"}
                     </span>
                   </div>*/}
                   <ChevronRight className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-gray-400 shrink-0" />
@@ -267,184 +270,186 @@ export default function HistoryTab() {
       )}
 
       {/* Modal */}
-      {selectedOrderDetails && (
-        <div
-          className="fixed inset-0 bg-black/25 backdrop-blur-xs z-999 flex items-center justify-center"
-          onClick={() => {
-            setSelectedOrderDetails(null);
-          }}
-        >
+      {selectedOrderDetails &&
+        createPortal(
           <div
-            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 max-h-[85vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 bg-black/25 backdrop-blur-xs z-9999 flex items-center justify-center"
+            onClick={() => {
+              setSelectedOrderDetails(null);
+            }}
           >
-            {/* Header - Fixed */}
-            <div className="shrink-0">
-              <div className="w-full flex justify-end">
-                <button
-                  onClick={() => {
-                    setSelectedOrderDetails(null);
-                  }}
-                  className="p-2 md:p-3 lg:p-4 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors justify-end flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
-                >
-                  <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
-                </button>
-              </div>
-              <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-4 md:mb-5 lg:mb-6">
-                <div className="flex flex-col justify-center items-center gap-3 md:gap-4 lg:gap-5">
-                  {selectedOrderDetails.restaurantLogo ? (
-                    <img
-                      src={selectedOrderDetails.restaurantLogo}
-                      alt={selectedOrderDetails.restaurantName}
-                      className="size-20 md:size-24 lg:size-28 object-cover rounded-lg md:rounded-xl"
-                    />
-                  ) : (
-                    <div className="size-20 md:size-24 lg:size-28 bg-teal-100 rounded-lg md:rounded-xl flex items-center justify-center">
-                      <span className="text-2xl md:text-3xl lg:text-4xl">
-                        🍽️
+            <div
+              className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-999 max-h-[72vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header - Fixed */}
+              <div className="shrink-0">
+                <div className="w-full flex justify-end">
+                  <button
+                    onClick={() => {
+                      setSelectedOrderDetails(null);
+                    }}
+                    className="p-2 md:p-3 lg:p-4 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors justify-end flex items-end mt-3 md:mt-4 lg:mt-5 mr-3 md:mr-4 lg:mr-5"
+                  >
+                    <X className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
+                  </button>
+                </div>
+                <div className="px-6 md:px-8 lg:px-10 flex items-center justify-center mb-4 md:mb-5 lg:mb-6">
+                  <div className="flex flex-col justify-center items-center gap-3 md:gap-4 lg:gap-5">
+                    {selectedOrderDetails.restaurantLogo ? (
+                      <img
+                        src={selectedOrderDetails.restaurantLogo}
+                        alt={selectedOrderDetails.restaurantName}
+                        className="size-20 md:size-24 lg:size-28 object-cover rounded-lg md:rounded-xl"
+                      />
+                    ) : (
+                      <div className="size-20 md:size-24 lg:size-28 bg-teal-100 rounded-lg md:rounded-xl flex items-center justify-center">
+                        <span className="text-2xl md:text-3xl lg:text-4xl">
+                          🍽️
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex flex-col items-center justify-center">
+                      <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold">
+                        {selectedOrderDetails.restaurantName}
+                      </h2>
+                      {selectedOrderDetails.orderType === "room-service" ? (
+                        <p className="text-sm md:text-base lg:text-lg text-white/80">
+                          Habitación {selectedOrderDetails.roomNumber}
+                        </p>
+                      ) : selectedOrderDetails.orderType !== "pick-and-go" ? (
+                        <p className="text-sm md:text-base lg:text-lg text-white/80">
+                          Mesa {selectedOrderDetails.tableNumber}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Order Info - Fixed */}
+                <div className="px-6 md:px-8 lg:px-10 border-t border-white/20 pt-4 md:pt-5 lg:pt-6 pb-4 md:pb-5 lg:pb-6">
+                  <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white mb-3 md:mb-4 lg:mb-5">
+                    Tu orden
+                  </h3>
+                  <div className="space-y-2 md:space-y-3 lg:space-y-4">
+                    <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
+                      <div className="bg-blue-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                        <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-blue-600" />
+                      </div>
+                      <span className="text-sm md:text-base lg:text-lg">
+                        {new Date(selectedOrderDetails.tableOrderDate)
+                          .toLocaleDateString("es-MX", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "2-digit",
+                          })
+                          .replace(/\//g, "/")}
                       </span>
                     </div>
-                  )}
-                  <div className="flex flex-col items-center justify-center">
-                    <h2 className="text-xl md:text-2xl lg:text-3xl text-white font-bold">
-                      {selectedOrderDetails.restaurantName}
-                    </h2>
                     {selectedOrderDetails.orderType === "room-service" ? (
-                      <p className="text-sm md:text-base lg:text-lg text-white/80">
-                        Habitación {selectedOrderDetails.roomNumber}
-                      </p>
+                      <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
+                        <div className="bg-orange-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                          <Utensils className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-orange-600" />
+                        </div>
+                        <span className="text-sm md:text-base lg:text-lg">
+                          Habitación {selectedOrderDetails.roomNumber}
+                        </span>
+                      </div>
                     ) : selectedOrderDetails.orderType !== "pick-and-go" ? (
-                      <p className="text-sm md:text-base lg:text-lg text-white/80">
-                        Mesa {selectedOrderDetails.tableNumber}
-                      </p>
+                      <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
+                        <div className="bg-orange-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
+                          <Utensils className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-orange-600" />
+                        </div>
+                        <span className="text-sm md:text-base lg:text-lg">
+                          Mesa {selectedOrderDetails.tableNumber}
+                        </span>
+                      </div>
                     ) : null}
+                    {selectedOrderDetails.paymentCardBrand && (
+                      <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
+                        <div className="bg-green-100 px-1 py-1.5 md:py-2 md:px-1.5 lg:py-2.5 lg:px-2 rounded-xl flex items-center justify-center">
+                          {getCardTypeIcon(
+                            selectedOrderDetails.paymentCardBrand,
+                            "small",
+                            32,
+                            20,
+                          )}
+                        </div>
+                        <span className="text-sm md:text-base lg:text-lg">
+                          ****{" "}
+                          {selectedOrderDetails.paymentCardLastFour.slice(-3)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Order Info - Fixed */}
-              <div className="px-6 md:px-8 lg:px-10 border-t border-white/20 pt-4 md:pt-5 lg:pt-6 pb-4 md:pb-5 lg:pb-6">
+              {/* Lista de platillos - Scrollable */}
+              <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 border-t border-white/20 pt-4 md:pt-5 lg:pt-6">
                 <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white mb-3 md:mb-4 lg:mb-5">
-                  Tu orden
+                  Items de la orden
                 </h3>
-                <div className="space-y-2 md:space-y-3 lg:space-y-4">
-                  <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
-                    <div className="bg-blue-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
-                      <Calendar className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-blue-600" />
-                    </div>
-                    <span className="text-sm md:text-base lg:text-lg">
-                      {new Date(selectedOrderDetails.tableOrderDate)
-                        .toLocaleDateString("es-MX", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "2-digit",
-                        })
-                        .replace(/\//g, "/")}
-                    </span>
-                  </div>
-                  {selectedOrderDetails.orderType === "room-service" ? (
-                    <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
-                      <div className="bg-orange-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
-                        <Utensils className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-orange-600" />
+                <div className="space-y-3 md:space-y-4 lg:space-y-5 pb-4 md:pb-5 lg:pb-6">
+                  {selectedOrderDetails.dishes?.map((dish: any) => (
+                    <div
+                      key={dish.dishOrderId}
+                      className="flex justify-between items-center gap-3 md:gap-4 lg:gap-5"
+                    >
+                      <div className="size-14 md:size-16 lg:size-20 bg-gray-300 rounded-sm md:rounded-md flex items-center justify-center hover:scale-105 transition-transform duration-200">
+                        <img
+                          src={dish.images[0] || "/logos/logo-short-green.webp"}
+                          alt="Dish preview"
+                          className="w-full h-full object-cover rounded-sm md:rounded-md"
+                        />
                       </div>
-                      <span className="text-sm md:text-base lg:text-lg">
-                        Habitación {selectedOrderDetails.roomNumber}
-                      </span>
-                    </div>
-                  ) : selectedOrderDetails.orderType !== "pick-and-go" ? (
-                    <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
-                      <div className="bg-orange-100 p-2 md:p-2.5 lg:p-3 rounded-xl flex items-center justify-center">
-                        <Utensils className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-orange-600" />
-                      </div>
-                      <span className="text-sm md:text-base lg:text-lg">
-                        Mesa {selectedOrderDetails.tableNumber}
-                      </span>
-                    </div>
-                  ) : null}
-                  {selectedOrderDetails.paymentCardBrand && (
-                    <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-white/90">
-                      <div className="bg-green-100 px-1 py-1.5 md:py-2 md:px-1.5 lg:py-2.5 lg:px-2 rounded-xl flex items-center justify-center">
-                        {getCardTypeIcon(
-                          selectedOrderDetails.paymentCardBrand,
-                          "small",
-                          32,
-                          20,
+                      {/* Dish Info */}
+                      <div className="flex-1">
+                        <p className="text-white font-medium text-base md:text-lg lg:text-xl capitalize">
+                          {dish.quantity}x {dish.item}
+                        </p>
+                        <p className="text-xs md:text-sm lg:text-base text-white/60">
+                          ${dish.price?.toFixed(2)} MXN c/u
+                        </p>
+                        {dish.extraPrice > 0 && (
+                          <p className="text-xs md:text-sm lg:text-base text-white/60">
+                            + Extras: ${dish.extraPrice?.toFixed(2)} MXN
+                          </p>
+                        )}
+                        {/* Status Badge */}
+                        {dish.status && (
+                          <span
+                            className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(dish.status)}`}
+                          >
+                            {getStatusText(dish.status)}
+                          </span>
                         )}
                       </div>
-                      <span className="text-sm md:text-base lg:text-lg">
-                        ****{" "}
-                        {selectedOrderDetails.paymentCardLastFour.slice(-3)}
-                      </span>
+
+                      {/* Total Price */}
+                      <div className="text-right">
+                        <p className="text-white font-medium text-base md:text-lg lg:text-xl">
+                          ${dish.totalPrice?.toFixed(2)} MXN
+                        </p>
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
-            </div>
 
-            {/* Lista de platillos - Scrollable */}
-            <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 border-t border-white/20 pt-4 md:pt-5 lg:pt-6">
-              <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white mb-3 md:mb-4 lg:mb-5">
-                Items de la orden
-              </h3>
-              <div className="space-y-3 md:space-y-4 lg:space-y-5 pb-4 md:pb-5 lg:pb-6">
-                {selectedOrderDetails.dishes?.map((dish: any) => (
-                  <div
-                    key={dish.dishOrderId}
-                    className="flex justify-between items-center gap-3 md:gap-4 lg:gap-5"
-                  >
-                    <div className="size-14 md:size-16 lg:size-20 bg-gray-300 rounded-sm md:rounded-md flex items-center justify-center hover:scale-105 transition-transform duration-200">
-                      <img
-                        src={dish.images[0]}
-                        alt="Dish preview"
-                        className="w-full h-full object-cover rounded-sm md:rounded-md"
-                      />
-                    </div>
-                    {/* Dish Info */}
-                    <div className="flex-1">
-                      <p className="text-white font-medium text-base md:text-lg lg:text-xl capitalize">
-                        {dish.quantity}x {dish.item}
-                      </p>
-                      <p className="text-xs md:text-sm lg:text-base text-white/60">
-                        ${dish.price?.toFixed(2)} MXN c/u
-                      </p>
-                      {dish.extraPrice > 0 && (
-                        <p className="text-xs md:text-sm lg:text-base text-white/60">
-                          + Extras: ${dish.extraPrice?.toFixed(2)} MXN
-                        </p>
-                      )}
-                      {/* Status Badge */}
-                      {dish.status && (
-                        <span
-                          className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(dish.status)}`}
-                        >
-                          {getStatusText(dish.status)}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Total Price */}
-                    <div className="text-right">
-                      <p className="text-white font-medium text-base md:text-lg lg:text-xl">
-                        ${dish.totalPrice?.toFixed(2)} MXN
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              {/* Total Summary - Fixed */}
+              <div className="shrink-0 px-6 md:px-8 lg:px-10 flex justify-between items-center border-t border-white/20 pt-4 md:pt-5 lg:pt-6 pb-6 md:pb-8 lg:pb-10">
+                <span className="text-lg md:text-xl lg:text-2xl font-medium text-white">
+                  Total
+                </span>
+                <span className="text-lg md:text-xl lg:text-2xl font-medium text-white">
+                  ${selectedOrderDetails.totalAmount?.toFixed(2)} MXN
+                </span>
               </div>
             </div>
-
-            {/* Total Summary - Fixed */}
-            <div className="shrink-0 px-6 md:px-8 lg:px-10 flex justify-between items-center border-t border-white/20 pt-4 md:pt-5 lg:pt-6 pb-6 md:pb-8 lg:pb-10">
-              <span className="text-lg md:text-xl lg:text-2xl font-medium text-white">
-                Total
-              </span>
-              <span className="text-lg md:text-xl lg:text-2xl font-medium text-white">
-                ${selectedOrderDetails.totalAmount?.toFixed(2)} MXN
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

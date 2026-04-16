@@ -196,7 +196,7 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
   }
 
   return (
-    <div className="w-full flex-1 overflow-y-auto min-h-0 pb-6">
+    <div className="w-full flex-1 overflow-y-scroll min-h-0">
       {/* Profile Image */}
       <div className="flex flex-col items-center">
         <div className="relative group mb-4">

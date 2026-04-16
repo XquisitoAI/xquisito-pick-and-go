@@ -117,7 +117,7 @@ const initialState: PickAndGoState = {
 
 function pickAndGoReducer(
   state: PickAndGoState,
-  action: PickAndGoAction
+  action: PickAndGoAction,
 ): PickAndGoState {
   switch (action.type) {
     case "SET_LOADING":
@@ -147,7 +147,7 @@ function pickAndGoReducer(
       const updatedItems = removeItemFromCart(
         state.cartItems,
         action.payload.id,
-        action.payload.customFields
+        action.payload.customFields,
       );
       const { totalItems, totalPrice } = calculateTotals(updatedItems);
 
@@ -165,7 +165,7 @@ function pickAndGoReducer(
         state.cartItems,
         action.payload.id,
         action.payload.quantity,
-        action.payload.customFields
+        action.payload.customFields,
       );
       const { totalItems, totalPrice } = calculateTotals(updatedItems);
 
@@ -236,7 +236,7 @@ interface PickAndGoContextType {
   updateCartQuantity: (
     itemId: string,
     quantity: number,
-    customFields?: CustomField[]
+    customFields?: CustomField[],
   ) => void;
   clearCart: () => void;
   syncCartTotals: () => void;
@@ -262,7 +262,7 @@ interface PickAndGoContextType {
 }
 
 const PickAndGoContext = createContext<PickAndGoContextType | undefined>(
-  undefined
+  undefined,
 );
 
 // ===============================================
@@ -292,7 +292,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
     (info: PickAndGoState["customerInfo"]) => {
       dispatch({ type: "SET_CUSTOMER_INFO", payload: info });
     },
-    []
+    [],
   );
 
   const initializeCustomerFromAuth = useCallback(() => {
@@ -360,7 +360,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
     console.log(
       "🛒 Item added to cart:",
       cartItem.name,
-      cartItem.customFields ? "with custom fields" : ""
+      cartItem.customFields ? "with custom fields" : "",
     );
   };
 
@@ -372,14 +372,14 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
     console.log(
       "🗑️ Item removed from cart:",
       itemId,
-      customFields ? "with custom fields" : ""
+      customFields ? "with custom fields" : "",
     );
   };
 
   const updateCartQuantity = (
     itemId: string,
     quantity: number,
-    customFields?: CustomField[]
+    customFields?: CustomField[],
   ) => {
     dispatch({
       type: "UPDATE_CART_QUANTITY",
@@ -389,7 +389,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
       "🔄 Cart quantity updated:",
       itemId,
       quantity,
-      customFields ? "with custom fields" : ""
+      customFields ? "with custom fields" : "",
     );
   };
 
@@ -533,14 +533,17 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
 
       // Ensure we have at least userId or guestName
       if (!authInfo.userId && !authInfo.displayName) {
-        throw new Error("Missing user identification. Please provide customer name.");
+        throw new Error(
+          "Missing user identification. Please provide customer name.",
+        );
       }
 
       // STEP 1: Create Pick & Go order first
       console.log("🆕 Creating Pick & Go order...");
       const orderResponse = await pickAndGoHook.createOrder({
         clerk_user_id: authInfo.userId,
-        customer_name: state.customerInfo?.name || authInfo.displayName || "Guest",
+        customer_name:
+          state.customerInfo?.name || authInfo.displayName || "Guest",
         customer_phone: state.customerInfo?.phone,
         customer_email: state.customerInfo?.email,
         restaurant_id: parseInt(restaurantId?.toString() || "1"),
@@ -568,7 +571,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
       console.log(
         "🍽️ Creating dish orders for",
         state.cartItems.length,
-        "items"
+        "items",
       );
 
       for (const item of state.cartItems) {
@@ -584,12 +587,13 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
             images: item.images || (item.image ? [item.image] : []), // images array
             customFields: item.customFields, // custom fields selected
             extraPrice: item.extraPrice || 0, // extra price from custom fields
-          }
+            menuItemId: item.id, // menu_item_id,
+          },
         );
 
         if (!response.success) {
           throw new Error(
-            response.error || `Failed to create dish order for ${item.name}`
+            response.error || `Failed to create dish order for ${item.name}`,
           );
         }
 
@@ -693,7 +697,7 @@ export function usePickAndGoContext() {
   const context = useContext(PickAndGoContext);
   if (!context) {
     throw new Error(
-      "usePickAndGoContext must be used within a PickAndGoProvider"
+      "usePickAndGoContext must be used within a PickAndGoProvider",
     );
   }
   return context;
