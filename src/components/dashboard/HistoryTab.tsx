@@ -171,7 +171,7 @@ export default function HistoryTab() {
       <h1 className="text-gray-700 text-xl md:text-2xl lg:text-3xl mb-3 md:mb-4 lg:mb-5">
         Ordenes previas
       </h1>
-      <div className="space-y-3 md:space-y-4 lg:space-y-5">
+      <div className="space-y-3 md:space-y-4 lg:space-y-5 overflow-y-scroll">
         {visibleOrders.map((order: any) => {
           return (
             <div

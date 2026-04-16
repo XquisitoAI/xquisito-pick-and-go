@@ -3,11 +3,21 @@
 import { useNavigation } from "../../hooks/useNavigation";
 import { ChevronLeft } from "lucide-react";
 
-export default function DashboardHeader() {
+interface DashboardHeaderProps {
+  onClose?: () => void;
+}
+
+export default function DashboardHeader({
+  onClose,
+}: DashboardHeaderProps = {}) {
   const { navigateWithRestaurantId } = useNavigation();
 
   const handleBack = () => {
-    navigateWithRestaurantId("/menu");
+    if (onClose) {
+      onClose();
+    } else {
+      navigateWithRestaurantId("/menu");
+    }
   };
 
   const handleLogoClick = () => {

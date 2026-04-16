@@ -25,6 +25,8 @@ import {
 } from "../../services/pickandgo.service";
 import { useGuest } from "@/context/GuestContext";
 import ChatView from "../ChatView";
+import AuthView from "./../AuthView";
+import DashboardView from "./../DashboardView";
 
 export default function MenuView() {
   const [filter, setFilter] = useState("Todo");
@@ -50,10 +52,12 @@ export default function MenuView() {
       setIsPepperClosing(false);
     }, 380);
   };
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [isSettingsClosing, setIsSettingsClosing] = useState(false);
 
-  // Bloquear scroll del body cuando el chat está abierto
+  // Bloquear scroll del body cuando el modal está abierto
   useEffect(() => {
-    if (showPepperChat) {
+    if (showPepperChat || showSettingsModal) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -61,7 +65,7 @@ export default function MenuView() {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [showPepperChat]);
+  }, [showPepperChat, showSettingsModal]);
 
   useEffect(() => {
     refreshCart();
@@ -136,14 +140,16 @@ export default function MenuView() {
     }
   };
 
+  const closeSettingsModal = () => {
+    setIsSettingsClosing(true);
+    setTimeout(() => {
+      setShowSettingsModal(false);
+      setIsSettingsClosing(false);
+    }, 380);
+  };
+
   const handleSettingsClick = () => {
-    if (isAuthenticated) {
-      navigateWithRestaurantId("/dashboard");
-    } else {
-      sessionStorage.removeItem("authFromPaymentFlow");
-      sessionStorage.setItem("authFromMenu", "true");
-      navigateWithRestaurantId("/auth");
-    }
+    setShowSettingsModal(true);
   };
 
   const handlePepperClick = () => {
@@ -595,26 +601,71 @@ export default function MenuView() {
             </div>
             <ChatView onBack={closePepperChat} />
           </div>
-          <style>{`
-            @keyframes slideUp {
-              from { transform: translateY(100%); opacity: 0.6; }
-              to   { transform: translateY(0);    opacity: 1; }
-            }
-            @keyframes slideDown {
-              from { transform: translateY(0);    opacity: 1; }
-              to   { transform: translateY(100%); opacity: 0.6; }
-            }
-            @keyframes fadeIn {
-              from { opacity: 0; }
-              to   { opacity: 1; }
-            }
-            @keyframes fadeOut {
-              from { opacity: 1; }
-              to   { opacity: 0; }
-            }
-          `}</style>
         </>
       )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div>
+          <div
+            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+            style={{
+              animation: isSettingsClosing
+                ? "fadeOut 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
+                : "fadeIn 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
+            }}
+            onClick={closeSettingsModal}
+          />
+          <div
+            className="fixed inset-x-0 z-50 flex flex-col rounded-t-3xl overflow-hidden shadow-2xl border-t border-white/20"
+            style={{
+              top: "5%",
+              bottom: 0,
+              paddingBottom: "env(safe-area-inset-bottom)",
+              background: "rgba(255, 255, 255, 0.82)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              animation: isSettingsClosing
+                ? "slideDown 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
+                : "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
+            }}
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-white/30" />
+            </div>
+            {isAuthenticated ? (
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <DashboardView
+                  onClose={closeSettingsModal}
+                  onLogout={closeSettingsModal}
+                />
+              </div>
+            ) : (
+              <AuthView onClose={closeSettingsModal} />
+            )}
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideUp {
+          from { transform: translateY(100%); opacity: 0.6; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+        @keyframes slideDown {
+          from { transform: translateY(0);    opacity: 1; }
+          to   { transform: translateY(100%); opacity: 0.6; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to   { opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }
