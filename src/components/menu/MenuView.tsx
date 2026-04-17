@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Loader2,
   ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -111,8 +112,10 @@ export default function MenuView() {
   const [filter, setFilter] = useState("Todo");
   const [searchQuery, setSearchQuery] = useState("");
   const [showBranchModal, setShowBranchModal] = useState(false);
-  const [activeOrder, setActiveOrder] =
-    useState<ActiveOrderResponse["data"]>(null);
+  const [activeOrders, setActiveOrders] = useState<
+    NonNullable<ActiveOrderResponse["data"]>[]
+  >([]);
+  const [activeOrderIndex, setActiveOrderIndex] = useState(0);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { user, profile, isAuthenticated } = useAuth();
@@ -159,6 +162,8 @@ export default function MenuView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const activeOrder = activeOrders[activeOrderIndex] ?? null;
+
   const checkActiveOrder = useCallback(async () => {
     const clientId = user?.id || guestId;
     if (!clientId || !restaurant?.id) return;
@@ -167,10 +172,14 @@ export default function MenuView() {
         clientId,
         restaurant.id,
       );
-      if (response.hasActiveOrder && response.data) {
-        setActiveOrder(response.data);
+      if (response.hasActiveOrder && response.orders?.length > 0) {
+        setActiveOrders(response.orders);
+        setActiveOrderIndex((prev) =>
+          prev < response.orders.length ? prev : 0,
+        );
       } else {
-        setActiveOrder(null);
+        setActiveOrders([]);
+        setActiveOrderIndex(0);
       }
     } catch (error) {
       console.error("Error checking active order:", error);
@@ -372,13 +381,13 @@ export default function MenuView() {
               </div>
             )}
 
-            {/* Link para ver estatus de pedido activo */}
-            {activeOrder && (
+            {/* Botón de pedidos activos */}
+            {activeOrders.length > 0 && (
               <button
                 onClick={() => setTimeout(() => setShowStatusModal(true), 400)}
                 className="bg-[#f9f9f9] border border-[#8e8e8e] rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium text-black w-fit mx-auto active:scale-90 transition-all"
               >
-                Estatus de pedido
+                {activeOrders.length > 1 ? "Ver pedidos" : "Estatus de pedido"}
               </button>
             )}
           </div>
@@ -467,9 +476,27 @@ export default function MenuView() {
           onClick={() => setShowStatusModal(false)}
         >
           <div
-            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
+            className="relative bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
+            {activeOrders.length > 1 && (
+              <>
+                <button
+                  onClick={() => setActiveOrderIndex((i) => i - 1)}
+                  disabled={activeOrderIndex === 0}
+                  className="absolute left-3 md:left-4 top-[30%] z-10 rounded-full size-9 md:size-10 flex items-center justify-center bg-white/10 border border-white/25 hover:bg-white/20 transition-colors active:scale-90 disabled:opacity-25 disabled:pointer-events-none"
+                >
+                  <ChevronLeft className="size-6 md:size-7 text-white" />
+                </button>
+                <button
+                  onClick={() => setActiveOrderIndex((i) => i + 1)}
+                  disabled={activeOrderIndex === activeOrders.length - 1}
+                  className="absolute right-3 md:right-4 top-[30%] z-10 rounded-full size-9 md:size-10 flex items-center justify-center bg-white/10 border border-white/25 hover:bg-white/20 transition-colors active:scale-90 disabled:opacity-25 disabled:pointer-events-none"
+                >
+                  <ChevronRight className="size-6 md:size-7 text-white" />
+                </button>
+              </>
+            )}
             {/* Header */}
             <div className="flex-shrink-0">
               <div className="w-full flex justify-end">
@@ -496,7 +523,9 @@ export default function MenuView() {
                       Pedido #{activeOrder.pick_and_go_order?.folio || "---"}
                     </h2>
                     <p className="text-sm md:text-base lg:text-lg text-white/80 mt-1">
-                      Pick & Go
+                      {activeOrders.length > 1
+                        ? `${activeOrderIndex + 1} de ${activeOrders.length}`
+                        : "Pick & Go"}
                     </p>
                   </div>
                 </div>

@@ -104,32 +104,35 @@ export interface CreateDishOrderRequest {
   menuItemId: string;
 }
 
+export type ActiveOrderData = {
+  pick_and_go_order: {
+    id: string;
+    folio?: string | null;
+    clerk_user_id: string | null;
+    customer_name: string;
+    total_amount: number;
+    payment_status: string;
+    order_status: string;
+    restaurant_id: number;
+    branch_number: number;
+    created_at: string;
+  };
+  dishes: Array<{
+    id: string;
+    item: string;
+    quantity: number;
+    price: number;
+    status: string;
+    payment_status: string;
+    images: string[];
+  }>;
+  pending_dishes_count: number;
+};
+
 export interface ActiveOrderResponse {
   hasActiveOrder: boolean;
-  data: {
-    pick_and_go_order: {
-      id: string;
-      folio?: string | null;
-      clerk_user_id: string | null;
-      customer_name: string;
-      total_amount: number;
-      payment_status: string;
-      order_status: string;
-      restaurant_id: number;
-      branch_number: number;
-      created_at: string;
-    };
-    dishes: Array<{
-      id: string;
-      item: string;
-      quantity: number;
-      price: number;
-      status: string;
-      payment_status: string;
-      images: string[];
-    }>;
-    pending_dishes_count: number;
-  } | null;
+  data: ActiveOrderData | null;
+  orders?: ActiveOrderData[];
 }
 
 export interface RecordPaymentTransactionRequest {
