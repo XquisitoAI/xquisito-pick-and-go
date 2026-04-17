@@ -614,6 +614,7 @@ const MessageContent = memo(
     );
   },
 );
+MessageContent.displayName = "MessageContent";
 
 // Cada mensaje está memoizado — durante streaming solo el último re-renderiza
 interface MemoizedMessageProps {
