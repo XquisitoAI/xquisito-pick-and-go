@@ -9,11 +9,9 @@ import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 import { X, ChevronRight, Loader2 } from "lucide-react";
 import { useBranch } from "@/context/BranchContext";
 import BranchSelectionModal from "@/components/modals/BranchSelectionModal";
-import Loader from "@/components/UI/Loader";
 import { calculateCommissions } from "@/utils/commissionCalculator";
 import { restaurantService } from "@/services/restaurant.service";
 import { cartService } from "@/services/cart.service";
-import PickupTimeSelector from "@/components/UI/PickupTimeSelector";
 
 export default function OrderConfirmPage() {
   const params = useParams();
@@ -63,6 +61,25 @@ export default function OrderConfirmPage() {
   const { totalAmountCharged: totalAmount } = commissions;
 
   const isUnderMinimum = totalAmount < MINIMUM_AMOUNT;
+
+  useEffect(() => {
+    const prev = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      width: document.body.style.width,
+      height: document.body.style.height,
+    };
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    document.body.style.height = "100%";
+    return () => {
+      document.body.style.overflow = prev.overflow;
+      document.body.style.position = prev.position;
+      document.body.style.width = prev.width;
+      document.body.style.height = prev.height;
+    };
+  }, []);
 
   useEffect(() => {
     if (!cartState.isLoading) {
@@ -127,11 +144,60 @@ export default function OrderConfirmPage() {
   };
 
   if (isLoadingInitial) {
-    return <Loader />;
+    return (
+      <div className="h-screen overflow-hidden bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
+        <div className="fixed top-0 left-0 right-0 z-50">
+          <MenuHeaderBack />
+        </div>
+        <div className="h-20" />
+
+        <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
+          <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
+            {/* Título skeleton */}
+            <div className="bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
+              <div className="py-6 px-8 flex flex-col justify-center">
+                <div className="h-8 w-2/3 bg-white/20 rounded-full mt-2 mb-6 animate-pulse" />
+              </div>
+            </div>
+
+            {/* Cuerpo skeleton */}
+            <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8 gap-4">
+              {/* Subtotal row */}
+              <div className="flex justify-between items-center">
+                <div className="h-4 w-16 bg-gray-200 rounded-full animate-pulse" />
+                <div className="h-4 w-24 bg-gray-200 rounded-full animate-pulse" />
+              </div>
+
+              {/* Propina label + botones */}
+              <div className="flex items-center gap-4">
+                <div className="h-4 w-16 bg-gray-200 rounded-full animate-pulse flex-shrink-0" />
+                <div className="grid grid-cols-5 gap-2 flex-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-8 bg-gray-100 rounded-full animate-pulse"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Total row */}
+              <div className="flex justify-between items-center border-t pt-4">
+                <div className="h-5 w-28 bg-gray-200 rounded-full animate-pulse" />
+                <div className="h-5 w-28 bg-gray-200 rounded-full animate-pulse" />
+              </div>
+
+              {/* Botón continuar */}
+              <div className="h-12 w-full bg-gray-200 rounded-full animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-dvh bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
       {/* Header fijo */}
       <div className="fixed top-0 left-0 right-0 z-50">
         <MenuHeaderBack />
@@ -140,7 +206,7 @@ export default function OrderConfirmPage() {
 
       {/* Tarjeta anclada al fondo */}
       <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
-        <div className="flex flex-col relative w-full">
+        <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
           <div className="bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
             <div className="py-6 px-8 flex flex-col justify-center">
               <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
@@ -177,11 +243,11 @@ export default function OrderConfirmPage() {
             )}
 
             {/* Hora de recolección */}
-            <PickupTimeSelector
+            {/*<PickupTimeSelector
               selectedTime={scheduledPickupTime}
               onTimeChange={setScheduledPickupTime}
               estimatedMinutes={25}
-            />
+            />*/}
 
             {/* Subtotal */}
             <div className="space-y-2 mb-4">
@@ -292,7 +358,7 @@ export default function OrderConfirmPage() {
               className={`w-full text-white py-3 rounded-full cursor-pointer transition-all active:scale-90 ${
                 isUnderMinimum || (branches.length > 1 && !selectedBranchNumber)
                   ? "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
-                  : "bg-gradient-to-r from-[#34808C] to-[#173E44]"
+                  : "bg-gradient-to-r from-[#34808C] to-[#173E44] animate-pulse-button"
               }`}
             >
               {branches.length > 1 && !selectedBranchNumber

@@ -12,7 +12,6 @@ import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 import { Plus, Trash2, Loader2, CircleAlert, X } from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
 import { useBranch } from "@/context/BranchContext";
-import Loader from "@/components/UI/Loader";
 import OrderAnimation from "@/components/UI/OrderAnimation";
 import { pickAndGoService } from "@/services/pickandgo.service";
 import { paymentService } from "@/services/payment.service";
@@ -207,7 +206,7 @@ export default function CardSelectionPage() {
       const orderResult = await paymentService.createApplePayOrder({
         amount: totalAmount,
         currency: "MXN",
-        tableNumber: undefined, // Pick & Go no tiene número de mesa
+        tableNumber: undefined,
         restaurantId: restaurantId?.toString(),
       });
 
@@ -931,7 +930,53 @@ export default function CardSelectionPage() {
   const isUnderMinimum = totalAmount < MINIMUM_AMOUNT;
 
   if (isLoadingInitial || isLoadingProvider) {
-    return <Loader />;
+    return (
+      <div className="min-h-dvh bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
+        <div className="fixed top-0 left-0 right-0 z-50">
+          <MenuHeaderBack />
+        </div>
+        <div className="h-20" />
+
+        <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
+          <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
+            {/* Título skeleton */}
+            <div className="bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
+              <div className="py-6 px-8 flex flex-col justify-center">
+                <div className="h-8 w-3/4 bg-white/20 rounded-full mt-2 mb-6 animate-pulse" />
+              </div>
+            </div>
+
+            {/* Cuerpo skeleton */}
+            <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8 gap-4">
+              {/* Subtotal row */}
+              <div className="flex justify-between items-center">
+                <div className="h-4 w-20 bg-gray-200 rounded-full animate-pulse" />
+                <div className="h-4 w-24 bg-gray-200 rounded-full animate-pulse" />
+              </div>
+              {/* Total row */}
+              <div className="flex justify-between items-center border-t pt-3">
+                <div className="h-5 w-28 bg-gray-200 rounded-full animate-pulse" />
+                <div className="h-5 w-28 bg-gray-200 rounded-full animate-pulse" />
+              </div>
+
+              {/* Label métodos de pago */}
+              <div className="h-4 w-36 bg-gray-200 rounded-full animate-pulse mt-1" />
+
+              {/* Card skeleton 1 */}
+              <div className="h-12 w-full bg-gray-100 rounded-full animate-pulse" />
+              {/* Card skeleton 2 */}
+              <div className="h-12 w-full bg-gray-100 rounded-full animate-pulse" />
+
+              {/* Botón agregar tarjeta */}
+              <div className="h-12 w-full bg-gray-100 rounded-full animate-pulse" />
+
+              {/* Botón pagar */}
+              <div className="h-12 w-full bg-gray-200 rounded-full animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -1035,7 +1080,7 @@ export default function CardSelectionPage() {
 
         {/* Tarjeta anclada al fondo */}
         <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
-          <div className="flex flex-col relative w-full">
+          <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
             <div className="bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
               <div className="py-6 px-8 flex flex-col justify-center">
                 <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
@@ -1205,7 +1250,7 @@ export default function CardSelectionPage() {
                 className={`w-full text-white py-3 rounded-full cursor-pointer transition-all active:scale-90 ${
                   isProcessing || !selectedPaymentMethodId
                     ? "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
-                    : "bg-gradient-to-r from-[#34808C] to-[#173E44]"
+                    : "bg-gradient-to-r from-[#34808C] to-[#173E44] animate-pulse-button"
                 }`}
               >
                 {isProcessing ? (
