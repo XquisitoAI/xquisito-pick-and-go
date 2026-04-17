@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
-import ProfileTab from "./dashboard/ProfileTab";
-import CardsTab from "./dashboard/CardsTab";
-import HistoryTab from "./dashboard/HistoryTab";
-import SupportTab from "./dashboard/SupportTab";
 import DashboardHeader from "./headers/DashboardHeader";
 import { useTableNavigation } from "@/hooks/useTableNavigation";
+
+const ProfileTab = lazy(() => import("./dashboard/ProfileTab"));
+const CardsTab = lazy(() => import("./dashboard/CardsTab"));
+const HistoryTab = lazy(() => import("./dashboard/HistoryTab"));
+const SupportTab = lazy(() => import("./dashboard/SupportTab"));
 
 interface DashboardViewProps {
   onClose?: () => void;
@@ -264,17 +265,19 @@ export default function DashboardView({
             <div
               className={`flex-1 flex flex-col overflow-y-auto pb-6 min-h-0 ${activeTab === "support" || activeTab === "cards" ? "relative" : ""}`}
             >
-              {activeTab === "profile" && <ProfileTab onLogout={onLogout} />}
-              {activeTab === "cards" && <CardsTab />}
-              {activeTab === "history" && <HistoryTab />}
-              {activeTab === "support" && (
-                <SupportTab
-                  messages={supportMessages}
-                  setMessages={setSupportMessages}
-                  sessionId={supportSessionId}
-                  setSessionId={setSupportSessionId}
-                />
-              )}
+              <Suspense fallback={null}>
+                {activeTab === "profile" && <ProfileTab onLogout={onLogout} />}
+                {activeTab === "cards" && <CardsTab />}
+                {activeTab === "history" && <HistoryTab />}
+                {activeTab === "support" && (
+                  <SupportTab
+                    messages={supportMessages}
+                    setMessages={setSupportMessages}
+                    sessionId={supportSessionId}
+                    setSessionId={setSupportSessionId}
+                  />
+                )}
+              </Suspense>
             </div>
           </div>
         </div>

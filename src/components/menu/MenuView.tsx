@@ -19,6 +19,8 @@ import {
   useEffect,
   useRef,
   useCallback,
+  useDeferredValue,
+  useTransition,
   lazy,
   Suspense,
 } from "react";
@@ -122,6 +124,7 @@ function UserAvatar({
 export default function MenuView() {
   const [filter, setFilter] = useState("Todo");
   const [searchQuery, setSearchQuery] = useState("");
+  const [, startTransition] = useTransition();
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [activeOrders, setActiveOrders] = useState<
     NonNullable<ActiveOrderResponse["data"]>[]
@@ -130,7 +133,7 @@ export default function MenuView() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { user, profile, isAuthenticated } = useAuth();
-  const { state, refreshCart } = useCart();
+  const { state } = useCart();
   const { restaurant, menu, error } = useRestaurant();
   const { branches, selectedBranchNumber } = useBranch();
   const { navigateWithRestaurantId } = useNavigation();
@@ -168,10 +171,14 @@ export default function MenuView() {
     return unlockScroll;
   }, [showPepperChat, showSettingsModal, showStatusModal]);
 
+  // Precargar chunks lazy después de que la página ya es interactiva
   useEffect(() => {
-    const t = setTimeout(() => refreshCart(), 300);
+    const t = setTimeout(() => {
+      import("./../DashboardView");
+      import("./../AuthView");
+      import("./../ChatView");
+    }, 1500);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const activeOrder = activeOrders[activeOrderIndex] ?? null;
@@ -240,16 +247,19 @@ export default function MenuView() {
 
   const totalItems = state.totalItems;
 
-  // Filtrar menú según la categoría seleccionada y búsqueda
+  const deferredFilter = useDeferredValue(filter);
+  const deferredSearch = useDeferredValue(searchQuery);
+
+  // Filtrar menú usando valores diferidos — el render pesado ocurre en baja prioridad
   const filteredMenu = useMemo(() => {
     let filtered = menu;
 
-    if (filter !== "Todo") {
-      filtered = filtered.filter((section) => section.name === filter);
+    if (deferredFilter !== "Todo") {
+      filtered = filtered.filter((section) => section.name === deferredFilter);
     }
 
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
+    if (deferredSearch.trim()) {
+      const query = deferredSearch.toLowerCase().trim();
       filtered = filtered
         .map((section) => ({
           ...section,
@@ -263,7 +273,7 @@ export default function MenuView() {
     }
 
     return filtered;
-  }, [menu, filter, searchQuery]);
+  }, [menu, deferredFilter, deferredSearch]);
 
   if (error) {
     return (
@@ -422,7 +432,7 @@ export default function MenuView() {
             {categorias.map((cat) => (
               <button
                 key={cat}
-                onClick={() => setFilter(cat)}
+                onClick={() => startTransition(() => setFilter(cat))}
                 className={`px-3 md:px-5 lg:px-6 py-1 md:py-2 text-sm md:text-base lg:text-lg rounded-full whitespace-nowrap flex-shrink-0
                 ${
                   filter === cat
@@ -687,6 +697,7 @@ export default function MenuView() {
               loop
               muted
               playsInline
+              preload="none"
               aria-hidden="true"
               disablePictureInPicture
               controls={false}
@@ -705,7 +716,7 @@ export default function MenuView() {
             style={{
               animation: isPepperClosing
                 ? "fadeOut 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
-                : "fadeIn 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
+                : "fade-in 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
             }}
             onClick={closePepperChat}
           />
@@ -719,7 +730,7 @@ export default function MenuView() {
               backdropFilter: "blur(24px)",
               WebkitBackdropFilter: "blur(24px)",
               animation: isPepperClosing
-                ? "slideDown 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
+                ? "slideDownModal 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
                 : "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
             }}
           >
@@ -741,7 +752,7 @@ export default function MenuView() {
             style={{
               animation: isSettingsClosing
                 ? "fadeOut 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
-                : "fadeIn 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
+                : "fade-in 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
             }}
             onClick={closeSettingsModal}
           />
@@ -755,7 +766,7 @@ export default function MenuView() {
               backdropFilter: "blur(24px)",
               WebkitBackdropFilter: "blur(24px)",
               animation: isSettingsClosing
-                ? "slideDown 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
+                ? "slideDownModal 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards"
                 : "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
             }}
           >
@@ -777,25 +788,6 @@ export default function MenuView() {
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes slideUp {
-          from { transform: translateY(100%); opacity: 0.6; }
-          to   { transform: translateY(0);    opacity: 1; }
-        }
-        @keyframes slideDown {
-          from { transform: translateY(0);    opacity: 1; }
-          to   { transform: translateY(100%); opacity: 0.6; }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes fadeOut {
-          from { opacity: 1; }
-          to   { opacity: 0; }
-        }
-      `}</style>
     </div>
   );
 }

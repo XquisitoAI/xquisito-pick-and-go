@@ -349,6 +349,16 @@ body {
   animation: fadeOut 0.5s ease-in-out forwards;
 }
 
+/* Modal sheet animations (MenuView, etc.) */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0.6; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes slideDownModal {
+  from { transform: translateY(0);    opacity: 1; }
+  to   { transform: translateY(100%); opacity: 0.6; }
+}
+
 @layer components {
   .myradio {
     @apply w-4 h-4 bg-gray-100 border border-gray-300 rounded-full cursor-pointer;

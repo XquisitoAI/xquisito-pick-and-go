@@ -777,6 +777,7 @@ export default function ChatView({ onBack }: ChatViewProps) {
                 loop
                 muted
                 playsInline
+                preload="none"
                 disablePictureInPicture
                 controls={false}
                 controlsList="nodownload nofullscreen noremoteplayback"
@@ -850,6 +851,7 @@ export default function ChatView({ onBack }: ChatViewProps) {
                   loop
                   muted
                   playsInline
+                  preload="none"
                   disablePictureInPicture
                   controls={false}
                   controlsList="nodownload nofullscreen noremoteplayback"
