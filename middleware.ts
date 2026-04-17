@@ -14,11 +14,11 @@ export function middleware(request: NextRequest) {
 
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' https://ecartpay.com;
+    script-src 'self' 'nonce-${nonce}' https://ecartpay.com https://applepay.cdn-apple.com;
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: blob: ${backendUrl} https://*.supabase.co;
     font-src 'self' https://applepay.cdn-apple.com;
-    connect-src 'self' ${backendUrl} ${wsProtocol}://${backendHost} https://*.ecartpay.com https://pay.ecart.com https://checkoutdev.ecartpay.com;
+    connect-src 'self' ${backendUrl} ${wsProtocol}://${backendHost} https://*.ecartpay.com https://pay.ecart.com https://applepay.cdn-apple.com https://checkoutdev.ecartpay.com;
     frame-src https://ecartpay.com https://pay.ecart.com;
     object-src 'none';
     base-uri 'self';
