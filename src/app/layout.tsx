@@ -11,6 +11,7 @@ import { PickAndGoProvider } from "@/context/PickAndGoContext";
 import { UserDataProvider } from "@/context/userDataContext";
 import { PaymentProvider } from "@/context/PaymentContext";
 import { PepperProvider } from "@/context/PepperContext";
+import Script from "next/script";
 
 const helveticaNeue = localFont({
   src: [
@@ -120,6 +121,10 @@ export default async function RootLayout({
         className={`${helveticaNeue.variable} antialiased`}
         style={{ fontFamily: "var(--font-helvetica-neue)" }}
       >
+        <Script
+          src="https://ecartpay.com/sdk/pay.js"
+          strategy="afterInteractive"
+        />
         <AuthProvider>
           <GuestProvider>
             <BranchProvider>

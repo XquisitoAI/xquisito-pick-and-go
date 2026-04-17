@@ -184,6 +184,20 @@ export default function CardSelectionPage() {
     setCompletedUserName("");
   };
 
+  const getApplePaySDK = () =>
+    new Promise<any>((resolve) => {
+      if ((window as any).Pay?.ApplePay) {
+        return resolve((window as any).Pay.ApplePay);
+      }
+
+      const interval = setInterval(() => {
+        if ((window as any).Pay?.ApplePay) {
+          clearInterval(interval);
+          resolve((window as any).Pay.ApplePay);
+        }
+      }, 100);
+    });
+
   // Inicializar Apple Pay SDK cuando los datos estén listos
   const initApplePay = useCallback(async () => {
     if (typeof window === "undefined" || !totalAmount) return;
@@ -197,17 +211,20 @@ export default function CardSelectionPage() {
         restaurantId: restaurantId?.toString(),
       });
 
-      const appleOrderId = (orderResult as any).orderId ?? orderResult.data?.orderId;
+      const appleOrderId =
+        (orderResult as any).orderId ?? orderResult.data?.orderId;
       if (!orderResult.success || !appleOrderId) {
         console.warn("⚠️ Apple Pay: no se pudo crear la orden", orderResult);
         return;
       }
 
-      const applePaySDK = (window as any).Pay?.ApplePay;
+      const applePaySDK = await getApplePaySDK();
       if (!applePaySDK) {
         console.warn("⚠️ Apple Pay SDK no disponible en window.Pay.ApplePay");
         return;
       }
+
+      console.log("ORDER RESULT:", orderResult);
 
       // Register listeners before render (SDK dispatches to window, not returned object)
       applePaySDK.on("ready", () => {
@@ -1163,10 +1180,7 @@ export default function CardSelectionPage() {
                     <div>
                       <div id="apple-pay-container" className="w-full" />
                       {!applePayReady && (
-                        <div className="border border-white/50 flex justify-center items-center gap-1 w-full text-black py-3 rounded-full bg-black text-base md:text-lg lg:text-xl">
-                          {/*<Loader2 className="size-4 animate-spin" />*/}
-                          <img src="" className="h-6" />
-                        </div>
+                        <div className="border border-white/50 flex justify-center items-center gap-1 w-full text-black py-3 rounded-full bg-black text-base md:text-lg lg:text-xl"></div>
                       )}
                     </div>
                   )}
