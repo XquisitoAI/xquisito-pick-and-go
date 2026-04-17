@@ -13,7 +13,15 @@ import {
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+  lazy,
+  Suspense,
+} from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
@@ -25,9 +33,10 @@ import {
   type ActiveOrderResponse,
 } from "../../services/pickandgo.service";
 import { useGuest } from "@/context/GuestContext";
-import ChatView from "../ChatView";
-import AuthView from "./../AuthView";
-import DashboardView from "./../DashboardView";
+
+const ChatView = lazy(() => import("../ChatView"));
+const AuthView = lazy(() => import("./../AuthView"));
+const DashboardView = lazy(() => import("./../DashboardView"));
 
 // Pure functions — defined outside to avoid re-creation on every render
 function getStatusColor(status: string) {
@@ -714,7 +723,9 @@ export default function MenuView() {
             <div className="flex justify-center pt-3 pb-1 shrink-0">
               <div className="w-10 h-1 rounded-full bg-gray-300/80" />
             </div>
-            <ChatView onBack={closePepperChat} />
+            <Suspense fallback={null}>
+              <ChatView onBack={closePepperChat} />
+            </Suspense>
           </div>
         </>
       )}
@@ -748,16 +759,18 @@ export default function MenuView() {
             <div className="flex justify-center pt-3 pb-1 shrink-0">
               <div className="w-10 h-1 rounded-full bg-white/30" />
             </div>
-            {isAuthenticated ? (
-              <div className="flex-1 min-h-0">
-                <DashboardView
-                  onClose={closeSettingsModal}
-                  onLogout={closeSettingsModal}
-                />
-              </div>
-            ) : (
-              <AuthView onClose={closeSettingsModal} />
-            )}
+            <Suspense fallback={null}>
+              {isAuthenticated ? (
+                <div className="flex-1 min-h-0">
+                  <DashboardView
+                    onClose={closeSettingsModal}
+                    onLogout={closeSettingsModal}
+                  />
+                </div>
+              ) : (
+                <AuthView onClose={closeSettingsModal} />
+              )}
+            </Suspense>
           </div>
         </div>
       )}
