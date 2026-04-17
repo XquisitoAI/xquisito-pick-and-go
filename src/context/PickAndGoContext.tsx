@@ -13,6 +13,7 @@ import { useGuest } from "@/context/GuestContext";
 import { PickAndGoOrder } from "@/services/pickandgo.service";
 import { usePickAndGo } from "@/hooks/usePickAndGo";
 import { useRestaurant } from "@/context/RestaurantContext";
+import { useBranch } from "@/context/BranchContext";
 
 // Import enhanced cart utilities from TableContext
 import {
@@ -281,6 +282,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
 
   // Get restaurant context - needed for robust order creation
   const { restaurantId } = useRestaurant();
+  const { selectedBranchNumber } = useBranch();
 
   const isLoaded = !isLoading;
 
@@ -459,7 +461,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
         customer_email: state.customerInfo?.email,
         total_amount: state.cartTotal,
         restaurant_id: parseInt(restaurantId?.toString() || "1"),
-        branch_number: 1,
+        branch_number: selectedBranchNumber || 1,
         payment_status: "pending",
         order_status: "active",
         session_data: {
@@ -547,7 +549,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
         customer_phone: state.customerInfo?.phone,
         customer_email: state.customerInfo?.email,
         restaurant_id: parseInt(restaurantId?.toString() || "1"),
-        branch_number: 1,
+        branch_number: selectedBranchNumber || 1,
         total_amount: state.cartTotal,
         session_data: {
           ...state.sessionData,

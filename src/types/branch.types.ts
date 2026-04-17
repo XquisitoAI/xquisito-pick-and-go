@@ -16,6 +16,7 @@ export interface BranchContextType {
   selectedBranchNumber: number | null;
   branches: Branch[];
   isLoading: boolean;
+  branchInitialized: boolean;
   setSelectedBranchNumber: (branchNumber: number | null) => void;
   fetchBranches: (restaurantId: number) => Promise<void>;
 }

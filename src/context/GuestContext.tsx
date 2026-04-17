@@ -5,6 +5,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
   Suspense,
 } from "react";
@@ -149,7 +150,8 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
         branchNumber: null,
       });
     }
-  }, [isLoading, user, searchParams]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, user, searchParams, isGuest]);
 
   const setAsGuest = (newRestaurantId?: number, newBranchNumber?: number) => {
     // Generate guest ID (which handles localStorage)
@@ -178,13 +180,7 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
     });
   };
 
-  const setAsAuthenticated = (userId: string) => {
-    // Clear guest session when user authenticates
-    clearGuestSession();
-    console.log("🔐 Set as authenticated user:", userId);
-  };
-
-  const clearGuestSession = () => {
+  const clearGuestSession = useCallback(() => {
     // NO eliminar el guest_id porque lo necesitamos para la migración del carrito
     // El guest_id debe preservarse para la migración del carrito en CartContext
     setIsGuest(false);
@@ -200,7 +196,13 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
     console.log(
       "🗑️ Guest session cleared (guest_id preserved for cart migration)"
     );
-  };
+  }, []);
+
+  const setAsAuthenticated = useCallback((userId: string) => {
+    // Clear guest session when user authenticates
+    clearGuestSession();
+    console.log("🔐 Set as authenticated user:", userId);
+  }, [clearGuestSession]);
 
   const setGuestNameHandler = (name: string) => {
     setGuestName(name);

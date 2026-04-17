@@ -12,6 +12,7 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
   const [selectedBranchNumber, setSelectedBranchNumber] = useState<number | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [branchInitialized, setBranchInitialized] = useState(false);
 
   // Sincronizar selectedBranchNumber con el query param de la URL
   useEffect(() => {
@@ -49,6 +50,7 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
       console.error("Error fetching branches:", error);
     } finally {
       setIsLoading(false);
+      setBranchInitialized(true);
     }
   }, [searchParams]);
 
@@ -58,6 +60,7 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
         selectedBranchNumber,
         branches,
         isLoading,
+        branchInitialized,
         setSelectedBranchNumber,
         fetchBranches,
       }}

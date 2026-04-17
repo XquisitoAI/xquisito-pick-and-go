@@ -5,9 +5,11 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
   useMemo,
 } from "react";
+import { useParams } from "next/navigation";
 import { Restaurant } from "../interfaces/restaurant";
 import { MenuSection } from "../interfaces/category";
 import { restaurantService } from "../services/restaurant.service";
@@ -26,7 +28,7 @@ interface RestaurantContextValue {
 }
 
 const RestaurantContext = createContext<RestaurantContextValue | undefined>(
-  undefined
+  undefined,
 );
 
 interface RestaurantProviderProps {
@@ -34,18 +36,25 @@ interface RestaurantProviderProps {
 }
 
 export function RestaurantProvider({ children }: RestaurantProviderProps) {
-  const [restaurantId, setRestaurantIdState] = useState<number | null>(null);
-  const { selectedBranchNumber } = useBranch();
+  const params = useParams();
+  const urlRestaurantId = params?.restaurantId
+    ? parseInt(params.restaurantId as string)
+    : null;
+
+  const [restaurantId, setRestaurantIdState] = useState<number | null>(
+    urlRestaurantId && !isNaN(urlRestaurantId) ? urlRestaurantId : null,
+  );
+  const { selectedBranchNumber, branchInitialized, fetchBranches } =
+    useBranch();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [menu, setMenu] = useState<MenuSection[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Función para establecer el restaurantId y cargar los datos
-  const setRestaurantId = (id: number) => {
-    console.log("🍽️ Setting restaurant ID:", id);
+  const setRestaurantId = useCallback((id: number) => {
     setRestaurantIdState(id);
-  };
+  }, []);
 
   // Función para recargar el menú
   const refetchMenu = async () => {
@@ -65,12 +74,12 @@ export function RestaurantProvider({ children }: RestaurantProviderProps) {
           "📡 Fetching restaurant data for ID:",
           id,
           "branch:",
-          branch
+          branch,
         );
         // Obtener restaurante y menú filtrado por sucursal
         const data = await restaurantService.getRestaurantWithMenuByBranch(
           id,
-          branch
+          branch,
         );
 
         console.log("✅ Restaurant data loaded:", data.restaurant.name);
@@ -79,7 +88,7 @@ export function RestaurantProvider({ children }: RestaurantProviderProps) {
           data.menu.length,
           "sections (filtered by branch",
           branch,
-          ")"
+          ")",
         );
 
         setRestaurant(data.restaurant);
@@ -107,17 +116,25 @@ export function RestaurantProvider({ children }: RestaurantProviderProps) {
     }
   };
 
-  // Effect para cargar datos cuando cambia el restaurantId
+  // Iniciar carga de branches cuando restaurantId esté disponible
   useEffect(() => {
-    if (restaurantId) {
-      fetchRestaurantData(restaurantId, selectedBranchNumber || undefined);
-    } else {
-      // Reset state cuando no hay restaurantId
+    if (restaurantId && !branchInitialized) {
+      fetchBranches(restaurantId);
+    }
+  }, [restaurantId, branchInitialized, fetchBranches]);
+
+  // Fetch restaurante solo cuando branch ya fue inicializado
+  // Evita el doble fetch (primero sin branch, luego con branch)
+  useEffect(() => {
+    if (!restaurantId) {
       setRestaurant(null);
       setMenu([]);
       setError(null);
+      return;
     }
-  }, [restaurantId, selectedBranchNumber]);
+    if (!branchInitialized) return;
+    fetchRestaurantData(restaurantId, selectedBranchNumber || undefined);
+  }, [restaurantId, selectedBranchNumber, branchInitialized]);
 
   // Check if restaurant is currently open (re-check every minute)
   const isOpen = useMemo(() => {

@@ -132,7 +132,7 @@ export default function MenuView() {
   const { user, profile, isAuthenticated } = useAuth();
   const { state, refreshCart } = useCart();
   const { restaurant, menu, error } = useRestaurant();
-  const { branches, selectedBranchNumber, fetchBranches } = useBranch();
+  const { branches, selectedBranchNumber } = useBranch();
   const { navigateWithRestaurantId } = useNavigation();
   const { guestId } = useGuest();
   const [showPepperChat, setShowPepperChat] = useState(false);
@@ -207,12 +207,6 @@ export default function MenuView() {
     await checkActiveOrder();
     setIsRefreshing(false);
   };
-
-  useEffect(() => {
-    if (restaurant?.id) {
-      fetchBranches(restaurant.id);
-    }
-  }, [restaurant?.id, fetchBranches]);
 
   // Mostrar barra sticky al hacer scroll past el trigger
   useEffect(() => {

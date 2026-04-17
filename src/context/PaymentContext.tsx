@@ -34,7 +34,7 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { isGuest, guestId, setAsAuthenticated } = useGuest();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const hasPaymentMethods = paymentMethods.length > 0;
 
@@ -281,6 +281,9 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
 
   // Load payment methods when user context changes
   useEffect(() => {
+    // Wait for auth to finish loading before acting
+    if (authLoading) return;
+
     // If user is authenticated, clear any guest session
     if (user && isGuest) {
       console.log("🔐 User authenticated - clearing guest session");
@@ -295,7 +298,8 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       guestId,
     });
     refreshPaymentMethods();
-  }, [isAuthenticated, user?.id, isGuest, guestId, setAsAuthenticated]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.id, isGuest, guestId, authLoading]);
 
   // Auto-migrate guest payment methods when user logs in
   useEffect(() => {

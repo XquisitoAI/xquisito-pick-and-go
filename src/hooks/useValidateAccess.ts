@@ -36,7 +36,7 @@ export function useValidateAccess() {
         const validation = await restaurantService.validateRestaurantAndBranch(
           parseInt(restaurantId),
           branchNumber ? parseInt(branchNumber) : null,
-          "pick-n-go"
+          "pick-n-go",
         );
 
         if (!validation.valid) {

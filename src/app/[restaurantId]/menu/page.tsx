@@ -6,7 +6,7 @@ import ValidationError from "@/components/ValidationError";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { usePickAndGoContext } from "@/context/PickAndGoContext";
 import { useValidateAccess } from "@/hooks/useValidateAccess";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 
 const MenuPage = () => {
   const { validationError, restaurantId } = useValidateAccess();
@@ -16,7 +16,6 @@ const MenuPage = () => {
   useEffect(() => {
     if (restaurantId && !isNaN(restaurantId)) {
       setPickAndGoRestaurantId(restaurantId.toString());
-      console.log("🥡 Pick & Go Menu Page:", { restaurantId });
     }
   }, [restaurantId, setPickAndGoRestaurantId]);
 
