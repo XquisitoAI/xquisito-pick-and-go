@@ -2,41 +2,32 @@
 
 import { Restaurant } from "../../interfaces/restaurant";
 import { useCart } from "../../context/CartContext";
-import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
+import { useNavigation } from "../../hooks/useNavigation";
 import { ShoppingCart } from "lucide-react";
 
 interface MenuHeaderProps {
   restaurant: Restaurant;
 }
 
-export default function MenuHeader({ restaurant }: MenuHeaderProps) {
+export default function MenuHeader(_: MenuHeaderProps) {
   const { state } = useCart();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const handleCartClick = () => {
-    // Extraer restaurantId del pathname actual (formato: /[restaurantId]/menu)
-    const pathSegments = pathname.split("/");
-    const restaurantId = pathSegments[1]; // Segundo segmento es el restaurantId
-    router.push(`/${restaurantId}/cart`);
-  };
+  const { navigateWithRestaurantId } = useNavigation();
 
   return (
     <header className="sticky top-0 container mx-auto px-5 md:px-8 lg:px-10 pt-5 md:pt-7 lg:pt-9 z-5">
       <div className="flex items-center justify-end z-10">
         <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4 z-10">
           <div className="relative group" id="cart-icon">
-            <div
-              onClick={handleCartClick}
-              className="size-10 md:size-12 lg:size-14 rounded-full flex items-center justify-center bg-white/85 backdrop-blur-sm shadow-sm hover:scale-105 active:scale-95 transition-transform duration-200 cursor-pointer"
+            <button
+              onClick={() => navigateWithRestaurantId("/cart")}
+              className="size-10 md:size-12 lg:size-14 rounded-full flex items-center justify-center bg-white/85 backdrop-blur-sm shadow-sm hover:scale-105 active:scale-95 transition-transform duration-200"
             >
               <ShoppingCart className="text-primary size-5 md:size-6 lg:size-7 group-hover:scale-105 transition-transform" />
-            </div>
+            </button>
             {state.totalItems > 0 && (
               <div
                 id="cart-badge"
-                className="absolute -top-1 -right-1 bg-[#eab3f4] text-white rounded-full size-4 md:size-5 lg:size-6 flex items-center justify-center text-xs md:text-sm font-normal"
+                className="absolute -top-1 -right-1 bg-[#eab3f4] text-white rounded-full size-4 md:size-5 lg:size-6 flex items-center justify-center text-xs md:text-sm font-normal pointer-events-none"
               >
                 {state.totalItems}
               </div>

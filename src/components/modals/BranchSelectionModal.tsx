@@ -18,6 +18,8 @@ interface BranchSelectionModalProps {
   }>;
 }
 
+const ANIMATION_DURATION = 380;
+
 export default function BranchSelectionModal({
   isOpen,
   onClose,
@@ -27,20 +29,29 @@ export default function BranchSelectionModal({
 }: BranchSelectionModalProps) {
   const { branches, selectedBranchNumber } = useBranch();
   const { changeBranch } = useNavigation();
+  const [isClosing, setIsClosing] = useState(false);
 
-  // Estado local temporal para la selección
   const [tempSelectedBranch, setTempSelectedBranch] = useState<number | null>(
     selectedBranchNumber
   );
 
-  // Sincronizar el estado temporal cuando cambia la selección global o se abre el modal
   useEffect(() => {
     if (isOpen) {
+      setIsClosing(false);
       setTempSelectedBranch(selectedBranchNumber);
     }
   }, [isOpen, selectedBranchNumber]);
 
-  if (!isOpen) return null;
+  // Animación de cierre antes de notificar al padre
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, ANIMATION_DURATION);
+  };
+
+  if (!isOpen && !isClosing) return null;
 
   const handleSelectBranch = (branchNumber: number) => {
     setTempSelectedBranch(branchNumber);
@@ -51,15 +62,14 @@ export default function BranchSelectionModal({
       tempSelectedBranch !== null &&
       tempSelectedBranch !== selectedBranchNumber
     ) {
-      // Si hay un callback personalizado, usarlo en lugar de cambiar directamente
       if (onBranchChangeRequested) {
         await onBranchChangeRequested(tempSelectedBranch);
       } else {
         changeBranch(tempSelectedBranch);
-        onClose();
+        handleClose();
       }
     } else {
-      onClose();
+      handleClose();
     }
   };
 
@@ -69,22 +79,40 @@ export default function BranchSelectionModal({
       style={{ zIndex: 99999 }}
     >
       {/* Fondo */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose}></div>
+      <div
+        className="absolute inset-0 bg-black/40"
+        style={{
+          animation: isClosing
+            ? `fadeOut ${ANIMATION_DURATION}ms cubic-bezier(0.32, 0.72, 0, 1) forwards`
+            : `fadeIn ${ANIMATION_DURATION}ms cubic-bezier(0.32, 0.72, 0, 1)`,
+        }}
+        onClick={handleClose}
+      />
 
       {/* Modal */}
       <div
-        className="relative bg-white rounded-t-4xl w-full mx-4"
+        className="relative bg-white rounded-t-4xl w-full"
+        style={{
+          animation: isClosing
+            ? `slideDown ${ANIMATION_DURATION}ms cubic-bezier(0.32, 0.72, 0, 1) forwards`
+            : `slideUp ${ANIMATION_DURATION}ms cubic-bezier(0.32, 0.72, 0, 1)`,
+        }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-gray-300" />
+        </div>
+
         {/* Header */}
-        <div className="px-6 pt-4">
+        <div className="px-6 pt-2">
           <div className="flex items-center justify-between pb-4 border-b border-[#8e8e8e]">
             <h3 className="text-lg font-semibold text-black">
               Selecciona una sucursal
             </h3>
             <button
-              onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+              onClick={handleClose}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
             >
               <X className="size-5 text-gray-500" />
             </button>
@@ -138,12 +166,11 @@ export default function BranchSelectionModal({
             <div className="space-y-2.5">
               {branches.map((branch) => {
                 const isSelected = branch.branch_number === tempSelectedBranch;
-
                 return (
-                  <div
+                  <button
                     key={branch.id}
                     onClick={() => handleSelectBranch(branch.branch_number)}
-                    className={`py-2 px-5 border rounded-full cursor-pointer transition-colors ${
+                    className={`w-full py-2 px-5 border rounded-full transition-colors text-left ${
                       isSelected
                         ? "border-teal-500 bg-teal-50"
                         : "border-black/50 bg-[#f9f9f9] hover:border-gray-400"
@@ -168,27 +195,46 @@ export default function BranchSelectionModal({
                         }`}
                       >
                         {isSelected && (
-                          <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                          <div className="w-full h-full rounded-full bg-white scale-50" />
                         )}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
           )}
         </div>
 
-        {/* Footer con botón de confirmar */}
+        {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white">
           <button
             onClick={handleConfirm}
-            className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-3 rounded-full cursor-pointer transition-colors text-base"
+            className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-3 rounded-full transition-colors text-base"
           >
             Confirmar
           </button>
         </div>
       </div>
+
+      <style>{`
+        @keyframes slideUp {
+          from { transform: translateY(100%); opacity: 0.6; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+        @keyframes slideDown {
+          from { transform: translateY(0);    opacity: 1; }
+          to   { transform: translateY(100%); opacity: 0.6; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to   { opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }

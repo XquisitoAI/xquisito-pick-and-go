@@ -5,7 +5,6 @@ import MenuCategory from "./MenuCategory";
 import {
   Search,
   ShoppingCart,
-  Settings,
   X,
   UserCircle,
   Utensils,
@@ -13,7 +12,7 @@ import {
   Loader2,
   ChevronRight,
 } from "lucide-react";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
@@ -29,6 +28,85 @@ import ChatView from "../ChatView";
 import AuthView from "./../AuthView";
 import DashboardView from "./../DashboardView";
 
+// Pure functions — defined outside to avoid re-creation on every render
+function getStatusColor(status: string) {
+  switch (status) {
+    case "preparing":
+      return "bg-yellow-100 text-yellow-800 border-yellow-300";
+    case "ready":
+      return "bg-orange-100 text-orange-800 border-orange-300";
+    case "delivered":
+      return "bg-green-100 text-green-800 border-green-300";
+    default:
+      return "bg-gray-100 text-gray-800 border-gray-300";
+  }
+}
+
+function getStatusText(status: string) {
+  switch (status) {
+    case "preparing":
+      return "Preparando";
+    case "ready":
+      return "Listo";
+    case "delivered":
+      return "Entregado";
+    default:
+      return status;
+  }
+}
+
+function lockScroll() {
+  const scrollY = window.scrollY;
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.width = "100%";
+  document.body.style.overflow = "hidden";
+}
+
+function unlockScroll() {
+  const scrollY = parseInt(document.body.style.top || "0") * -1;
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.width = "";
+  document.body.style.overflow = "";
+  window.scrollTo(0, scrollY);
+}
+
+// Reutilizable para el avatar del usuario en header normal y sticky bar
+interface UserAvatarProps {
+  isAuthenticated: boolean;
+  profile: { photoUrl?: string; firstName?: string } | null;
+  iconSize?: string;
+  textSize?: string;
+}
+
+function UserAvatar({
+  isAuthenticated,
+  profile,
+  iconSize = "size-6 md:size-7 lg:size-8",
+  textSize = "text-base md:text-lg lg:text-xl",
+}: UserAvatarProps) {
+  if (isAuthenticated && profile?.photoUrl) {
+    return (
+      <img
+        src={profile.photoUrl}
+        alt="Perfil"
+        className="w-full h-full object-cover"
+      />
+    );
+  }
+  if (isAuthenticated && profile?.firstName) {
+    return (
+      <span className={`text-stone-800 font-semibold select-none ${textSize}`}>
+        {profile.firstName.charAt(0).toUpperCase()}
+      </span>
+    );
+  }
+  return (
+    <UserCircle className={`text-stone-500 ${iconSize}`} strokeWidth={1.2} />
+  );
+}
+
 export default function MenuView() {
   const [filter, setFilter] = useState("Todo");
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,7 +119,7 @@ export default function MenuView() {
   const { state, refreshCart } = useCart();
   const { restaurant, menu, error } = useRestaurant();
   const { branches, selectedBranchNumber, fetchBranches } = useBranch();
-  const { navigateWithRestaurantId, branchNumber } = useNavigation();
+  const { navigateWithRestaurantId } = useNavigation();
   const { guestId } = useGuest();
   const [showPepperChat, setShowPepperChat] = useState(false);
   const [isPepperClosing, setIsPepperClosing] = useState(false);
@@ -58,44 +136,32 @@ export default function MenuView() {
     }, 380);
   };
 
-  // Bloquear scroll del body cuando el modal está abierto
+  const closeSettingsModal = () => {
+    setIsSettingsClosing(true);
+    setTimeout(() => {
+      setShowSettingsModal(false);
+      setIsSettingsClosing(false);
+    }, 380);
+  };
+
+  // Scroll lock unificado para todos los modales
   useEffect(() => {
-    if (showPepperChat || showSettingsModal) {
-      // Bloquear scroll en body para móviles
-      const scrollY = window.scrollY;
-      document.body.style.position = "fixed";
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = "100%";
-      document.body.style.overflow = "hidden";
+    if (showPepperChat || showSettingsModal || showStatusModal) {
+      lockScroll();
     } else {
-      // Restaurar scroll
-      const scrollY = parseInt(document.body.style.top || "0") * -1;
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.width = "";
-      document.body.style.overflow = "";
-      window.scrollTo(0, scrollY);
+      unlockScroll();
     }
-    return () => {
-      // Restaurar scroll
-      const scrollY = parseInt(document.body.style.top || "0") * -1;
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.width = "";
-      document.body.style.overflow = "";
-      window.scrollTo(0, scrollY);
-    };
-  }, [showPepperChat, showSettingsModal]);
+    return unlockScroll;
+  }, [showPepperChat, showSettingsModal, showStatusModal]);
 
   useEffect(() => {
     refreshCart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Verificar si hay orden activa con platillos pendientes
-  const checkActiveOrder = async () => {
+  const checkActiveOrder = useCallback(async () => {
     const clientId = user?.id || guestId;
     if (!clientId || !restaurant?.id) return;
-
     try {
       const response: any = await pickAndGoService.getActiveOrderByUser(
         clientId,
@@ -109,91 +175,23 @@ export default function MenuView() {
     } catch (error) {
       console.error("Error checking active order:", error);
     }
-  };
+  }, [user?.id, guestId, restaurant?.id]);
 
   useEffect(() => {
     checkActiveOrder();
-  }, [user?.id, guestId, restaurant?.id]);
+  }, [checkActiveOrder]);
 
-  // Bloquear scroll cuando el modal está abierto
-  useEffect(() => {
-    if (showStatusModal) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [showStatusModal]);
-
-  // Refrescar orden
   const handleRefreshOrder = async () => {
     setIsRefreshing(true);
     await checkActiveOrder();
     setIsRefreshing(false);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "preparing":
-        return "bg-yellow-100 text-yellow-800 border-yellow-300";
-      case "ready":
-        return "bg-orange-100 text-orange-800 border-orange-300";
-      case "delivered":
-        return "bg-green-100 text-green-800 border-green-300";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-300";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "preparing":
-        return "Preparando";
-      case "ready":
-        return "Listo";
-      case "delivered":
-        return "Entregado";
-      default:
-        return status;
-    }
-  };
-
-  const closeSettingsModal = () => {
-    setIsSettingsClosing(true);
-    setTimeout(() => {
-      setShowSettingsModal(false);
-      setIsSettingsClosing(false);
-    }, 380);
-  };
-
-  const handleSettingsClick = () => {
-    setShowSettingsModal(true);
-  };
-
-  const handlePepperClick = () => {
-    setShowPepperChat(true);
-  };
-
-  const handleCartClick = () => {
-    navigateWithRestaurantId("/cart");
-  };
-
-  // Cargar branches cuando el restaurante esté disponible
   useEffect(() => {
     if (restaurant?.id) {
       fetchBranches(restaurant.id);
     }
   }, [restaurant?.id, fetchBranches]);
-
-  // Sincronizar branchNumber de la URL con el contexto
-  useEffect(() => {
-    if (branchNumber && branchNumber !== selectedBranchNumber) {
-      // Si hay un branchNumber en la URL diferente al seleccionado, actualizarlo
-      // El contexto ya maneja esto, solo lo documentamos
-    }
-  }, [branchNumber, selectedBranchNumber]);
 
   // Mostrar barra sticky al hacer scroll past el trigger
   useEffect(() => {
@@ -212,15 +210,12 @@ export default function MenuView() {
     const categories = ["Todo"];
     if (menu && menu.length > 0) {
       menu.forEach((section) => {
-        if (section.name) {
-          categories.push(section.name);
-        }
+        if (section.name) categories.push(section.name);
       });
     }
     return categories;
   }, [menu]);
 
-  // Get gender Clerk
   const gender = profile?.gender;
   const welcomeMessage = user
     ? gender === "female"
@@ -228,19 +223,16 @@ export default function MenuView() {
       : "Bienvenido"
     : "Bienvenido";
 
-  // Total de items en el carrito
   const totalItems = state.totalItems;
 
   // Filtrar menú según la categoría seleccionada y búsqueda
   const filteredMenu = useMemo(() => {
     let filtered = menu;
 
-    // Filtrar por categoría
     if (filter !== "Todo") {
       filtered = filtered.filter((section) => section.name === filter);
     }
 
-    // Filtrar por búsqueda
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered
@@ -258,7 +250,6 @@ export default function MenuView() {
     return filtered;
   }, [menu, filter, searchQuery]);
 
-  // Mostrar error si falla
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex items-center justify-center">
@@ -270,7 +261,6 @@ export default function MenuView() {
     );
   }
 
-  // Mostrar mensaje si no hay restaurante
   if (!restaurant) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex items-center justify-center">
@@ -305,32 +295,17 @@ export default function MenuView() {
           />
           <div className="mt-6 md:mt-8 flex items-start justify-between w-full">
             {/* Settings Icon */}
-            <div
-              onClick={handleSettingsClick}
-              className="bg-white rounded-full border border-gray-400 shadow-sm cursor-pointer hover:bg-gray-50 transition-all active:scale-95 size-9 md:size-10 lg:size-12 overflow-hidden flex items-center justify-center"
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              className="bg-white rounded-full border border-gray-400 shadow-sm hover:bg-gray-50 transition-all active:scale-95 size-9 md:size-10 lg:size-12 overflow-hidden flex items-center justify-center"
             >
-              {isAuthenticated && profile?.photoUrl ? (
-                <img
-                  src={profile.photoUrl}
-                  alt="Perfil"
-                  className="w-full h-full object-cover"
-                />
-              ) : isAuthenticated && profile?.firstName ? (
-                <span className="text-stone-800 font-semibold text-base md:text-lg lg:text-xl select-none">
-                  {profile.firstName.charAt(0).toUpperCase()}
-                </span>
-              ) : (
-                <UserCircle
-                  className="size-6 md:size-7 lg:size-8 text-stone-500"
-                  strokeWidth={1.2}
-                />
-              )}
-            </div>
+              <UserAvatar isAuthenticated={isAuthenticated} profile={profile} />
+            </button>
 
-            {/* Assistent Icon */}
-            <div
-              onClick={handlePepperClick}
-              className="bg-white rounded-full text-black border border-gray-400 size-10 md:size-12 lg:size-14 cursor-pointer shadow-sm"
+            {/* Assistant Icon */}
+            <button
+              onClick={() => setShowPepperChat(true)}
+              className="bg-white rounded-full text-black border border-gray-400 size-10 md:size-12 lg:size-14 shadow-sm overflow-hidden"
             >
               <video
                 src="/videos/video-icon-pepper.webm"
@@ -338,12 +313,13 @@ export default function MenuView() {
                 loop
                 muted
                 playsInline
+                aria-hidden="true"
                 disablePictureInPicture
                 controls={false}
                 controlsList="nodownload nofullscreen noremoteplayback"
                 className="w-full h-full object-cover rounded-full"
               />
-            </div>
+            </button>
           </div>
 
           {/* Name and photo */}
@@ -398,17 +374,12 @@ export default function MenuView() {
 
             {/* Link para ver estatus de pedido activo */}
             {activeOrder && (
-              <div
-                onClick={() => {
-                  Promise.resolve();
-                  setTimeout(() => {
-                    setShowStatusModal(true);
-                  }, 400);
-                }}
+              <button
+                onClick={() => setTimeout(() => setShowStatusModal(true), 400)}
                 className="bg-[#f9f9f9] border border-[#8e8e8e] rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium text-black w-fit mx-auto active:scale-90 transition-all"
               >
                 Estatus de pedido
-              </div>
+              </button>
             )}
           </div>
 
@@ -432,10 +403,10 @@ export default function MenuView() {
           {/* Filters */}
           <div className="flex gap-2 md:gap-3 mt-3 md:mt-5 mb-3 md:mb-5 w-full overflow-x-auto scrollbar-hide">
             {categorias.map((cat) => (
-              <div
+              <button
                 key={cat}
                 onClick={() => setFilter(cat)}
-                className={`px-3 md:px-5 lg:px-6 py-1 md:py-2 text-sm md:text-base lg:text-lg rounded-full cursor-pointer whitespace-nowrap flex-shrink-0
+                className={`px-3 md:px-5 lg:px-6 py-1 md:py-2 text-sm md:text-base lg:text-lg rounded-full whitespace-nowrap flex-shrink-0
                 ${
                   filter === cat
                     ? "bg-black text-white hover:bg-slate-800"
@@ -443,7 +414,7 @@ export default function MenuView() {
                 }`}
               >
                 {cat}
-              </div>
+              </button>
             ))}
           </div>
 
@@ -471,15 +442,15 @@ export default function MenuView() {
       {/* Carrito flotante */}
       {totalItems > 0 && (
         <div className="fixed bottom-6 md:bottom-8 lg:bottom-10 left-0 right-0 z-50 flex justify-center">
-          <div
-            onClick={handleCartClick}
-            className="bg-gradient-to-r from-[#34808C] to-[#173E44] text-white rounded-full px-6 md:px-8 lg:px-10 py-4 md:py-5 lg:py-6 shadow-lg flex items-center gap-3 md:gap-4 cursor-pointer transition-all hover:scale-105 animate-bounce-in active:scale-90"
+          <button
+            onClick={() => navigateWithRestaurantId("/cart")}
+            className="bg-gradient-to-r from-[#34808C] to-[#173E44] text-white rounded-full px-6 md:px-8 lg:px-10 py-4 md:py-5 lg:py-6 shadow-lg flex items-center gap-3 md:gap-4 transition-all hover:scale-105 animate-bounce-in active:scale-90"
           >
             <ShoppingCart className="size-5 md:size-6 lg:size-7" />
             <span className="text-base md:text-lg lg:text-xl font-medium">
               Ver el carrito • {totalItems}
             </span>
-          </div>
+          </button>
         </div>
       )}
 
@@ -531,7 +502,6 @@ export default function MenuView() {
                 </div>
               </div>
 
-              {/* Título con botón de refresh */}
               <div className="px-6 md:px-8 lg:px-10 border-t border-white/20 pt-4 md:pt-5 lg:pt-6">
                 <div className="flex justify-between items-center">
                   <h3 className="font-medium text-xl md:text-2xl lg:text-3xl text-white">
@@ -586,7 +556,6 @@ export default function MenuView() {
                         <h3 className="text-base md:text-lg lg:text-xl text-white font-medium capitalize">
                           {dish.item}
                         </h3>
-                        {/* Badge de estado */}
                         <div className="mt-1 md:mt-1.5 lg:mt-2">
                           <span
                             className={`inline-block px-2 md:px-3 lg:px-4 py-0.5 md:py-1 lg:py-1.5 text-xs md:text-sm lg:text-base font-medium rounded-full border ${getStatusColor(dish.status)}`}
@@ -636,39 +605,29 @@ export default function MenuView() {
           }}
         >
           {/* Settings */}
-          <div
-            onClick={handleSettingsClick}
-            className="size-11 md:size-12 rounded-full overflow-hidden flex items-center justify-center bg-white/60 border border-gray-200 cursor-pointer hover:bg-white transition-colors active:scale-95"
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="size-11 md:size-12 rounded-full overflow-hidden flex items-center justify-center bg-white/60 border border-gray-200 hover:bg-white transition-colors active:scale-95"
           >
-            {isAuthenticated && profile?.photoUrl ? (
-              <img
-                src={profile.photoUrl}
-                alt="Perfil"
-                className="w-full h-full object-cover"
-              />
-            ) : isAuthenticated && profile?.firstName ? (
-              <span className="text-stone-700 font-semibold text-base md:text-lg select-none">
-                {profile.firstName.charAt(0).toUpperCase()}
-              </span>
-            ) : (
-              <UserCircle
-                className="size-6 md:size-7 text-stone-500"
-                strokeWidth={1.2}
-              />
-            )}
-          </div>
+            <UserAvatar
+              isAuthenticated={isAuthenticated}
+              profile={profile}
+              iconSize="size-6 md:size-7"
+              textSize="text-base md:text-lg"
+            />
+          </button>
 
           {/* Carrito */}
-          <div className="relative group">
-            <div
-              onClick={handleCartClick}
-              className="size-11 md:size-12 rounded-full flex items-center justify-center bg-white/60 border border-gray-200 cursor-pointer hover:bg-white transition-colors active:scale-95"
+          <div className="relative">
+            <button
+              onClick={() => navigateWithRestaurantId("/cart")}
+              className="size-11 md:size-12 rounded-full flex items-center justify-center bg-white/60 border border-gray-200 hover:bg-white transition-colors active:scale-95"
             >
               <ShoppingCart
                 className="size-5 md:size-6 text-stone-700"
                 strokeWidth={1.5}
               />
-            </div>
+            </button>
             {state.totalItems > 0 && (
               <div className="absolute -top-1 -right-1 bg-[#eab3f4] text-white rounded-full size-5 flex items-center justify-center text-xs font-normal">
                 {state.totalItems}
@@ -677,9 +636,9 @@ export default function MenuView() {
           </div>
 
           {/* Pepper */}
-          <div
-            onClick={handlePepperClick}
-            className="size-11 md:size-12 rounded-full border border-gray-200 bg-white/60 cursor-pointer overflow-hidden hover:bg-white transition-colors active:scale-95"
+          <button
+            onClick={() => setShowPepperChat(true)}
+            className="size-11 md:size-12 rounded-full border border-gray-200 bg-white/60 overflow-hidden hover:bg-white transition-colors active:scale-95"
           >
             <video
               src="/videos/video-icon-pepper.webm"
@@ -687,12 +646,13 @@ export default function MenuView() {
               loop
               muted
               playsInline
+              aria-hidden="true"
               disablePictureInPicture
               controls={false}
               controlsList="nodownload nofullscreen noremoteplayback"
               className="w-full h-full object-cover"
             />
-          </div>
+          </button>
         </div>
       </div>
 
@@ -722,7 +682,6 @@ export default function MenuView() {
                 : "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
             }}
           >
-            {/* Drag handle */}
             <div className="flex justify-center pt-3 pb-1 shrink-0">
               <div className="w-10 h-1 rounded-full bg-gray-300/80" />
             </div>
@@ -757,7 +716,6 @@ export default function MenuView() {
                 : "slideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1)",
             }}
           >
-            {/* Drag handle */}
             <div className="flex justify-center pt-3 pb-1 shrink-0">
               <div className="w-10 h-1 rounded-full bg-white/30" />
             </div>

@@ -23,6 +23,32 @@ const countries: Country[] = [
   { code: "+58", flag: "VE", name: "Venezuela" },
 ];
 
+// Pure functions — defined outside to avoid re-creation on every render
+function formatPhoneNumber(phoneNumber: string) {
+  if (!phoneNumber) return "";
+  const cleaned = phoneNumber.replace(/\D/g, "");
+  if (cleaned.length === 10) {
+    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
+  }
+  if (cleaned.length > 10) {
+    const cc = cleaned.slice(0, cleaned.length - 10);
+    const areaCode = cleaned.slice(-10, -7);
+    const firstPart = cleaned.slice(-7, -4);
+    const lastPart = cleaned.slice(-4);
+    return `+${cc} (${areaCode}) ${firstPart}-${lastPart}`;
+  }
+  return phoneNumber;
+}
+
+function formatPhoneInput(value: string) {
+  const cleaned = value.replace(/\D/g, "");
+  if (cleaned.length <= 3) return cleaned;
+  if (cleaned.length <= 6) return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
+  if (cleaned.length <= 10)
+    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
+  return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 10)}`;
+}
+
 interface AuthViewProps {
   onClose: () => void;
 }
@@ -48,32 +74,6 @@ export default function AuthView({ onClose }: AuthViewProps) {
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  const formatPhoneNumber = (phoneNumber: string) => {
-    if (!phoneNumber) return "";
-    const cleaned = phoneNumber.replace(/\D/g, "");
-    if (cleaned.length === 10) {
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-    }
-    if (cleaned.length > 10) {
-      const cc = cleaned.slice(0, cleaned.length - 10);
-      const areaCode = cleaned.slice(-10, -7);
-      const firstPart = cleaned.slice(-7, -4);
-      const lastPart = cleaned.slice(-4);
-      return `+${cc} (${areaCode}) ${firstPart}-${lastPart}`;
-    }
-    return phoneNumber;
-  };
-
-  const formatPhoneInput = (value: string) => {
-    const cleaned = value.replace(/\D/g, "");
-    if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 6)
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
-    if (cleaned.length <= 10)
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 10)}`;
-  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

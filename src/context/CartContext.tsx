@@ -264,7 +264,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       const response = await cartService.addToCart(
         item.id,
-        1,
+        quantity,
         item.customFields || [],
         item.extraPrice || 0,
         item.price, // Pasar el precio base (ya con descuento aplicado si lo hay)
