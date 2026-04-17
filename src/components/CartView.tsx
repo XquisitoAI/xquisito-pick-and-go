@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Minus, Plus, X } from "lucide-react";
-import { useCart, CartItem } from "../context/CartContext";
+import { Minus, Plus } from "lucide-react";
+import { useCart } from "../context/CartContext";
 import { useNavigation } from "../hooks/useNavigation";
 import MenuHeaderBack from "./headers/MenuHeaderBack";
 import { useAuth } from "@/context/AuthContext";
 
 export default function CartView() {
-  const { state, updateQuantity, removeItem } = useCart();
+  const { state, updateQuantity } = useCart();
   const { navigateWithRestaurantId } = useNavigation();
   const { isLoading, user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);

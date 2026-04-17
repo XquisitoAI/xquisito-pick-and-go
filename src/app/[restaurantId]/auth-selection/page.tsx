@@ -337,16 +337,6 @@ export default function AuthSelectionPage() {
                   {loading ? "Enviando..." : "Acceder"}
                 </button>
               </form>
-
-              {/* Guest link */}
-              <div className="text-center pt-1">
-                <button
-                  onClick={() => navigateWithRestaurantId("/user")}
-                  className="text-white/70 hover:text-white text-sm underline underline-offset-2 transition-colors"
-                >
-                  Continuar como invitado
-                </button>
-              </div>
             </div>
           )}
 
@@ -471,6 +461,15 @@ export default function AuthSelectionPage() {
               >
                 {loading ? "Guardando..." : "Continuar"}
               </button>
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => navigateWithRestaurantId("/order-confirm")}
+                  className="text-white/70 hover:text-white text-sm underline underline-offset-2 transition-colors"
+                >
+                  Continuar como invitado
+                </button>
+              </div>
             </form>
           )}
         </div>

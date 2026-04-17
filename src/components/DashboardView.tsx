@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import Loader from "./UI/Loader";
 import ProfileTab from "./dashboard/ProfileTab";
 import CardsTab from "./dashboard/CardsTab";
 import HistoryTab from "./dashboard/HistoryTab";

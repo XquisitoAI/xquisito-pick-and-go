@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/context/AuthContext";
 import { User, Camera, Loader2, Phone, X, LogOut, LogIn } from "lucide-react";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -20,13 +21,13 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
     updateProfile,
   } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState(profile?.firstName || "");
+  const [lastName, setLastName] = useState(profile?.lastName || "");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [phone, setPhone] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [gender, setGender] = useState("");
-  const [photoUrl, setPhotoUrl] = useState("");
+  const [phone, setPhone] = useState(profile?.phone || "");
+  const [birthDate, setBirthDate] = useState(profile?.birthDate || "");
+  const [gender, setGender] = useState(profile?.gender || "");
+  const [photoUrl, setPhotoUrl] = useState(profile?.photoUrl || "");
   const isAuthenticated = !!user;
 
   // Formatear número de teléfono
@@ -79,6 +80,7 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
       });
 
       if (response.success) {
+        await refreshProfile();
         alert("Perfil actualizado correctamente");
       } else {
         throw new Error(response.error || "Error al actualizar");
@@ -162,7 +164,7 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || (user && !profile)) {
     return (
       <div className="flex items-center justify-center py-12 md:py-16 lg:py-20">
         <Loader2 className="size-8 md:size-10 lg:size-12 animate-spin text-teal-600" />
@@ -360,54 +362,56 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
       )}
 
       {/* Logout Confirmation Modal */}
-      {isLogoutModalOpen && (
-        <div
-          className="fixed inset-0 flex items-end justify-center"
-          style={{ zIndex: 99999 }}
-        >
-          {/* Fondo */}
+      {isLogoutModalOpen &&
+        createPortal(
           <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setIsLogoutModalOpen(false)}
-          ></div>
-
-          <div className="relative bg-white rounded-t-4xl w-full mx-4 p-6 md:p-7 lg:p-8">
-            {/* Close Button */}
-            <button
+            className="fixed inset-0 flex items-end justify-center"
+            style={{ zIndex: 99999 }}
+          >
+            {/* Fondo */}
+            <div
+              className="absolute inset-0 bg-black/40"
               onClick={() => setIsLogoutModalOpen(false)}
-              className="absolute top-4 md:top-5 lg:top-6 right-4 md:right-5 lg:right-6 text-gray-400 hover:text-gray-600"
-            >
-              <X className="size-5 md:size-6 lg:size-7" />
-            </button>
+            ></div>
 
-            {/* Modal Title */}
-            <h3 className="text-base md:text-xl lg:text-2xl font-semibold text-gray-800 mb-4 md:mb-5">
-              Cerrar sesión
-            </h3>
-
-            {/* Confirmation Message */}
-            <p className="text-sm md:text-base text-gray-600 mb-6 md:mb-8">
-              ¿Estás seguro de que deseas cerrar sesión?
-            </p>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 md:gap-4">
+            <div className="relative bg-white rounded-t-4xl w-full mx-4 p-6 md:p-7 lg:p-8">
+              {/* Close Button */}
               <button
                 onClick={() => setIsLogoutModalOpen(false)}
-                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 md:py-3 text-base md:text-lg rounded-full cursor-pointer transition-colors"
+                className="absolute top-4 md:top-5 lg:top-6 right-4 md:right-5 lg:right-6 text-gray-400 hover:text-gray-600"
               >
-                Cancelar
+                <X className="size-5 md:size-6 lg:size-7" />
               </button>
-              <button
-                onClick={handleLogout}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 md:py-3 text-base md:text-lg rounded-full cursor-pointer transition-colors"
-              >
+
+              {/* Modal Title */}
+              <h3 className="text-base md:text-xl lg:text-2xl font-semibold text-gray-800 mb-4 md:mb-5">
                 Cerrar sesión
-              </button>
+              </h3>
+
+              {/* Confirmation Message */}
+              <p className="text-sm md:text-base text-gray-600 mb-6 md:mb-8">
+                ¿Estás seguro de que deseas cerrar sesión?
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 md:gap-4">
+                <button
+                  onClick={() => setIsLogoutModalOpen(false)}
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 md:py-3 text-base md:text-lg rounded-full cursor-pointer transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 md:py-3 text-base md:text-lg rounded-full cursor-pointer transition-colors"
+                >
+                  Cerrar sesión
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
