@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronDown, SendHorizontal, ShoppingBag } from "lucide-react";
-import { useState, useRef, useEffect, memo } from "react";
+import { useState, useRef, useEffect, memo, useMemo, useCallback } from "react";
 import { useRestaurant } from "../context/RestaurantContext";
 import { useGuest } from "../context/GuestContext";
 import { useAuth } from "../context/AuthContext";
@@ -256,7 +256,7 @@ const OrderButton = ({
   // en lugar de confiar en el ID que provee el agente.
   // Usa matching por palabras clave para tolerar diferencias entre el nombre
   // que Pepper dice ("Wrap de Pollo") y el nombre real en BD ("Wrap Pollo").
-  const resolvedDishId = (() => {
+  const resolvedDishId = useMemo(() => {
     const normalize = (s: string) =>
       s
         .toLowerCase()
@@ -327,7 +327,7 @@ const OrderButton = ({
 
     // Solo usar el match si la confianza es suficiente (≥50% de palabras coinciden)
     return bestScore >= 0.5 ? bestId : dishId;
-  })();
+  }, [menu, dishId, dishName]);
 
   const handleAdd = async () => {
     if (status !== "idle") return;
@@ -444,122 +444,147 @@ function parseMessageContent(raw: string, isStreaming: boolean) {
   };
 }
 
-// Componente para renderizar mensajes con imágenes (sin memo para garantizar re-render con nuevas URLs)
-const MessageContent = ({
-  content,
-  isStreaming,
-  activeTool,
-  restaurantId,
-  userId,
-}: {
-  content: string;
-  isStreaming?: boolean;
-  activeTool?: string | null;
-  restaurantId: number | null;
-  userId: string | null;
-}) => {
-  const { text, dishId, dishName } = parseMessageContent(
+// MessageContent con memo — solo re-renderiza si cambia content, isStreaming o activeTool
+const MessageContent = memo(
+  ({
     content,
-    !!isStreaming,
-  );
+    isStreaming,
+    activeTool,
+    restaurantId,
+    userId,
+  }: {
+    content: string;
+    isStreaming?: boolean;
+    activeTool?: string | null;
+    restaurantId: number | null;
+    userId: string | null;
+  }) => {
+    const { text, dishId, dishName } = parseMessageContent(
+      content,
+      !!isStreaming,
+    );
 
-  // 🔹 Estado vacío
-  if (!text) {
-    if (activeTool) {
+    // 🔹 Estado vacío
+    if (!text) {
+      if (activeTool) {
+        return (
+          <div className="flex items-center gap-2">
+            <Spinner />
+            <span className="text-gray-500">
+              {toolDisplayNames[activeTool] || activeTool}
+            </span>
+          </div>
+        );
+      }
+      return <LoadingDots />;
+    }
+
+    // 🔹 STREAMING
+    if (isStreaming) {
+      const IMAGE_PLACEHOLDER = "\u0000IMG\u0000";
+
+      let processed = text
+        .replace(
+          /!\[[^\]]*\]\(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?\)/gi,
+          IMAGE_PLACEHOLDER,
+        )
+        .replace(/!\[[^\]]*\]?\(?https?:\/\/[^\s)]*$/, IMAGE_PLACEHOLDER)
+        .replace(
+          /(?<![(\[])(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?)/gi,
+          IMAGE_PLACEHOLDER,
+        );
+
+      if (hasIncompleteImageUrl(processed)) {
+        processed = processed.replace(/https?:\/\/[^\s)]*$/, IMAGE_PLACEHOLDER);
+      }
+
+      const parts = processed.split(IMAGE_PLACEHOLDER);
+
       return (
-        <div className="flex items-center gap-2">
-          <Spinner />
-          <span className="text-gray-500">
-            {toolDisplayNames[activeTool] || activeTool}
-          </span>
+        <div>
+          {parts.map((part, i) => (
+            <span key={i}>
+              {part && (
+                <span className="whitespace-pre-wrap">
+                  {renderBoldText(part)}
+                </span>
+              )}
+              {i < parts.length - 1 && <LoadingDots />}
+            </span>
+          ))}
         </div>
       );
     }
-    return <LoadingDots />;
-  }
 
-  // 🔹 STREAMING
-  if (isStreaming) {
-    const IMAGE_PLACEHOLDER = "\u0000IMG\u0000";
+    // 🔹 FINAL (no streaming)
+    const markdownImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const directImageRegex =
+      /(?<![(\[])(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?)/gi;
 
-    let processed = text
-      .replace(
-        /!\[[^\]]*\]\(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?\)/gi,
-        IMAGE_PLACEHOLDER,
-      )
-      .replace(/!\[[^\]]*\]?\(?https?:\/\/[^\s)]*$/, IMAGE_PLACEHOLDER)
-      .replace(
-        /(?<![(\[])(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?)/gi,
-        IMAGE_PLACEHOLDER,
-      );
+    const elements: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let key = 0;
 
-    if (hasIncompleteImageUrl(processed)) {
-      processed = processed.replace(/https?:\/\/[^\s)]*$/, IMAGE_PLACEHOLDER);
-    }
+    const matches: Array<{
+      index: number;
+      length: number;
+      url: string;
+      alt?: string;
+    }> = [];
 
-    const parts = processed.split(IMAGE_PLACEHOLDER);
+    let match;
 
-    return (
-      <div>
-        {parts.map((part, i) => (
-          <span key={i}>
-            {part && (
-              <span className="whitespace-pre-wrap">
-                {renderBoldText(part)}
-              </span>
-            )}
-            {i < parts.length - 1 && <LoadingDots />}
-          </span>
-        ))}
-      </div>
-    );
-  }
-
-  // 🔹 FINAL (no streaming)
-  const markdownImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
-  const directImageRegex =
-    /(?<![(\[])(https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|avif)(?:\?[^\s)]*)?)/gi;
-
-  const elements: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let key = 0;
-
-  const matches: Array<{
-    index: number;
-    length: number;
-    url: string;
-    alt?: string;
-  }> = [];
-
-  let match;
-
-  while ((match = markdownImageRegex.exec(text)) !== null) {
-    matches.push({
-      index: match.index,
-      length: match[0].length,
-      url: match[2],
-      alt: match[1],
-    });
-  }
-
-  while ((match = directImageRegex.exec(text)) !== null) {
-    const isInsideMarkdown = matches.some(
-      (m) => match!.index >= m.index && match!.index < m.index + m.length,
-    );
-    if (!isInsideMarkdown) {
+    while ((match = markdownImageRegex.exec(text)) !== null) {
       matches.push({
         index: match.index,
         length: match[0].length,
-        url: match[0],
+        url: match[2],
+        alt: match[1],
       });
     }
-  }
 
-  matches.sort((a, b) => a.index - b.index);
+    while ((match = directImageRegex.exec(text)) !== null) {
+      const isInsideMarkdown = matches.some(
+        (m) => match!.index >= m.index && match!.index < m.index + m.length,
+      );
+      if (!isInsideMarkdown) {
+        matches.push({
+          index: match.index,
+          length: match[0].length,
+          url: match[0],
+        });
+      }
+    }
 
-  for (const m of matches) {
-    if (m.index > lastIndex) {
-      const chunk = text.slice(lastIndex, m.index);
+    matches.sort((a, b) => a.index - b.index);
+
+    for (const m of matches) {
+      if (m.index > lastIndex) {
+        const chunk = text.slice(lastIndex, m.index);
+        if (chunk.trim()) {
+          elements.push(
+            <p key={key++} className="whitespace-pre-wrap">
+              {renderBoldText(chunk)}
+            </p>,
+          );
+        }
+      }
+
+      elements.push(
+        <img
+          key={m.url + key++}
+          src={m.url}
+          alt={m.alt || "Imagen"}
+          className="rounded-lg max-w-full h-auto"
+          loading="lazy"
+        />,
+      );
+
+      lastIndex = m.index + m.length;
+    }
+
+    if (lastIndex < text.length) {
+      const chunk = text.slice(lastIndex);
       if (chunk.trim()) {
         elements.push(
           <p key={key++} className="whitespace-pre-wrap">
@@ -569,49 +594,65 @@ const MessageContent = ({
       }
     }
 
-    elements.push(
-      <img
-        key={m.url + key++}
-        src={m.url}
-        alt={m.alt || "Imagen"}
-        className="rounded-lg max-w-full h-auto"
-        loading="lazy"
-      />,
+    return (
+      <div className="space-y-2">
+        {elements.length > 0 ? (
+          elements
+        ) : (
+          <p className="whitespace-pre-wrap">{renderBoldText(text)}</p>
+        )}
+
+        {dishId && dishName && (
+          <OrderButton
+            dishId={dishId}
+            dishName={dishName}
+            restaurantId={restaurantId}
+            userId={userId}
+          />
+        )}
+      </div>
     );
+  },
+);
 
-    lastIndex = m.index + m.length;
-  }
-
-  if (lastIndex < text.length) {
-    const chunk = text.slice(lastIndex);
-    if (chunk.trim()) {
-      elements.push(
-        <p key={key++} className="whitespace-pre-wrap">
-          {renderBoldText(chunk)}
-        </p>,
-      );
-    }
-  }
-
-  return (
-    <div className="space-y-2">
-      {elements.length > 0 ? (
-        elements
-      ) : (
-        <p className="whitespace-pre-wrap">{renderBoldText(text)}</p>
-      )}
-
-      {dishId && dishName && (
-        <OrderButton
-          dishId={dishId}
-          dishName={dishName}
+// Cada mensaje está memoizado — durante streaming solo el último re-renderiza
+interface MemoizedMessageProps {
+  msg: { id: string; role: "user" | "pepper"; content: string };
+  isLastPepperMessage: boolean;
+  isStreaming: boolean;
+  activeTool: string | null;
+  restaurantId: number | null;
+  userId: string | null;
+}
+const MemoizedMessage = memo(
+  ({
+    msg,
+    isLastPepperMessage,
+    isStreaming,
+    activeTool,
+    restaurantId,
+    userId,
+  }: MemoizedMessageProps) => (
+    <div
+      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+    >
+      <div
+        className={`max-w-[80%] rounded-xl md:rounded-2xl px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-black text-base md:text-lg lg:text-xl ${
+          msg.role === "user" ? "bg-[#ebb2f4]" : "bg-white/60"
+        }`}
+      >
+        <MessageContent
+          content={msg.content}
+          isStreaming={isLastPepperMessage && isStreaming}
+          activeTool={isLastPepperMessage ? activeTool : null}
           restaurantId={restaurantId}
           userId={userId}
         />
-      )}
+      </div>
     </div>
-  );
-};
+  ),
+);
+MemoizedMessage.displayName = "MemoizedMessage";
 
 export default function ChatView({ onBack }: ChatViewProps) {
   const [message, setMessage] = useState("");
@@ -812,32 +853,19 @@ export default function ChatView({ onBack }: ChatViewProps) {
       >
         {hasStartedChat && (
           <div className="min-h-full flex flex-col justify-end gap-3 md:gap-4 lg:gap-5">
-            {messages.map((msg, index) => {
-              const isLastPepperMessage =
-                msg.role === "pepper" && index === messages.length - 1;
-              return (
-                <div
-                  key={msg.id}
-                  className={`flex ${
-                    msg.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-xl md:rounded-2xl px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-black text-base md:text-lg lg:text-xl ${
-                      msg.role === "user" ? "bg-[#ebb2f4]" : "bg-white/60"
-                    }`}
-                  >
-                    <MessageContent
-                      content={msg.content}
-                      isStreaming={isLastPepperMessage && isStreaming}
-                      activeTool={isLastPepperMessage ? activeTool : null}
-                      restaurantId={restaurantId}
-                      userId={user?.id ?? null}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+            {messages.map((msg, index) => (
+              <MemoizedMessage
+                key={msg.id}
+                msg={msg}
+                isLastPepperMessage={
+                  msg.role === "pepper" && index === messages.length - 1
+                }
+                isStreaming={isStreaming}
+                activeTool={activeTool}
+                restaurantId={restaurantId}
+                userId={user?.id ?? null}
+              />
+            ))}
             <div ref={messagesEndRef} />
           </div>
         )}
