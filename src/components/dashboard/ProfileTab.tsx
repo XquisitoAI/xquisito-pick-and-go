@@ -76,7 +76,11 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
         firstName,
         lastName,
         birthDate: birthDate || undefined,
-        gender: gender as "male" | "female" | "other" | undefined,
+        gender: (gender || undefined) as
+          | "male"
+          | "female"
+          | "other"
+          | undefined,
       });
 
       if (response.success) {
@@ -296,6 +300,9 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
               }}
               disabled={isUpdating || !isAuthenticated}
             >
+              <option value="" disabled>
+                Selecciona...
+              </option>
               <option value="male">Masculino</option>
               <option value="female">Femenino</option>
               <option value="other">Otro</option>
