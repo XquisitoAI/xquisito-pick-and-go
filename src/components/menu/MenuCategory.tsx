@@ -17,7 +17,10 @@ export default function MenuCategory({
   const [showClosedModal, setShowClosedModal] = useState(false);
 
   return (
-    <section className="w-full mb-4 md:mb-5">
+    <section
+      className="w-full mb-4 md:mb-5"
+      style={{ contentVisibility: "auto", containIntrinsicSize: "0 400px" }}
+    >
       <RestaurantClosedModal
         isOpen={showClosedModal}
         onClose={() => setShowClosedModal(false)}

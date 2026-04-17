@@ -27,7 +27,9 @@ import { useCart } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { useBranch } from "../../context/BranchContext";
 import { useNavigation } from "../../hooks/useNavigation";
-import BranchSelectionModal from "../modals/BranchSelectionModal";
+const BranchSelectionModal = lazy(
+  () => import("../modals/BranchSelectionModal"),
+);
 import {
   pickAndGoService,
   type ActiveOrderResponse,
@@ -167,7 +169,8 @@ export default function MenuView() {
   }, [showPepperChat, showSettingsModal, showStatusModal]);
 
   useEffect(() => {
-    refreshCart();
+    const t = setTimeout(() => refreshCart(), 300);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -299,6 +302,7 @@ export default function MenuView() {
           "https://w0.peakpx.com/wallpaper/531/501/HD-wallpaper-coffee-espresso-latte-art-cup-food.jpg"
         }
         alt=""
+        fetchPriority="high"
         className="absolute top-0 left-0 w-full h-[230px] md:h-96 lg:h-[28rem] object-cover banner-mobile z-0"
       />
 
@@ -331,6 +335,7 @@ export default function MenuView() {
                 loop
                 muted
                 playsInline
+                preload="none"
                 aria-hidden="true"
                 disablePictureInPicture
                 controls={false}
@@ -473,10 +478,14 @@ export default function MenuView() {
       )}
 
       {/* Modal de selección de sucursal */}
-      <BranchSelectionModal
-        isOpen={showBranchModal}
-        onClose={() => setShowBranchModal(false)}
-      />
+      {showBranchModal && (
+        <Suspense fallback={null}>
+          <BranchSelectionModal
+            isOpen={showBranchModal}
+            onClose={() => setShowBranchModal(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Status Modal */}
       {showStatusModal && activeOrder && (
