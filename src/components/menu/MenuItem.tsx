@@ -10,14 +10,14 @@ import { useFlyToCart } from "../../hooks/useFlyToCart";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { Plus, Minus } from "lucide-react";
-import { useRef, useState, useEffect, useMemo } from "react";
-import RestaurantClosedModal from "../RestaurantClosedModal";
+import { useRef, useState, useEffect, useMemo, memo } from "react";
 
 interface MenuItemProps {
   item: MenuItemDB | MenuItemData;
+  onRestaurantClosed?: () => void;
 }
 
-export default function MenuItem({ item }: MenuItemProps) {
+function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
   // Adaptar el item de BD al formato legacy
   const adaptedItem: MenuItemData = useMemo(() => {
     // Si ya tiene el formato legacy, devolverlo tal cual
@@ -44,7 +44,6 @@ export default function MenuItem({ item }: MenuItemProps) {
   const plusButtonRef = useRef<HTMLDivElement>(null);
   const [localQuantity, setLocalQuantity] = useState(0);
   const [isPulsing, setIsPulsing] = useState(false);
-  const [showClosedModal, setShowClosedModal] = useState(false);
 
   // Verificar si el item tiene custom fields obligatorios
   const hasRequiredCustomFields = useMemo(() => {
@@ -75,7 +74,7 @@ export default function MenuItem({ item }: MenuItemProps) {
 
     // Verificar si el restaurante está abierto
     if (!isOpen) {
-      setShowClosedModal(true);
+      onRestaurantClosed?.();
       return;
     }
 
@@ -180,13 +179,6 @@ export default function MenuItem({ item }: MenuItemProps) {
 
   return (
     <>
-      <RestaurantClosedModal
-        isOpen={showClosedModal}
-        onClose={() => setShowClosedModal(false)}
-        openingHours={restaurant?.opening_hours}
-        restaurantName={restaurant?.name}
-        restaurantLogo={restaurant?.logo_url}
-      />
       <div
         className="border-b border-gray-300 py-4 md:py-6 lg:py-7 relative"
         onClick={handleImageClick}
@@ -199,12 +191,14 @@ export default function MenuItem({ item }: MenuItemProps) {
                 <img
                   src={adaptedItem.images[0]}
                   alt="Dish preview"
+                  loading="lazy"
                   className="w-full h-full object-cover rounded-xl md:rounded-2xl"
                 />
               ) : (
                 <img
                   src={"/logos/logo-short-green.webp"}
                   alt="Logo Xquisito"
+                  loading="lazy"
                   className="size-18 md:size-20 lg:size-22 object-contain"
                 />
               )}
@@ -282,3 +276,5 @@ export default function MenuItem({ item }: MenuItemProps) {
     </>
   );
 }
+
+export default memo(MenuItem);
