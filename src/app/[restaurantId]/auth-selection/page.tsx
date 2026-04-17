@@ -464,7 +464,7 @@ export default function AuthSelectionPage() {
               <div className="text-center pt-1">
                 <button
                   type="button"
-                  onClick={() => navigateWithRestaurantId("/order-confirm")}
+                  onClick={() => navigateWithRestaurantId("/user")}
                   className="text-white/70 hover:text-white text-sm underline underline-offset-2 transition-colors"
                 >
                   Continuar como invitado
