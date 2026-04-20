@@ -58,6 +58,8 @@ export default function AuthView({ onClose }: AuthViewProps) {
     verifyOTP,
     createOrUpdateProfile: updateProfile,
     refreshProfile,
+    user,
+    profile: authProfile,
   } = useAuth();
 
   const [step, setStep] = useState<Step>("phone");
@@ -91,6 +93,13 @@ export default function AuthView({ onClose }: AuthViewProps) {
       return () => clearTimeout(timer);
     }
   }, [countdown]);
+
+  // Si ya está autenticado pero sin nombre (ej. recarga de página), ir directo a perfil
+  useEffect(() => {
+    if (user && !authProfile?.firstName) {
+      setStep("profile");
+    }
+  }, [user, authProfile]);
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();

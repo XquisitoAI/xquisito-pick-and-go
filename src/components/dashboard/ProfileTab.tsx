@@ -85,7 +85,6 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
 
       if (response.success) {
         await refreshProfile();
-        alert("Perfil actualizado correctamente");
       } else {
         throw new Error(response.error || "Error al actualizar");
       }

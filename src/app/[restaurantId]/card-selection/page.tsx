@@ -894,7 +894,7 @@ export default function CardSelectionPage() {
     );
     const cardBrand = selectedMethod?.cardBrand;
 
-    // Configuración de MSI según el tipo de tarjeta
+    // Configuración de Diferido según el tipo de tarjeta (tasas del portal EcartPay, pre-IVA)
     const msiOptions =
       cardBrand === "amex"
         ? [
@@ -902,17 +902,13 @@ export default function CardSelectionPage() {
             { months: 6, rate: 6.25 },
             { months: 9, rate: 8.25 },
             { months: 12, rate: 10.25 },
-            { months: 15, rate: 13.25 },
             { months: 18, rate: 15.25 },
-            { months: 21, rate: 17.25 },
-            { months: 24, rate: 19.25 },
           ]
         : [
-            { months: 3, rate: 3.5 },
-            { months: 6, rate: 5.5 },
-            { months: 9, rate: 8.5 },
-            { months: 12, rate: 11.5 },
-            { months: 18, rate: 15.0 },
+            { months: 3, rate: 4.25 },
+            { months: 6, rate: 8.5 },
+            { months: 9, rate: 13.0 },
+            { months: 12, rate: 18.25 },
           ];
 
     // Encontrar la opción seleccionada
@@ -1312,7 +1308,7 @@ export default function CardSelectionPage() {
                   );
                   const cardBrand = selectedMethod?.cardBrand;
 
-                  // Configuración de MSI según el tipo de tarjeta
+                  // Configuración de Diferido según el tipo de tarjeta (tasas del portal EcartPay, pre-IVA)
                   const msiOptions =
                     cardBrand === "amex"
                       ? [
@@ -1320,18 +1316,14 @@ export default function CardSelectionPage() {
                           { months: 6, rate: 6.25, minAmount: 0 },
                           { months: 9, rate: 8.25, minAmount: 0 },
                           { months: 12, rate: 10.25, minAmount: 0 },
-                          { months: 15, rate: 13.25, minAmount: 0 },
                           { months: 18, rate: 15.25, minAmount: 0 },
-                          { months: 21, rate: 17.25, minAmount: 0 },
-                          { months: 24, rate: 19.25, minAmount: 0 },
                         ]
                       : [
-                          // Visa/Mastercard
-                          { months: 3, rate: 3.5, minAmount: 300 },
-                          { months: 6, rate: 5.5, minAmount: 600 },
-                          { months: 9, rate: 8.5, minAmount: 900 },
-                          { months: 12, rate: 11.5, minAmount: 1200 },
-                          { months: 18, rate: 15.0, minAmount: 1800 },
+                          // Visa/Mastercard — tasas configuradas en portal EcartPay
+                          { months: 3, rate: 4.25, minAmount: 300 },
+                          { months: 6, rate: 8.5, minAmount: 600 },
+                          { months: 9, rate: 13.0, minAmount: 900 },
+                          { months: 12, rate: 18.25, minAmount: 1200 },
                         ];
 
                   return (

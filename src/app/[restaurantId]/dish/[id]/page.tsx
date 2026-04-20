@@ -481,7 +481,6 @@ export default function DishDetailPage() {
           });
 
       if (response?.success) {
-        alert(myReview ? "¡Reseña actualizada!" : "¡Gracias por tu reseña!");
         setIsReviewModalOpen(false);
         // Paralelo — no hay dependencia entre ambas llamadas
         await Promise.all([loadDishStats(), loadMyReview()]);
