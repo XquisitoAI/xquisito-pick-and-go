@@ -565,6 +565,7 @@ export default function CardSelectionPage() {
         orderId: `order-${Date.now()}`,
         tableNumber: "PICKUP", // Pick & Go usa un valor especial
         restaurantId,
+        installments: selectedMSI || undefined,
       };
 
       console.log("💳 Processing payment:", paymentData);
@@ -1178,7 +1179,10 @@ export default function CardSelectionPage() {
                       }`}
                     >
                       <div
-                        onClick={() => setSelectedPaymentMethodId(method.id)}
+                        onClick={() => {
+                          setSelectedPaymentMethodId(method.id);
+                          setSelectedMSI(null);
+                        }}
                         className="flex items-center justify-center gap-3 mx-auto cursor-pointer"
                       >
                         <div>{getCardTypeIcon(method.cardBrand)}</div>
@@ -1190,7 +1194,10 @@ export default function CardSelectionPage() {
                       </div>
 
                       <div
-                        onClick={() => setSelectedPaymentMethodId(method.id)}
+                        onClick={() => {
+                          setSelectedPaymentMethodId(method.id);
+                          setSelectedMSI(null);
+                        }}
                         className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
                           selectedPaymentMethodId === method.id
                             ? "border-teal-500 bg-teal-500"

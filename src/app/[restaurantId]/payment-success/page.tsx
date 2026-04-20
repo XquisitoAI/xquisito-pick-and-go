@@ -877,9 +877,11 @@ export default function PaymentSuccessPage() {
                     <h2 className="text-2xl md:text-3xl lg:text-4xl text-white font-semibold">
                       Pedido #{orderFolio || "---"}
                     </h2>
-                    {/*<p className="text-sm md:text-base lg:text-lg text-white/80 mt-1">
-                      Pick & Go
-                    </p>*/}
+                    {paymentDetails?.userName && (
+                      <p className="text-base md:text-md lg:text-lg text-white/80 font-medium">
+                        {paymentDetails.userName}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

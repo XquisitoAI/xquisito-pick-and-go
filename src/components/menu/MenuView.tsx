@@ -12,6 +12,7 @@ import {
   Loader2,
   ChevronRight,
   ChevronLeft,
+  Clock,
 } from "lucide-react";
 import {
   useState,
@@ -68,6 +69,16 @@ function getStatusText(status: string) {
     default:
       return status;
   }
+}
+
+function getOrderOverallStatus(
+  dishes: { status: string }[],
+): "preparing" | "ready" | "delivered" {
+  if (!dishes || dishes.length === 0) return "preparing";
+  const statuses = dishes.map((d) => d.status);
+  if (statuses.every((s) => s === "delivered")) return "delivered";
+  if (statuses.every((s) => s === "ready")) return "ready";
+  return "preparing";
 }
 
 function lockScroll() {
@@ -547,11 +558,116 @@ export default function MenuView() {
                     <h2 className="text-2xl md:text-3xl lg:text-4xl text-white font-semibold">
                       Pedido #{activeOrder.pick_and_go_order?.folio || "---"}
                     </h2>
-                    <p className="text-sm md:text-base lg:text-lg text-white/80 mt-1">
+                    <p className="text-base md:text-md lg:text-lg text-white/80 font-medium">
                       {activeOrders.length > 1
                         ? `${activeOrderIndex + 1} de ${activeOrders.length}`
-                        : "Pick & Go"}
+                        : activeOrder.pick_and_go_order?.customer_name ||
+                          "Pick & Go"}
                     </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Estatus General - 3 pasos */}
+              <div className="px-6 md:px-8 lg:px-10 mb-4 md:mb-5 lg:mb-6">
+                <div className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8">
+                  {/* Preparando - siempre activo */}
+                  <div className="flex flex-col items-center gap-1.5 md:gap-2">
+                    <div className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 bg-white border border-green-200">
+                      <Clock className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-green-600" />
+                    </div>
+                    <span className="text-xs md:text-sm font-medium text-green-100">
+                      Preparando
+                    </span>
+                  </div>
+
+                  <div className="flex-1 max-w-12 md:max-w-16 lg:max-w-20 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full w-full rounded-full bg-gradient-to-r from-white to-green-200"></div>
+                  </div>
+
+                  {/* Listo */}
+                  <div className="flex flex-col items-center gap-1.5 md:gap-2">
+                    <div
+                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
+                        getOrderOverallStatus(activeOrder.dishes) === "ready" ||
+                        getOrderOverallStatus(activeOrder.dishes) ===
+                          "delivered"
+                          ? "bg-green-100 border border-green-100"
+                          : "bg-white/10"
+                      }`}
+                    >
+                      <Utensils
+                        className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 ${
+                          getOrderOverallStatus(activeOrder.dishes) ===
+                            "ready" ||
+                          getOrderOverallStatus(activeOrder.dishes) ===
+                            "delivered"
+                            ? "text-green-600"
+                            : "text-white"
+                        }`}
+                      />
+                    </div>
+                    <span
+                      className={`text-xs md:text-sm font-medium ${
+                        getOrderOverallStatus(activeOrder.dishes) === "ready" ||
+                        getOrderOverallStatus(activeOrder.dishes) ===
+                          "delivered"
+                          ? "text-green-100"
+                          : "text-white/60"
+                      }`}
+                    >
+                      Listo
+                    </span>
+                  </div>
+
+                  <div className="flex-1 max-w-12 md:max-w-16 lg:max-w-20 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        getOrderOverallStatus(activeOrder.dishes) ===
+                        "delivered"
+                          ? "w-full bg-gradient-to-r from-green-200 to-green-300"
+                          : "w-0"
+                      }`}
+                    ></div>
+                  </div>
+
+                  {/* Entregado */}
+                  <div className="flex flex-col items-center gap-1.5 md:gap-2">
+                    <div
+                      className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
+                        getOrderOverallStatus(activeOrder.dishes) ===
+                        "delivered"
+                          ? "bg-green-200 border border-green-300"
+                          : "bg-white/10"
+                      }`}
+                    >
+                      <svg
+                        className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 ${
+                          getOrderOverallStatus(activeOrder.dishes) ===
+                          "delivered"
+                            ? "text-green-800"
+                            : "text-white"
+                        }`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <span
+                      className={`text-xs md:text-sm font-medium ${
+                        getOrderOverallStatus(activeOrder.dishes) ===
+                        "delivered"
+                          ? "text-green-100"
+                          : "text-white/60"
+                      }`}
+                    >
+                      Entregado
+                    </span>
                   </div>
                 </div>
               </div>
