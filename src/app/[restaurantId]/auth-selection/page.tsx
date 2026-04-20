@@ -225,14 +225,14 @@ export default function AuthSelectionPage() {
           <div className="mb-6 md:mb-8 text-center">
             <h1 className="text-white text-xl md:text-2xl lg:text-3xl font-medium mb-2">
               {step === "phone"
-                ? "¿Cómo deseas continuar?"
+                ? "Ingresa tu número de celular"
                 : step === "verify"
                   ? "Verifica tu código"
                   : "Completa tu perfil"}
             </h1>
             <p className="text-white/80 text-sm md:text-base">
               {step === "phone"
-                ? "Ingresa tu número para acceder o crear tu cuenta"
+                ? "Te avisaremos cuando tu pedido esté listo"
                 : step === "verify"
                   ? `Enviamos un código al ${formatPhoneNumber(phone)}`
                   : "Cuéntanos un poco más sobre ti"}
