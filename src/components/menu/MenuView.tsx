@@ -41,6 +41,7 @@ import { useGuest } from "@/context/GuestContext";
 const ChatView = lazy(() => import("../ChatView"));
 const AuthView = lazy(() => import("./../AuthView"));
 const DashboardView = lazy(() => import("./../DashboardView"));
+const RestaurantClosedModal = lazy(() => import("../RestaurantClosedModal"));
 
 // Pure functions — defined outside to avoid re-creation on every render
 function getStatusColor(status: string) {
@@ -143,6 +144,7 @@ export default function MenuView() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isSettingsClosing, setIsSettingsClosing] = useState(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
+  const [showClosedModal, setShowClosedModal] = useState(false);
   const stickyTriggerRef = useRef<HTMLDivElement>(null);
 
   const closePepperChat = () => {
@@ -452,6 +454,7 @@ export default function MenuView() {
                 key={section.id}
                 section={section}
                 showSectionName={filter === "Todo"}
+                onRestaurantClosed={() => setShowClosedModal(true)}
               />
             ))
           ) : (
@@ -788,6 +791,17 @@ export default function MenuView() {
           </div>
         </div>
       )}
+
+      {/* Restaurant Closed Modal */}
+      <Suspense fallback={null}>
+        <RestaurantClosedModal
+          isOpen={showClosedModal}
+          onClose={() => setShowClosedModal(false)}
+          openingHours={restaurant?.opening_hours}
+          restaurantName={restaurant?.name}
+          restaurantLogo={restaurant?.logo_url}
+        />
+      </Suspense>
     </div>
   );
 }
