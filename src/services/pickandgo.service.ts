@@ -373,11 +373,26 @@ class PickAndGoService {
     });
 
     // Usar el nuevo endpoint que NO requiere mesas
+    // Mapear camelCase a snake_case para el backend
+    const body = {
+      item: orderData.item,
+      quantity: orderData.quantity,
+      price: orderData.price,
+      user_id: orderData.userId,
+      guest_id: orderData.guestId,
+      guest_name: orderData.guestName,
+      images: orderData.images,
+      custom_fields: orderData.customFields,
+      extra_price: orderData.extraPrice,
+      pick_and_go_order_id: pickAndGoOrderId,
+      menu_item_id: orderData.menuItemId,
+    };
+
     return this.request<DishOrder>(
       `/pick-and-go/orders/${pickAndGoOrderId}/dishes`,
       {
         method: "POST",
-        body: JSON.stringify(orderData),
+        body: JSON.stringify(body),
       },
     );
   }

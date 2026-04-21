@@ -389,6 +389,7 @@ export default function CardSelectionPage() {
             customFields: customFields,
             extraPrice: item.extraPrice || 0,
             pickAndGoOrderId: pickAndGoOrderId,
+            menuItemId: item.id,
           };
 
           console.log("Creating dish order:", dishOrderData);
@@ -672,6 +673,7 @@ export default function CardSelectionPage() {
           customFields: customFields, // JSONB o null
           extraPrice: item.extraPrice || 0,
           pickAndGoOrderId: pickAndGoOrderId, // 🔑 VINCULACIÓN CON PICK & GO ORDER
+          menuItemId: item.id,
         };
 
         console.log("Creating dish order:", dishOrderData);
