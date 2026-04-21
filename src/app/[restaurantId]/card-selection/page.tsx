@@ -561,7 +561,7 @@ export default function CardSelectionPage() {
         paymentMethodId: selectedPaymentMethodId!,
         amount: totalAmount,
         currency: "MXN",
-        description: `Pick & Go Order - ${profile?.firstName || "Invitado"}`,
+        description: `Pick & Go Order - ${profile?.firstName || cartState.userName || "Invitado"}`,
         orderId: `order-${Date.now()}`,
         tableNumber: "PICKUP", // Pick & Go usa un valor especial
         restaurantId,

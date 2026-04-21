@@ -11,6 +11,7 @@ import { PickAndGoProvider } from "@/context/PickAndGoContext";
 import { UserDataProvider } from "@/context/userDataContext";
 import { PaymentProvider } from "@/context/PaymentContext";
 import { PepperProvider } from "@/context/PepperContext";
+import AuthCartSync from "@/components/AuthCartSync";
 import Script from "next/script";
 
 const helveticaNeue = localFont({
@@ -130,6 +131,7 @@ export default async function RootLayout({
             <BranchProvider>
               <RestaurantProvider>
                 <CartProvider>
+                  <AuthCartSync />
                   <PepperProvider>
                     <PickAndGoProvider>
                       <PaymentProvider>

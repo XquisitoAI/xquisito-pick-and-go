@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 export default function CartView() {
   const { state, updateQuantity } = useCart();
   const { navigateWithRestaurantId } = useNavigation();
-  const { isLoading, user } = useAuth();
+  const { isLoading, user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOrder = async () => {
@@ -18,7 +18,12 @@ export default function CartView() {
     if (!isLoading && user) {
       setIsSubmitting(true);
       try {
-        navigateWithRestaurantId("/order-confirm");
+        // Si el usuario no tiene nombre en su perfil, pedirlo primero
+        if (!profile?.firstName) {
+          navigateWithRestaurantId("/user");
+        } else {
+          navigateWithRestaurantId("/order-confirm");
+        }
       } catch (error) {
         console.error("Error navigating to payment:", error);
       } finally {

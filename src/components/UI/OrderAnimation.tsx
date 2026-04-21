@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { CartItem } from "../../context/CartContext";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { useParams, useRouter } from "next/navigation";
@@ -27,6 +27,12 @@ const OrderAnimation = ({
   const restaurantId = params?.restaurantId as string;
   const { restaurant, loading } = useRestaurant();
   const { user, profile } = useAuth();
+
+  // Siempre apunta a la versión más reciente del callback para evitar closures obsoletos
+  const onConfirmRef = useRef(onConfirm);
+  useEffect(() => {
+    onConfirmRef.current = onConfirm;
+  }, [onConfirm]);
   const [animationState, setAnimationState] = useState<
     "circle" | "content" | "greenCircle" | "success"
   >("circle");
@@ -111,8 +117,9 @@ const OrderAnimation = ({
     const cancelButtonTimer = setTimeout(() => {
       setShowCancelButton(false);
       // Confirmar la orden después de que expire el tiempo de cancelación
-      if (onConfirm) {
-        onConfirm();
+      // Usamos el ref para siempre llamar la versión más reciente (evita closures obsoletos con profile=null)
+      if (onConfirmRef.current) {
+        onConfirmRef.current();
       }
     }, 4000);
 
