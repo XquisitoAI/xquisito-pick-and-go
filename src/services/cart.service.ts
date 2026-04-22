@@ -20,6 +20,7 @@ export interface CartItem {
       price: number;
     }>;
   }>;
+  specialInstructions?: string | null;
   subtotal: number;
 }
 
@@ -28,6 +29,7 @@ export interface Cart {
   items: CartItem[];
   total_items: number;
   total_amount: number;
+  order_notes?: string | null;
 }
 
 export interface CartTotals {
@@ -96,7 +98,8 @@ class CartService {
     quantity: number = 1,
     customFields: CartItem["customFields"] = [],
     extraPrice: number = 0,
-    price?: number
+    price?: number,
+    specialInstructions?: string | null
   ): Promise<ApiResponse<{ cart_item_id: string }>> {
     const userId = this.getUserIdentifier();
 
@@ -108,6 +111,7 @@ class CartService {
       extra_price: extraPrice,
       restaurant_id: this.restaurantId,
       branch_number: this.branchNumber,
+      special_instructions: specialInstructions || null,
     };
 
     // Si se proporciona un precio específico, incluirlo en el request
@@ -193,6 +197,23 @@ class CartService {
         ...userId,
         restaurant_id: this.restaurantId,
         branch_number: this.branchNumber,
+      }),
+    });
+  }
+
+  /**
+   * Actualizar notas de la orden
+   */
+  async updateOrderNotes(orderNotes: string | null): Promise<ApiResponse<{ message: string }>> {
+    const userId = this.getUserIdentifier();
+
+    return this.request<{ message: string }>("/cart/notes", {
+      method: "PATCH",
+      body: JSON.stringify({
+        ...userId,
+        restaurant_id: this.restaurantId,
+        branch_number: this.branchNumber,
+        order_notes: orderNotes || null,
       }),
     });
   }

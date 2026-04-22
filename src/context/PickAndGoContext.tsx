@@ -14,6 +14,7 @@ import { PickAndGoOrder } from "@/services/pickandgo.service";
 import { usePickAndGo } from "@/hooks/usePickAndGo";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { useBranch } from "@/context/BranchContext";
+import { useCart } from "@/context/CartContext";
 
 // Import enhanced cart utilities from TableContext
 import {
@@ -279,6 +280,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
   const { user, profile, isLoading } = useAuth();
   const { guestId } = useGuest();
   const pickAndGoHook = usePickAndGo();
+  const { orderNotes, setOrderNotes, updateOrderNotes } = useCart();
 
   // Get restaurant context - needed for robust order creation
   const { restaurantId } = useRestaurant();
@@ -560,7 +562,9 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
           estimatedItems: state.cartItems.length,
           cartTotal: state.cartTotal,
         },
+        order_notes: orderNotes.trim() || null,
       });
+      updateOrderNotes(""); // limpia en DB y en estado
 
       if (!orderResponse) {
         throw new Error("Failed to create Pick & Go order");

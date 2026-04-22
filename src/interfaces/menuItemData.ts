@@ -50,4 +50,5 @@ export interface MenuItemData {
     }>;
   }>;
   extraPrice?: number;
+  specialInstructions?: string | null;
 }

@@ -112,6 +112,7 @@ function convertApiItemToCartItem(apiItem: ApiCartItem): CartItem {
     discount: apiItem.discount || 0,
     customFields: apiItem.customFields || [],
     extraPrice: apiItem.extraPrice || 0,
+    specialInstructions: apiItem.specialInstructions || null,
     quantity: apiItem.quantity,
     cartItemId: apiItem.id,
   };
@@ -120,12 +121,15 @@ function convertApiItemToCartItem(apiItem: ApiCartItem): CartItem {
 // Contexto del carrito con funciones
 interface CartContextType {
   state: CartState;
-  addItem: (item: MenuItemData, quantity?: number) => Promise<void>;
+  addItem: (item: MenuItemData, quantity?: number, specialInstructions?: string | null) => Promise<void>;
   removeItem: (itemId: number) => Promise<void>;
   updateQuantity: (itemId: number, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
   refreshCart: () => Promise<void>;
   setUserName: (name: string) => void;
+  orderNotes: string;
+  setOrderNotes: (notes: string) => void;
+  updateOrderNotes: (notes: string) => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -133,6 +137,7 @@ const CartContext = createContext<CartContextType | null>(null);
 // Provider del carrito
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+  const [orderNotes, setOrderNotes] = React.useState("");
   const { user, isLoading: authLoading } = useAuth();
   const {
     guestId,
@@ -248,6 +253,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             cartId: response.data.cart_id,
           },
         });
+        setOrderNotes(response.data.order_notes || "");
       } else {
         dispatch({ type: "SET_LOADING", payload: false });
       }
@@ -258,7 +264,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   // Agregar item al carrito
-  const addItem = async (item: MenuItemData, quantity: number = 1) => {
+  const addItem = async (item: MenuItemData, quantity: number = 1, specialInstructions?: string | null) => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
 
@@ -268,6 +274,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         item.customFields || [],
         item.extraPrice || 0,
         item.price, // Pasar el precio base (ya con descuento aplicado si lo hay)
+        specialInstructions,
       );
 
       if (response.success) {
@@ -359,6 +366,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Actualizar notas de la orden (persiste en DB)
+  const updateOrderNotes = async (notes: string) => {
+    setOrderNotes(notes);
+    try {
+      await cartService.updateOrderNotes(notes.trim() || null);
+    } catch (error) {
+      console.error("Error updating order notes:", error);
+    }
+  };
+
   // Actualizar nombre de usuario
   const setUserName = (name: string) => {
     dispatch({ type: "SET_USER_NAME", payload: name });
@@ -372,6 +389,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     clearCart,
     refreshCart,
     setUserName,
+    orderNotes,
+    setOrderNotes,
+    updateOrderNotes,
   };
 
   // Cargar carrito al montar el componente o cuando cambie el restaurante

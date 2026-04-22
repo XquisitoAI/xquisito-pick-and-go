@@ -35,7 +35,12 @@ export default function CardSelectionPage() {
   const tipAmountFromParam = parseFloat(searchParams.get("tipAmount") || "0");
   const scheduledPickupTime = searchParams.get("scheduledPickupTime") || null;
 
-  const { state: cartState, clearCart } = useCart();
+  const {
+    state: cartState,
+    clearCart,
+    orderNotes,
+    updateOrderNotes,
+  } = useCart();
   const { navigateWithRestaurantId, branchNumber } = useNavigation();
   const { paymentMethods, deletePaymentMethod } = usePayment();
   const { user, profile } = useAuth();
@@ -340,10 +345,12 @@ export default function CardSelectionPage() {
             items_count: cartState.items.length,
             scheduled_pickup_time: scheduledPickupTime,
           },
+          order_notes: orderNotes.trim() || null,
         };
 
         const pickAndGoOrderResult =
           await pickAndGoService.createOrder(pickAndGoOrderData);
+        updateOrderNotes("");
 
         if (!pickAndGoOrderResult.success || !pickAndGoOrderResult.data) {
           console.error(
@@ -390,6 +397,7 @@ export default function CardSelectionPage() {
             extraPrice: item.extraPrice || 0,
             pickAndGoOrderId: pickAndGoOrderId,
             menuItemId: item.id,
+            specialInstructions: item.specialInstructions || null,
           };
 
           console.log("Creating dish order:", dishOrderData);
@@ -625,10 +633,12 @@ export default function CardSelectionPage() {
           items_count: cartState.items.length,
           scheduled_pickup_time: scheduledPickupTime,
         },
+        order_notes: orderNotes.trim() || null,
       };
 
       const pickAndGoOrderResult =
         await pickAndGoService.createOrder(pickAndGoOrderData);
+      updateOrderNotes("");
 
       if (!pickAndGoOrderResult.success || !pickAndGoOrderResult.data) {
         console.error(
@@ -674,6 +684,7 @@ export default function CardSelectionPage() {
           extraPrice: item.extraPrice || 0,
           pickAndGoOrderId: pickAndGoOrderId, // 🔑 VINCULACIÓN CON PICK & GO ORDER
           menuItemId: item.id,
+          specialInstructions: item.specialInstructions || null,
         };
 
         console.log("Creating dish order:", dishOrderData);

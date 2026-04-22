@@ -61,6 +61,7 @@ export default function DishDetailPage() {
   const [localQuantity, setLocalQuantity] = useState(0);
   const [dishQuantity, setDishQuantity] = useState(1);
   const [isPulsing, setIsPulsing] = useState(false);
+  const [specialInstructions, setSpecialInstructions] = useState("");
   const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>(
     {},
   );
@@ -409,8 +410,9 @@ export default function DishDetailPage() {
       price: basePrice,
       customFields: customFieldsData,
       extraPrice,
+      specialInstructions: specialInstructions.trim() || null,
     };
-  }, [dishData, customFieldSelections]);
+  }, [dishData, customFieldSelections, specialInstructions]);
 
   const handleAddToCart = async (e?: React.MouseEvent): Promise<boolean> => {
     e?.stopPropagation();
@@ -424,7 +426,7 @@ export default function DishDetailPage() {
 
     setLocalQuantity((prev) => prev + dishQuantity);
     setIsPulsing(true);
-    await addItem(item, dishQuantity);
+    await addItem(item, dishQuantity, item.specialInstructions);
     localStorage.setItem(`lastItem_${dishData.dish.id}`, JSON.stringify(item));
     return true;
   };
@@ -1015,7 +1017,13 @@ export default function DishDetailPage() {
               <textarea
                 className="h-24 md:h-28 lg:h-32 text-base md:text-lg lg:text-xl w-full bg-[#f9f9f9] border border-[#bfbfbf] px-3 md:px-4 lg:px-5 py-2 md:py-3 lg:py-4 rounded-lg md:rounded-xl resize-none focus:outline-none mt-2 md:mt-3 lg:mt-4"
                 placeholder="Alergias, instrucciones especiales, comentarios..."
+                value={specialInstructions}
+                onChange={(e) => setSpecialInstructions(e.target.value)}
+                maxLength={60}
               />
+              <p className="text-right text-sm text-gray-400 mt-1">
+                {specialInstructions.length}/60
+              </p>
             </div>
 
             {/* Bottom bar */}

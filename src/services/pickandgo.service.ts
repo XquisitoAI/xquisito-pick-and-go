@@ -48,6 +48,7 @@ export interface CreateOrderRequest {
   total_amount?: number;
   session_data?: Record<string, any>;
   prep_metadata?: Record<string, any>;
+  order_notes?: string | null;
 }
 
 export interface AddItemRequest {
@@ -205,6 +206,7 @@ class PickAndGoService {
       total_amount: orderData.total_amount || 0,
       session_data: orderData.session_data || {},
       prep_metadata: orderData.prep_metadata || {},
+      order_notes: orderData.order_notes || null,
     };
 
     return this.request<PickAndGoOrder>("/pick-and-go/orders", {

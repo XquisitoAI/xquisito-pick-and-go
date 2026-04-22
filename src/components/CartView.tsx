@@ -8,7 +8,8 @@ import MenuHeaderBack from "./headers/MenuHeaderBack";
 import { useAuth } from "@/context/AuthContext";
 
 export default function CartView() {
-  const { state, updateQuantity } = useCart();
+  const { state, updateQuantity, orderNotes, setOrderNotes, updateOrderNotes } =
+    useCart();
   const { navigateWithRestaurantId } = useNavigation();
   const { isLoading, user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -145,6 +146,11 @@ export default function CartView() {
                                     ))}
                                   </div>
                                 )}
+                              {item.specialInstructions && (
+                                <p className="text-xs md:text-sm text-gray-500 italic mt-0.5">
+                                  &ldquo;{item.specialInstructions}&rdquo;
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="text-right flex items-center justify-center gap-4 md:gap-5 lg:gap-6">
@@ -185,10 +191,12 @@ export default function CartView() {
                       ¿Algo que debamos saber?
                     </span>
                     <textarea
-                      name=""
-                      id=""
                       className="h-24 md:h-28 lg:h-32 text-base md:text-lg lg:text-xl w-full bg-[#f9f9f9] border border-[#bfbfbf] px-3 md:px-4 py-2 md:py-3 rounded-lg resize-none focus:outline-none mt-2 md:mt-3"
-                      placeholder="Alergias, instrucciones especiales, comentarios..."
+                      placeholder="Comentarios generales para el restaurante..."
+                      value={orderNotes}
+                      onChange={(e) => setOrderNotes(e.target.value)}
+                      onBlur={(e) => updateOrderNotes(e.target.value)}
+                      maxLength={80}
                       onFocus={(e) => {
                         setTimeout(() => {
                           e.target.scrollIntoView({
@@ -197,7 +205,10 @@ export default function CartView() {
                           });
                         }, 300);
                       }}
-                    ></textarea>
+                    />
+                    <p className="text-right text-sm text-gray-400 mt-1">
+                      {orderNotes.length}/80
+                    </p>
                   </div>
                 </div>
               )}
