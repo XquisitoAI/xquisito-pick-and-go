@@ -93,14 +93,18 @@ class AuthService {
         this.onRefreshed(newToken);
         this.isRefreshing = false;
         return newToken;
+      } else if (result.error === "Error al refrescar el token") {
+        // Error de red — los tokens pueden seguir siendo válidos, no cerrar sesión
+        console.warn("⚠️ Network error during token refresh, keeping session");
+        this.isRefreshing = false;
+        return null;
       } else {
-        // Refresh falló, hacer logout
+        // El servidor rechazó el refresh (token inválido o expirado) → logout
         this.isRefreshing = false;
         await this.logout();
         this.clearAuthToken();
         this.clearAllSessionData();
 
-        // Redirigir a login si estamos en el navegador
         if (typeof window !== "undefined") {
           window.location.href = "/";
         }
@@ -108,18 +112,9 @@ class AuthService {
         return null;
       }
     } catch (error) {
-      console.error("Error in handleTokenRefresh:", error);
+      // Error inesperado — no cerrar sesión, puede ser un problema temporal
+      console.error("❌ Unexpected error in handleTokenRefresh:", error);
       this.isRefreshing = false;
-
-      // Hacer logout en caso de error
-      await this.logout();
-      this.clearAuthToken();
-      this.clearAllSessionData();
-
-      if (typeof window !== "undefined") {
-        window.location.href = "/";
-      }
-
       return null;
     }
   }

@@ -16,7 +16,7 @@ export interface PaymentMethod {
 
 export interface AddPaymentMethodRequest {
   fullName: string;
-  email: string;
+  //email: string;
   cardNumber: string;
   expDate: string;
   cvv: string;

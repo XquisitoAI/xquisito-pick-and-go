@@ -333,12 +333,6 @@ export default function AuthView({ onClose }: AuthViewProps) {
                     />
                   </div>
                 </div>
-                <p className="text-gray-400 text-xs">
-                  Ejemplo:{" "}
-                  {countryCode === "+52" || countryCode === "+1"
-                    ? "500 555 0006"
-                    : "123 456 789"}
-                </p>
               </div>
               <button
                 type="submit"

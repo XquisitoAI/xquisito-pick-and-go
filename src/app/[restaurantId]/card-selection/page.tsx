@@ -48,17 +48,14 @@ export default function CardSelectionPage() {
   const { selectedBranchNumber } = useBranch();
 
   // Tarjeta por defecto del sistema para todos los usuarios
-  const defaultSystemCard = {
+  /*const defaultSystemCard = {
     id: "system-default-card",
     lastFourDigits: "1234",
     cardBrand: "amex",
     cardType: "credit",
     isDefault: true,
     isSystemCard: true,
-  };
-
-  // Combinar tarjetas del sistema con las del usuario
-  const allPaymentMethods = [defaultSystemCard, ...paymentMethods];
+  };*/
 
   // Obtener monto base del carrito desde el contexto
   const baseAmount = cartState.totalPrice;
@@ -68,6 +65,7 @@ export default function CardSelectionPage() {
 
   const [showTotalModal, setShowTotalModal] = useState(false);
   const [showPaymentOptionsModal, setShowPaymentOptionsModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedMSI, setSelectedMSI] = useState<number | null>(null);
   const [applePayReady, setApplePayReady] = useState(false);
   const [applePayUnavailable, setApplePayUnavailable] = useState(false);
@@ -113,9 +111,9 @@ export default function CardSelectionPage() {
   // Set default payment method when payment methods are loaded
   useEffect(() => {
     // Siempre hay al menos la tarjeta del sistema disponible
-    if (!selectedPaymentMethodId && allPaymentMethods.length > 0) {
+    if (!selectedPaymentMethodId && paymentMethods.length > 0) {
       const defaultMethod =
-        allPaymentMethods.find((pm) => pm.isDefault) || allPaymentMethods[0];
+        paymentMethods.find((pm) => pm.isDefault) || paymentMethods[0];
       setSelectedPaymentMethodId(defaultMethod.id);
       console.log("💳 Auto-seleccionando tarjeta:", defaultMethod.id);
     }
@@ -123,7 +121,7 @@ export default function CardSelectionPage() {
     if (!cartState.isLoading) {
       setIsLoadingInitial(false);
     }
-  }, [allPaymentMethods.length, selectedPaymentMethodId, cartState.isLoading]);
+  }, [paymentMethods.length, selectedPaymentMethodId, cartState.isLoading]);
 
   // Cargar el SDK de Ecart Pay para Apple Pay
   useEffect(() => {
@@ -864,9 +862,13 @@ export default function CardSelectionPage() {
       // El timer navigateTimer (9s) en OrderAnimation se encargará de la redirección
     } catch (error) {
       console.error("Payment/Order error:", error);
-      const errorMessage =
+      // Limpiar IDs de orden para evitar navegación a payment-success con datos viejos
+      sessionStorage.removeItem("xquisito-current-order-id");
+      sessionStorage.removeItem("xquisito-current-payment-key");
+      setCompletedOrderId(null);
+      const errMsg =
         error instanceof Error ? error.message : "Error desconocido";
-      alert(`Error: ${errorMessage}`);
+      setErrorMessage(errMsg);
       // Si hay error, ocultar la animación
       setShowAnimation(false);
     } finally {
@@ -902,7 +904,7 @@ export default function CardSelectionPage() {
     }
 
     // Obtener el tipo de tarjeta seleccionada
-    const selectedMethod = allPaymentMethods.find(
+    const selectedMethod = paymentMethods.find(
       (pm) => pm.id === selectedPaymentMethodId,
     );
     const cardBrand = selectedMethod?.cardBrand;
@@ -915,23 +917,25 @@ export default function CardSelectionPage() {
             { months: 6, rate: 6.25 },
             { months: 9, rate: 8.25 },
             { months: 12, rate: 10.25 },
+            { months: 15, rate: 13.25 },
             { months: 18, rate: 15.25 },
+            { months: 21, rate: 17.25 },
+            { months: 24, rate: 19.25 },
           ]
         : [
-            { months: 3, rate: 4.25 },
-            { months: 6, rate: 8.5 },
-            { months: 9, rate: 13.0 },
-            { months: 12, rate: 18.25 },
+            { months: 3, rate: 4.26 },
+            { months: 6, rate: 7.3 },
+            { months: 9, rate: 8.5 },
+            { months: 12, rate: 13.0 },
+            { months: 18, rate: 18.25 },
           ];
 
     // Encontrar la opción seleccionada
     const selectedOption = msiOptions.find((opt) => opt.months === selectedMSI);
     if (!selectedOption) return totalAmount;
 
-    // Calcular comisión e IVA
-    const commission = totalAmount * (selectedOption.rate / 100);
-    const ivaCommission = commission * 0.16;
-    return totalAmount + commission + ivaCommission;
+    // Calcular total con financiamiento e IVA (fórmula EcartPay: markup sobre monto final)
+    return totalAmount / (1 - (selectedOption.rate / 100) * 1.16);
   };
 
   const displayTotal = getDisplayTotal();
@@ -1145,7 +1149,7 @@ export default function CardSelectionPage() {
 
                 {/* Payment Options - Solo mostrar si es tarjeta de crédito */}
                 {(() => {
-                  const selectedMethod = allPaymentMethods.find(
+                  const selectedMethod = paymentMethods.find(
                     (pm) => pm.id === selectedPaymentMethodId,
                   );
                   return selectedMethod?.cardType === "credit" ? (
@@ -1178,7 +1182,7 @@ export default function CardSelectionPage() {
               <div className="mb-2.5">
                 <h3 className="text-black font-medium mb-3">Métodos de pago</h3>
                 <div className="space-y-2.5">
-                  {allPaymentMethods.map((method) => (
+                  {paymentMethods.map((method) => (
                     <div
                       key={method.id}
                       className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
@@ -1316,7 +1320,7 @@ export default function CardSelectionPage() {
               {/* Contenido */}
               <div className="px-6 py-4">
                 {(() => {
-                  const selectedMethod = allPaymentMethods.find(
+                  const selectedMethod = paymentMethods.find(
                     (pm) => pm.id === selectedPaymentMethodId,
                   );
                   const cardBrand = selectedMethod?.cardBrand;
@@ -1325,18 +1329,22 @@ export default function CardSelectionPage() {
                   const msiOptions =
                     cardBrand === "amex"
                       ? [
-                          { months: 3, rate: 3.25, minAmount: 0 },
-                          { months: 6, rate: 6.25, minAmount: 0 },
-                          { months: 9, rate: 8.25, minAmount: 0 },
-                          { months: 12, rate: 10.25, minAmount: 0 },
-                          { months: 18, rate: 15.25, minAmount: 0 },
+                          { months: 3, rate: 3.25, minAmount: 300 },
+                          { months: 6, rate: 6.25, minAmount: 600 },
+                          { months: 9, rate: 8.25, minAmount: 900 },
+                          { months: 12, rate: 10.25, minAmount: 1200 },
+                          { months: 15, rate: 13.25, minAmount: 1800 },
+                          { months: 18, rate: 15.25, minAmount: 1800 },
+                          { months: 21, rate: 17.25, minAmount: 1800 },
+                          { months: 24, rate: 19.25, minAmount: 1800 },
                         ]
                       : [
                           // Visa/Mastercard — tasas configuradas en portal EcartPay
-                          { months: 3, rate: 4.25, minAmount: 300 },
-                          { months: 6, rate: 8.5, minAmount: 600 },
-                          { months: 9, rate: 13.0, minAmount: 900 },
-                          { months: 12, rate: 18.25, minAmount: 1200 },
+                          { months: 3, rate: 4.26, minAmount: 300 },
+                          { months: 6, rate: 7.3, minAmount: 600 },
+                          { months: 9, rate: 8.5, minAmount: 900 },
+                          { months: 12, rate: 13.0, minAmount: 1200 },
+                          { months: 18, rate: 18.25, minAmount: 1800 },
                         ];
 
                   return (
@@ -1397,12 +1405,9 @@ export default function CardSelectionPage() {
                         return (
                           <>
                             {availableOptions.map((option) => {
-                              // Calcular comisión e IVA
-                              const commission =
-                                totalAmount * (option.rate / 100);
-                              const ivaCommission = commission * 0.16;
+                              // Calcular total con financiamiento e IVA (fórmula EcartPay: markup sobre monto final)
                               const totalWithCommission =
-                                totalAmount + commission + ivaCommission;
+                                totalAmount / (1 - (option.rate / 100) * 1.16);
                               const monthlyPayment =
                                 totalWithCommission / option.months;
 
@@ -1530,6 +1535,46 @@ export default function CardSelectionPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de error de pago */}
+      {errorMessage && (
+        <div
+          className="fixed inset-0 z-[99999] flex items-end justify-center bg-black/50"
+          onClick={() => setErrorMessage(null)}
+        >
+          <div
+            className="bg-white rounded-t-4xl w-full shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 max-w-2xl mx-auto">
+              <div className="flex flex-col items-center mb-4">
+                <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                  <CircleAlert
+                    className="size-7 text-red-500"
+                    strokeWidth={2}
+                  />
+                </div>
+                <h2 className="text-xl font-semibold text-black text-center">
+                  Error al procesar el pago
+                </h2>
+              </div>
+
+              <div className="bg-[#f9f9f9] border border-[#bfbfbf]/50 rounded-xl p-4 mb-6">
+                <p className="text-gray-700 text-sm text-center">
+                  {errorMessage}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setErrorMessage(null)}
+                className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-3 rounded-full text-base"
+              >
+                Intentar de nuevo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

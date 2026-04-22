@@ -321,12 +321,6 @@ export default function AuthSelectionPage() {
                       />
                     </div>
                   </div>
-                  <p className="text-white/60 text-xs">
-                    Ejemplo:{" "}
-                    {countryCode === "+52" || countryCode === "+1"
-                      ? "500 555 0006"
-                      : "123 456 789"}
-                  </p>
                 </div>
 
                 <button

@@ -44,18 +44,18 @@ function AddCardContent() {
   }, []);
 
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  //const [email, setEmail] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [expDate, setExpDate] = useState("");
   const [cvv, setCvv] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [isLoadingParams, setIsLoadingParams] = useState(true);
-  const [showToast, setShowToast] = useState(false);
+  /*const [showToast, setShowToast] = useState(false);
 
   const handleScanClick = () => {
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
-  };
+  };*/
 
   const handleFullNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -66,18 +66,18 @@ function AddCardContent() {
     }
   };
 
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  /*const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const emailCharsRegex = /^[a-zA-Z0-9@._-]*$/;
 
     if (emailCharsRegex.test(value)) {
       setEmail(value);
     }
-  };
+  };*/
 
   const fillTestCard = () => {
     setFullName("Test User");
-    setEmail("test@example.com");
+    //setEmail("test@example.com");
     setCardNumber("4242 4242 4242 4242");
     setExpDate("12/25");
     setCvv("123");
@@ -95,14 +95,14 @@ function AddCardContent() {
       alert("Please enter your full name");
       return;
     }
-    if (!email.trim()) {
+    /*if (!email.trim()) {
       alert("Please enter your email address");
       return;
     }
     if (!validateEmail(email)) {
       alert("Please enter a valid email address");
       return;
-    }
+    }*/
     if (!cardNumber.trim()) {
       alert("Please enter card number");
       return;
@@ -122,7 +122,7 @@ function AddCardContent() {
       .slice(-4)
       .substring(0, 3);
     const isDuplicate = paymentMethods.some(
-      (method) => method.lastFourDigits === lastFourDigits
+      (method) => method.lastFourDigits === lastFourDigits,
     );
 
     if (isDuplicate) {
@@ -143,7 +143,6 @@ function AddCardContent() {
       // paymentService uses requestWithAuth which automatically handles auth tokens and guest IDs
       const result = await paymentService.addPaymentMethod({
         fullName,
-        email,
         cardNumber,
         expDate,
         cvv,
@@ -283,6 +282,7 @@ function AddCardContent() {
       )}
 
       {/* Toast notification */}
+      {/*
       {showToast && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-fade-in-out">
           <div className="bg-gray-900 text-white px-5 py-2 rounded-lg shadow-lg flex items-center gap-3">
@@ -292,7 +292,7 @@ function AddCardContent() {
             </span>
           </div>
         </div>
-      )}
+      )}*/}
 
       <div className="min-h-screen bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
         <MenuHeaderBack />
@@ -333,14 +333,14 @@ function AddCardContent() {
                 </div>
               )}
               {/* Card Scanner */}
-              <button
+              {/*<button
                 type="button"
                 onClick={handleScanClick}
                 className="bg-black hover:bg-stone-950 w-full text-white py-3 rounded-full font-normal cursor-pointer transition-colors disabled:bg-stone-900 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-6"
               >
                 <Camera className="size-5" />
                 Escanear Tarjeta
-              </button>
+              </button>*/}
 
               {/* Add Card Form */}
               <div className="space-y-4">
@@ -401,7 +401,7 @@ function AddCardContent() {
                   />
                 </div>
 
-                <div>
+                {/*<div>
                   <label className="block text-sm text-gray-700 mb-2">
                     Correo Electronico
                   </label>
@@ -412,7 +412,7 @@ function AddCardContent() {
                     placeholder="john@example.com"
                     className="w-full px-3 py-3 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent"
                   />
-                </div>
+                </div>*/}
               </div>
 
               {/* Save Button */}
