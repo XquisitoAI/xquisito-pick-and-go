@@ -580,7 +580,9 @@ export default function CardSelectionPage() {
       const paymentResult = await paymentService.processPayment(paymentData);
 
       if (!paymentResult.success) {
-        throw new Error("Error al procesar el pago");
+        const errorMsg =
+          (paymentResult as any).error?.message || "Error al procesar el pago";
+        throw new Error(errorMsg);
       }
 
       console.log("✅ Payment successful:", paymentResult);
