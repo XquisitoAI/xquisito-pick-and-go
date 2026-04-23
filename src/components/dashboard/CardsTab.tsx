@@ -1,9 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { usePayment } from "@/context/PaymentContext";
 import { useTableNavigation } from "@/hooks/useTableNavigation";
-import { Plus, Trash2, Star, StarOff, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Star,
+  StarOff,
+  Loader2,
+  CircleAlert,
+} from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
 
 export default function CardsTab() {
@@ -17,6 +25,7 @@ export default function CardsTab() {
 
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleAddNewCard = () => {
     navigateWithTable("add-card");
@@ -27,7 +36,9 @@ export default function CardsTab() {
     try {
       await setDefaultPaymentMethod(paymentMethodId);
     } catch (error) {
-      alert("Error al establecer tarjeta por defecto. Intenta de nuevo.");
+      setErrorMessage(
+        "Error al establecer tarjeta por defecto. Intenta de nuevo.",
+      );
     } finally {
       setSettingDefaultId(null);
     }
@@ -42,7 +53,7 @@ export default function CardsTab() {
     try {
       await deletePaymentMethod(paymentMethodId);
     } catch (error) {
-      alert("Error al eliminar la tarjeta. Intenta de nuevo.");
+      setErrorMessage("Error al eliminar la tarjeta. Intenta de nuevo.");
     } finally {
       setDeletingCardId(null);
     }
@@ -155,6 +166,46 @@ export default function CardsTab() {
           Agregar nueva tarjeta
         </button>
       </div>
+
+      {/* Error Modal */}
+      {errorMessage &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[99999] flex items-end justify-center bg-black/50"
+            onClick={() => setErrorMessage(null)}
+          >
+            <div
+              className="bg-white rounded-t-4xl w-full shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 max-w-2xl mx-auto">
+                <div className="flex flex-col items-center mb-4">
+                  <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                    <CircleAlert
+                      className="size-7 text-red-500"
+                      strokeWidth={2}
+                    />
+                  </div>
+                  <h2 className="text-xl font-semibold text-black text-center">
+                    Error
+                  </h2>
+                </div>
+                <div className="bg-[#f9f9f9] border border-[#bfbfbf]/50 rounded-xl p-4 mb-6">
+                  <p className="text-gray-700 text-sm text-center">
+                    {errorMessage}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setErrorMessage(null)}
+                  className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-3 rounded-full text-base"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

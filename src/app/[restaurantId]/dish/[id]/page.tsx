@@ -6,7 +6,7 @@ import { useCart } from "@/context/CartContext";
 import { usePickAndGoContext } from "@/context/PickAndGoContext";
 import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
-import { ChevronDown, X, Home } from "lucide-react";
+import { ChevronDown, X, Home, CircleAlert } from "lucide-react";
 import MenuHeaderDish from "@/components/headers/MenuHeaderDish";
 import RestaurantClosedModal from "@/components/RestaurantClosedModal";
 import {
@@ -73,6 +73,7 @@ export default function DishDetailPage() {
     [fieldId: string]: string | string[] | Record<string, number>;
   }>({});
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState(0);
   const [hoveredReviewRating, setHoveredReviewRating] = useState(0);
   const [showClosedModal, setShowClosedModal] = useState(false);
@@ -489,7 +490,7 @@ export default function DishDetailPage() {
       }
     } catch (error: any) {
       console.error("Error submitting review:", error);
-      alert(
+      setErrorMessage(
         error.message?.includes("already reviewed")
           ? "Ya has calificado este platillo"
           : "Error al enviar la reseña. Intenta de nuevo.",
@@ -1167,6 +1168,43 @@ export default function DishDetailPage() {
                       : "Enviar reseña"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Error Modal */}
+      {errorMessage && (
+        <div
+          className="fixed inset-0 z-[99999] flex items-end justify-center bg-black/50"
+          onClick={() => setErrorMessage(null)}
+        >
+          <div
+            className="bg-white rounded-t-4xl w-full shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 max-w-2xl mx-auto">
+              <div className="flex flex-col items-center mb-4">
+                <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                  <CircleAlert
+                    className="size-7 text-red-500"
+                    strokeWidth={2}
+                  />
+                </div>
+                <h2 className="text-xl font-semibold text-black text-center">
+                  Error
+                </h2>
+              </div>
+              <div className="bg-[#f9f9f9] border border-[#bfbfbf]/50 rounded-xl p-4 mb-6">
+                <p className="text-gray-700 text-sm text-center">
+                  {errorMessage}
+                </p>
+              </div>
+              <button
+                onClick={() => setErrorMessage(null)}
+                className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-3 rounded-full text-base"
+              >
+                Entendido
+              </button>
             </div>
           </div>
         </div>

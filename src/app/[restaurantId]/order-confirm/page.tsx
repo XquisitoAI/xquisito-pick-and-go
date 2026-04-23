@@ -6,7 +6,8 @@ import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { useEffect, useState } from "react";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
-import { X, ChevronRight, Loader2 } from "lucide-react";
+import { X, ChevronRight, Loader2, CircleAlert } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useBranch } from "@/context/BranchContext";
 import BranchSelectionModal from "@/components/modals/BranchSelectionModal";
 import { calculateCommissions } from "@/utils/commissionCalculator";
@@ -48,6 +49,7 @@ export default function OrderConfirmPage() {
   );
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const calculateTipAmount = () => {
     if (customTip && parseFloat(customTip) > 0) {
@@ -474,7 +476,7 @@ export default function OrderConfirmPage() {
                           } catch (error) {
                             console.error("Error during branch change:", error);
                             setIsCheckingAvailability(false);
-                            alert(
+                            setErrorMessage(
                               "Hubo un error al cambiar de sucursal. Por favor intenta de nuevo.",
                             );
                           }
@@ -491,6 +493,46 @@ export default function OrderConfirmPage() {
           </div>
         </div>
       )}
+
+      {/* Error Modal */}
+      {errorMessage &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[99999] flex items-end justify-center bg-black/50"
+            onClick={() => setErrorMessage(null)}
+          >
+            <div
+              className="bg-white rounded-t-4xl w-full shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 max-w-2xl mx-auto">
+                <div className="flex flex-col items-center mb-4">
+                  <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                    <CircleAlert
+                      className="size-7 text-red-500"
+                      strokeWidth={2}
+                    />
+                  </div>
+                  <h2 className="text-xl font-semibold text-black text-center">
+                    Error
+                  </h2>
+                </div>
+                <div className="bg-[#f9f9f9] border border-[#bfbfbf]/50 rounded-xl p-4 mb-6">
+                  <p className="text-gray-700 text-sm text-center">
+                    {errorMessage}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setErrorMessage(null)}
+                  className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-3 rounded-full text-base"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {/* Modal selección de sucursal */}
       <BranchSelectionModal

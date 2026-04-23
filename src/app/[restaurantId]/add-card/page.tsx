@@ -50,6 +50,13 @@ function AddCardContent() {
   const [cvv, setCvv] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [isLoadingParams, setIsLoadingParams] = useState(true);
+  const [errors, setErrors] = useState<{
+    fullName?: string;
+    cardNumber?: string;
+    expDate?: string;
+    cvv?: string;
+    general?: string;
+  }>({});
   /*const [showToast, setShowToast] = useState(false);
 
   const handleScanClick = () => {
@@ -63,6 +70,8 @@ function AddCardContent() {
 
     if (textOnlyRegex.test(value)) {
       setFullName(value);
+      if (errors.fullName)
+        setErrors((prev) => ({ ...prev, fullName: undefined }));
     }
   };
 
@@ -91,28 +100,16 @@ function AddCardContent() {
   };
 
   const handleSave = async () => {
-    if (!fullName.trim()) {
-      alert("Please enter your full name");
-      return;
-    }
-    /*if (!email.trim()) {
-      alert("Please enter your email address");
-      return;
-    }
-    if (!validateEmail(email)) {
-      alert("Please enter a valid email address");
-      return;
-    }*/
-    if (!cardNumber.trim()) {
-      alert("Please enter card number");
-      return;
-    }
-    if (!expDate.trim()) {
-      alert("Please enter expiration date");
-      return;
-    }
-    if (!cvv.trim()) {
-      alert("Please enter CVV");
+    const newErrors: typeof errors = {};
+
+    if (!fullName.trim()) newErrors.fullName = "Ingresa tu nombre completo";
+    if (!cardNumber.trim())
+      newErrors.cardNumber = "Ingresa el número de tarjeta";
+    if (!expDate.trim()) newErrors.expDate = "Ingresa la fecha de expiración";
+    if (!cvv.trim()) newErrors.cvv = "Ingresa el CVV";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
@@ -126,9 +123,13 @@ function AddCardContent() {
     );
 
     if (isDuplicate) {
-      alert(`Ya existe una tarjeta terminada en ${lastFourDigits}`);
+      setErrors({
+        cardNumber: `Ya existe una tarjeta terminada en ${lastFourDigits}`,
+      });
       return;
     }
+
+    setErrors({});
 
     setIsLoading(true);
 
@@ -169,8 +170,6 @@ function AddCardContent() {
         console.log("🔄 Force refreshing payment methods after add...");
         await refreshPaymentMethods();
 
-        alert("Card added successfully!");
-
         // Check if we came from saved-cards page
         const fromSavedCards = document.referrer.includes("/saved-cards");
 
@@ -180,11 +179,17 @@ function AddCardContent() {
           router.back();
         }
       } else {
-        alert(result.error || "Failed to add card. Please try again.");
+        setErrors({
+          general:
+            result.error || "No se pudo agregar la tarjeta. Intenta de nuevo.",
+        });
       }
     } catch (error) {
       console.error("Error saving card:", error);
-      alert("Failed to add card. Please check your connection and try again.");
+      setErrors({
+        general:
+          "No se pudo agregar la tarjeta. Verifica tu conexión e intenta de nuevo.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -222,17 +227,20 @@ function AddCardContent() {
     if (numbersOnlyRegex.test(value)) {
       const formatted = formatCardNumber(value);
       setCardNumber(formatted);
+      if (errors.cardNumber)
+        setErrors((prev) => ({ ...prev, cardNumber: undefined }));
     }
   };
 
   const handleExpDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Solo permitir números y "/" para la fecha de expiración
     const expDateRegex = /^[0-9/]*$/;
 
     if (expDateRegex.test(value)) {
       const formatted = formatExpDate(value);
       setExpDate(formatted);
+      if (errors.expDate)
+        setErrors((prev) => ({ ...prev, expDate: undefined }));
     }
   };
 
@@ -241,7 +249,8 @@ function AddCardContent() {
     const numbersOnlyRegex = /^[0-9]*$/;
 
     if (numbersOnlyRegex.test(value)) {
-      setCvv(value.substring(0, 4)); // Máximo 4 dígitos
+      setCvv(value.substring(0, 4));
+      if (errors.cvv) setErrors((prev) => ({ ...prev, cvv: undefined }));
     }
   };
 
@@ -353,8 +362,13 @@ function AddCardContent() {
                     value={fullName}
                     onChange={handleFullNameChange}
                     placeholder="John Doe"
-                    className="w-full px-3 py-3 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent"
+                    className={`w-full px-3 py-3 border text-black rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent ${errors.fullName ? "border-red-500 bg-red-50" : "border-gray-300"}`}
                   />
+                  {errors.fullName && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.fullName}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -367,8 +381,13 @@ function AddCardContent() {
                     onChange={handleCardNumberChange}
                     placeholder="**** 2098"
                     maxLength={19}
-                    className="w-full px-3 py-3 text-black bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent"
+                    className={`w-full px-3 py-3 text-black rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent ${errors.cardNumber ? "border border-red-500 bg-red-50" : "bg-gray-100 border border-gray-200"}`}
                   />
+                  {errors.cardNumber && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.cardNumber}
+                    </p>
+                  )}
                 </div>
 
                 {/* Exp Date Field */}
@@ -382,8 +401,13 @@ function AddCardContent() {
                     onChange={handleExpDateChange}
                     placeholder="02/24"
                     maxLength={5}
-                    className="w-full px-3 py-3 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent text-black"
+                    className={`w-full px-3 py-3 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent text-black ${errors.expDate ? "border border-red-500 bg-red-50" : "bg-gray-100 border border-gray-200"}`}
                   />
+                  {errors.expDate && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.expDate}
+                    </p>
+                  )}
                 </div>
 
                 {/* CVV Field */}
@@ -397,8 +421,11 @@ function AddCardContent() {
                     onChange={handleCvvChange}
                     placeholder="123"
                     maxLength={4}
-                    className="w-full px-3 py-3 text-black border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent"
+                    className={`w-full px-3 py-3 text-black rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent ${errors.cvv ? "border border-red-500 bg-red-50" : "border border-gray-300"}`}
                   />
+                  {errors.cvv && (
+                    <p className="text-red-500 text-xs mt-1">{errors.cvv}</p>
+                  )}
                 </div>
 
                 {/*<div>
@@ -423,6 +450,11 @@ function AddCardContent() {
               >
                 {isLoading ? "Guardando..." : "Guardar"}
               </button>
+              {errors.general && (
+                <p className="text-red-500 text-sm text-center mt-3">
+                  {errors.general}
+                </p>
+              )}
             </div>
           </div>
         </div>

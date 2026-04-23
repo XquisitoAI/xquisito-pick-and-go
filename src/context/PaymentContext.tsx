@@ -217,22 +217,32 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
       "User ID:",
       user.id,
     );
-    try {
-      // Auth token is automatically managed by AuthContext and paymentService
 
+    // Optimistic update: remove immediately, restore on failure
+    const deletedMethod = paymentMethods.find(
+      (pm) => pm.id === paymentMethodId,
+    );
+    removePaymentMethod(paymentMethodId);
+
+    try {
       const response =
         await paymentService.deletePaymentMethod(paymentMethodId);
       console.log("🗑️ Delete response:", response);
 
       if (response.success) {
-        removePaymentMethod(paymentMethodId);
         console.log("✅ Payment method deleted successfully:", paymentMethodId);
       } else {
         console.error("❌ Delete payment method failed:", response.error);
+        if (deletedMethod) {
+          addPaymentMethod(deletedMethod);
+        }
         throw new Error("No se pudo eliminar la tarjeta");
       }
     } catch (error) {
       console.error("❌ Error deleting payment method:", error);
+      if (deletedMethod) {
+        addPaymentMethod(deletedMethod);
+      }
       throw error;
     }
   };

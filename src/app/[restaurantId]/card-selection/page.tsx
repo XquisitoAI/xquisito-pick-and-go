@@ -166,7 +166,7 @@ export default function CardSelectionPage() {
 
   const handleInitiatePayment = (): void => {
     if (!selectedPaymentMethodId) {
-      alert("Por favor selecciona una tarjeta de pago");
+      setErrorMessage("Por favor selecciona una tarjeta de pago");
       return;
     }
 
@@ -893,7 +893,7 @@ export default function CardSelectionPage() {
     try {
       await deletePaymentMethod(paymentMethodId);
     } catch (error) {
-      alert("Error al eliminar la tarjeta. Intenta de nuevo.");
+      setErrorMessage("Error al eliminar la tarjeta. Intenta de nuevo.");
     } finally {
       setDeletingCardId(null);
     }

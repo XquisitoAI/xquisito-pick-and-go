@@ -3,7 +3,16 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/context/AuthContext";
-import { User, Camera, Loader2, Phone, X, LogOut, LogIn } from "lucide-react";
+import {
+  User,
+  Camera,
+  Loader2,
+  Phone,
+  X,
+  LogOut,
+  LogIn,
+  CircleAlert,
+} from "lucide-react";
 import { useNavigation } from "@/hooks/useNavigation";
 
 interface ProfileTabProps {
@@ -24,6 +33,7 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
   const [firstName, setFirstName] = useState(profile?.firstName || "");
   const [lastName, setLastName] = useState(profile?.lastName || "");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [phone, setPhone] = useState(profile?.phone || "");
   const [birthDate, setBirthDate] = useState(profile?.birthDate || "");
   const [gender, setGender] = useState(profile?.gender || "");
@@ -90,7 +100,7 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
       }
     } catch (error) {
       console.error("Error al actualizar el perfil:", error);
-      alert("Error al actualizar el perfil");
+      setErrorMessage("Error al actualizar el perfil");
     } finally {
       setIsUpdating(false);
     }
@@ -103,13 +113,13 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
 
     // Validar tamaño (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      alert("La imagen no puede superar los 5MB");
+      setErrorMessage("La imagen no puede superar los 5MB");
       return;
     }
 
     // Validar tipo
     if (!file.type.startsWith("image/")) {
-      alert("Solo se permiten archivos de imagen");
+      setErrorMessage("Solo se permiten archivos de imagen");
       return;
     }
 
@@ -118,7 +128,8 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
     try {
       const token = localStorage.getItem("xquisito_access_token");
       if (!token) {
-        alert("No estás autenticado");
+        setErrorMessage("No estás autenticado");
+        setIsUpdating(false);
         return;
       }
 
@@ -140,13 +151,12 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
 
       if (data.success && data.data?.photoUrl) {
         setPhotoUrl(data.data.photoUrl);
-        alert("Foto de perfil actualizada correctamente");
       } else {
         throw new Error(data.error || "Error al subir la foto");
       }
     } catch (error) {
       console.error("Error al actualizar la foto:", error);
-      alert("Error al actualizar la foto");
+      setErrorMessage("Error al actualizar la foto");
     } finally {
       setIsUpdating(false);
     }
@@ -163,7 +173,7 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
       }
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
-      alert("Error al cerrar sesión");
+      setErrorMessage("Error al cerrar sesión");
     }
   };
 
@@ -366,6 +376,46 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
           )}
         </button>
       )}
+
+      {/* Error Modal */}
+      {errorMessage &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[99999] flex items-end justify-center bg-black/50"
+            onClick={() => setErrorMessage(null)}
+          >
+            <div
+              className="bg-white rounded-t-4xl w-full shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 max-w-2xl mx-auto">
+                <div className="flex flex-col items-center mb-4">
+                  <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                    <CircleAlert
+                      className="size-7 text-red-500"
+                      strokeWidth={2}
+                    />
+                  </div>
+                  <h2 className="text-xl font-semibold text-black text-center">
+                    Error
+                  </h2>
+                </div>
+                <div className="bg-[#f9f9f9] border border-[#bfbfbf]/50 rounded-xl p-4 mb-6">
+                  <p className="text-gray-700 text-sm text-center">
+                    {errorMessage}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setErrorMessage(null)}
+                  className="w-full bg-gradient-to-r from-[#34808C] to-[#173E44] text-white py-3 rounded-full text-base"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {/* Logout Confirmation Modal */}
       {isLogoutModalOpen &&
