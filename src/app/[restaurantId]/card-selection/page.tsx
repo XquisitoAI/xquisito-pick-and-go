@@ -47,16 +47,6 @@ export default function CardSelectionPage() {
   const { guestId } = useGuest();
   const { selectedBranchNumber } = useBranch();
 
-  // Tarjeta por defecto del sistema para todos los usuarios
-  /*const defaultSystemCard = {
-    id: "system-default-card",
-    lastFourDigits: "1234",
-    cardBrand: "amex",
-    cardType: "credit",
-    isDefault: true,
-    isSystemCard: true,
-  };*/
-
   // Obtener monto base del carrito desde el contexto
   const baseAmount = cartState.totalPrice;
 
@@ -1203,7 +1193,7 @@ export default function CardSelectionPage() {
                         <div>{getCardTypeIcon(method.cardBrand)}</div>
                         <div>
                           <p className="text-black">
-                            **** **** **** {method.lastFourDigits}
+                            •••• •••• •••• {method.lastFourDigits}
                           </p>
                         </div>
                       </div>
