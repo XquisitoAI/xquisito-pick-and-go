@@ -1246,7 +1246,7 @@ export default function CardSelectionPage() {
                   {!applePayUnavailable && (
                     <div
                       id="apple-pay-container"
-                      className={`w-full rounded-full overflow-hidden${applePayReady ? " mb-2.5" : ""}`}
+                      className={`w-full rounded-full overflow-hidden${applePayReady || applePayUnavailable ? " mb-2.5" : ""}`}
                     />
                   )}
                 </div>
