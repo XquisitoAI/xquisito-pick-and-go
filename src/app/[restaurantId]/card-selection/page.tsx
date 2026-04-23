@@ -1181,7 +1181,7 @@ export default function CardSelectionPage() {
               </div>
 
               {/* Métodos de pago guardados - Mostrar siempre (incluye tarjeta del sistema) */}
-              <div className="space-y-2.5">
+              <div className="mb-2.5">
                 <h3 className="text-black font-medium mb-3">Métodos de pago</h3>
                 <div className="space-y-2.5">
                   {paymentMethods.map((method) => (
@@ -1246,7 +1246,7 @@ export default function CardSelectionPage() {
                   {!applePayUnavailable && (
                     <div
                       id="apple-pay-container"
-                      className={`w-full rounded-full overflow-hidden${applePayReady || applePayUnavailable ? " mb-2.5" : ""}`}
+                      className={`w-full rounded-full overflow-hidden`}
                     />
                   )}
                 </div>
