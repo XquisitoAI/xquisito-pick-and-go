@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useNavigation } from "../hooks/useNavigation";
@@ -13,6 +13,7 @@ export default function CartView() {
   const { navigateWithRestaurantId } = useNavigation();
   const { isLoading, user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const handleOrder = async () => {
     // Si el usuario está loggeado, ir a confirmar pedido
@@ -66,7 +67,10 @@ export default function CartView() {
           {/* Cart Items */}
           <div className="bg-white rounded-t-4xl flex-1 z-5 flex flex-col px-6 md:px-8 lg:px-10 overflow-hidden">
             {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto flex flex-col pb-[120px] md:pb-[140px] lg:pb-[160px]">
+            <div
+              ref={scrollContainerRef}
+              className="flex-1 overflow-y-auto flex flex-col pb-[120px] md:pb-[140px] lg:pb-[160px]"
+            >
               <div className="pt-6 md:pt-8">
                 <h2 className="bg-[#f9f9f9] border border-[#8e8e8e] rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-base md:text-lg lg:text-xl font-medium text-black w-fit mx-auto">
                   Mi carrito
@@ -197,10 +201,9 @@ export default function CartView() {
                       onChange={(e) => setOrderNotes(e.target.value)}
                       onBlur={(e) => {
                         updateOrderNotes(e.target.value);
-                        const scrollable = e.currentTarget.closest(
-                          ".overflow-y-auto",
-                        ) as HTMLElement | null;
-                        scrollable?.scrollTo({ top: 0, behavior: "smooth" });
+                        if (scrollContainerRef.current) {
+                          scrollContainerRef.current.scrollTop = 0;
+                        }
                       }}
                       maxLength={80}
                       onKeyDown={(e) => {
