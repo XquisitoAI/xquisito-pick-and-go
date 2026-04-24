@@ -943,42 +943,54 @@ export default function CardSelectionPage() {
         </div>
         <div className="h-20" />
 
-        <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
-          <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
-            {/* Título skeleton */}
-            <div className="bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
-              <div className="py-6 px-8 flex flex-col justify-center">
-                <div className="h-8 w-3/4 bg-white/20 rounded-full mt-2 mb-6 animate-pulse" />
+        <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
+          {/* Título skeleton */}
+          <div className="bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
+            <div className="py-6 px-8 flex flex-col justify-center">
+              <div className="h-8 w-3/4 bg-white/20 rounded-full mt-2 mb-6 animate-pulse" />
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="bg-white rounded-t-4xl flex-1 flex flex-col px-8 overflow-hidden">
+              <div className="flex-1 overflow-y-auto py-8 pb-[120px] flex flex-col gap-4">
+                {/* Subtotal row */}
+                <div className="flex justify-between items-center">
+                  <div className="h-4 w-20 bg-gray-200 rounded-full animate-pulse" />
+                  <div className="h-4 w-24 bg-gray-200 rounded-full animate-pulse" />
+                </div>
+                {/* Total row */}
+                <div className="flex justify-between items-center border-t pt-3">
+                  <div className="h-5 w-28 bg-gray-200 rounded-full animate-pulse" />
+                  <div className="h-5 w-28 bg-gray-200 rounded-full animate-pulse" />
+                </div>
+
+                {/* Label métodos de pago */}
+                <div className="h-4 w-36 bg-gray-200 rounded-full animate-pulse mt-1" />
+
+                {/* Card skeleton 1 */}
+                <div className="h-12 w-full bg-gray-100 rounded-full animate-pulse" />
+                {/* Card skeleton 2 */}
+                <div className="h-12 w-full bg-gray-100 rounded-full animate-pulse" />
+
+                {/* Botón agregar tarjeta */}
+                <div className="h-12 w-full bg-gray-100 rounded-full animate-pulse" />
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Cuerpo skeleton */}
-            <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8 gap-4">
-              {/* Subtotal row */}
-              <div className="flex justify-between items-center">
-                <div className="h-4 w-20 bg-gray-200 rounded-full animate-pulse" />
-                <div className="h-4 w-24 bg-gray-200 rounded-full animate-pulse" />
-              </div>
-              {/* Total row */}
-              <div className="flex justify-between items-center border-t pt-3">
-                <div className="h-5 w-28 bg-gray-200 rounded-full animate-pulse" />
-                <div className="h-5 w-28 bg-gray-200 rounded-full animate-pulse" />
-              </div>
-
-              {/* Label métodos de pago */}
-              <div className="h-4 w-36 bg-gray-200 rounded-full animate-pulse mt-1" />
-
-              {/* Card skeleton 1 */}
-              <div className="h-12 w-full bg-gray-100 rounded-full animate-pulse" />
-              {/* Card skeleton 2 */}
-              <div className="h-12 w-full bg-gray-100 rounded-full animate-pulse" />
-
-              {/* Botón agregar tarjeta */}
-              <div className="h-12 w-full bg-gray-100 rounded-full animate-pulse" />
-
-              {/* Botón pagar */}
-              <div className="h-12 w-full bg-gray-200 rounded-full animate-pulse" />
+        {/* Barra inferior fija — skeleton */}
+        <div
+          className="fixed bottom-0 left-0 right-0 bg-white mx-4 px-8 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+          style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+        >
+          <div className="flex gap-3 mt-6 mb-2 justify-between items-center">
+            <div className="flex flex-col gap-1.5">
+              <div className="h-3 w-16 bg-gray-200 rounded-full animate-pulse" />
+              <div className="h-6 w-28 bg-gray-200 rounded-full animate-pulse" />
             </div>
+            <div className="h-12 w-36 bg-gray-200 rounded-full animate-pulse" />
           </div>
         </div>
       </div>
@@ -1079,203 +1091,206 @@ export default function CardSelectionPage() {
 
       <div className="min-h-dvh bg-gradient-to-br from-[#0a8b9b] to-[#153f43] flex flex-col">
         {/* Header fijo */}
-        <div className="fixed top-0 left-0 right-0 z-50">
-          <MenuHeaderBack />
-        </div>
-        <div className="h-20" />
+        <MenuHeaderBack />
 
-        {/* Tarjeta anclada al fondo */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
-          <div className="flex flex-col relative px-4 md:px-6 lg:px-8 w-full">
-            <div className="bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
-              <div className="py-6 px-8 flex flex-col justify-center">
-                <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
-                  Selecciona tu método de pago
-                </h1>
-              </div>
+        {/* Contenido de página (flujo normal, scrolleable) */}
+        <div className="px-4 md:px-6 lg:px-8 w-full flex-1 flex flex-col">
+          <div className="bg-gradient-to-tl from-[#0a8b9b] to-[#1d727e] rounded-t-4xl translate-y-7 z-0">
+            <div className="py-6 px-8 flex flex-col justify-center">
+              <h1 className="font-medium text-white text-3xl leading-7 mt-2 mb-6">
+                Selecciona tu método de pago
+              </h1>
             </div>
+          </div>
 
-            <div className="bg-white rounded-t-4xl relative z-10 flex flex-col px-8 py-8 overflow-y-auto max-h-[calc(100dvh-8rem)]">
-              {/* Resumen compacto del pedido */}
-              <div className="mb-3 space-y-2">
-                <div className="flex justify-between items-center text-base font-medium text-black">
-                  <span>Subtotal</span>
-                  <span>${baseAmount.toFixed(2)} MXN</span>
-                </div>
-                {tipAmount > 0 && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="bg-white rounded-t-4xl flex-1 flex flex-col px-8 overflow-hidden z-50">
+              <div className="flex-1 overflow-y-auto py-8 pb-[120px]">
+                {/* Resumen compacto del pedido */}
+                <div className="mb-3 space-y-2">
                   <div className="flex justify-between items-center text-base font-medium text-black">
-                    <span>Propina</span>
-                    <span>${tipAmount.toFixed(2)} MXN</span>
+                    <span>Subtotal</span>
+                    <span>${baseAmount.toFixed(2)} MXN</span>
                   </div>
-                )}
-              </div>
+                  {tipAmount > 0 && (
+                    <div className="flex justify-between items-center text-base font-medium text-black">
+                      <span>Propina</span>
+                      <span>${tipAmount.toFixed(2)} MXN</span>
+                    </div>
+                  )}
+                </div>
 
-              {/* Comisión e IVA */}
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between items-center border-t pt-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-black font-medium text-base md:text-lg lg:text-xl">
-                      Total a pagar
-                    </span>
-                    <CircleAlert
-                      className="size-4 cursor-pointer text-gray-500"
-                      strokeWidth={2.3}
-                      onClick={() => setShowTotalModal(true)}
-                    />
-                  </div>
-                  <div className="text-right">
-                    {selectedMSI !== null ? (
-                      <>
-                        <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                          ${(displayTotal / selectedMSI).toFixed(2)} MXN x{" "}
-                          {selectedMSI} meses
-                        </span>
-                      </>
-                    ) : (
-                      <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                        ${displayTotal.toFixed(2)} MXN
+                {/* Comisión e IVA */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between items-center border-t pt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-black font-medium text-base md:text-lg lg:text-xl">
+                        Total a pagar
                       </span>
+                      <CircleAlert
+                        className="size-4 cursor-pointer text-gray-500"
+                        strokeWidth={2.3}
+                        onClick={() => setShowTotalModal(true)}
+                      />
+                    </div>
+                    <div className="text-right">
+                      {selectedMSI !== null ? (
+                        <>
+                          <span className="font-medium text-black text-base md:text-lg lg:text-xl">
+                            ${(displayTotal / selectedMSI).toFixed(2)} MXN x{" "}
+                            {selectedMSI} meses
+                          </span>
+                        </>
+                      ) : (
+                        <span className="font-medium text-black text-base md:text-lg lg:text-xl">
+                          ${displayTotal.toFixed(2)} MXN
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Payment Options - Solo mostrar si es tarjeta de crédito */}
+                  {(() => {
+                    const selectedMethod = paymentMethods.find(
+                      (pm) => pm.id === selectedPaymentMethodId,
+                    );
+                    return selectedMethod?.cardType === "credit" ? (
+                      <div
+                        className="py-2 cursor-pointer"
+                        onClick={() => setShowPaymentOptionsModal(true)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-black text-base md:text-lg lg:text-xl">
+                            Pago a meses
+                          </span>
+                          <div
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                              selectedMSI !== null
+                                ? "border-[#eab3f4] bg-[#eab3f4]"
+                                : "border-gray-300"
+                            }`}
+                          >
+                            {selectedMSI !== null && (
+                              <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+
+                {/* Métodos de pago guardados - Mostrar siempre (incluye tarjeta del sistema) */}
+                <div className="mb-2.5">
+                  <h3 className="text-black font-medium mb-3">
+                    Métodos de pago
+                  </h3>
+                  <div className="space-y-2.5">
+                    {paymentMethods.map((method) => (
+                      <div
+                        key={method.id}
+                        className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
+                          selectedPaymentMethodId === method.id
+                            ? "border-teal-500 bg-teal-50"
+                            : "border-black/50 bg-[#f9f9f9]"
+                        }`}
+                      >
+                        <div
+                          onClick={() => {
+                            setSelectedPaymentMethodId(method.id);
+                            setSelectedMSI(null);
+                          }}
+                          className="flex items-center justify-center gap-3 mx-auto cursor-pointer"
+                        >
+                          <div>{getCardTypeIcon(method.cardBrand)}</div>
+                          <div>
+                            <p className="text-black">
+                              •••• •••• •••• {method.lastFourDigits}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div
+                          onClick={() => {
+                            setSelectedPaymentMethodId(method.id);
+                            setSelectedMSI(null);
+                          }}
+                          className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
+                            selectedPaymentMethodId === method.id
+                              ? "border-teal-500 bg-teal-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          {selectedPaymentMethodId === method.id && (
+                            <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                          )}
+                        </div>
+
+                        {/* Delete Button - No mostrar para tarjeta del sistema */}
+                        {method.id !== "system-default-card" && (
+                          <button
+                            onClick={() => handleDeleteCard(method.id)}
+                            disabled={deletingCardId === method.id}
+                            className="pl-2 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 cursor-pointer"
+                            title="Eliminar tarjeta"
+                          >
+                            {deletingCardId === method.id ? (
+                              <Loader2 className="size-5 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-5" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Apple Pay Button */}
+                    {!applePayUnavailable && (
+                      <div
+                        id="apple-pay-container"
+                        className={`w-full rounded-full overflow-hidden`}
+                      />
                     )}
                   </div>
                 </div>
 
-                {/* Payment Options - Solo mostrar si es tarjeta de crédito */}
-                {(() => {
-                  const selectedMethod = paymentMethods.find(
-                    (pm) => pm.id === selectedPaymentMethodId,
-                  );
-                  return selectedMethod?.cardType === "credit" ? (
-                    <div
-                      className="py-2 cursor-pointer"
-                      onClick={() => setShowPaymentOptionsModal(true)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-black text-base md:text-lg lg:text-xl">
-                          Pago a meses
-                        </span>
-                        <div
-                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                            selectedMSI !== null
-                              ? "border-[#eab3f4] bg-[#eab3f4]"
-                              : "border-gray-300"
-                          }`}
-                        >
-                          {selectedMSI !== null && (
-                            <div className="w-full h-full rounded-full bg-white scale-50"></div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-              </div>
-
-              {/* Métodos de pago guardados - Mostrar siempre (incluye tarjeta del sistema) */}
-              <div className="mb-2.5">
-                <h3 className="text-black font-medium mb-3">Métodos de pago</h3>
-                <div className="space-y-2.5">
-                  {paymentMethods.map((method) => (
-                    <div
-                      key={method.id}
-                      className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
-                        selectedPaymentMethodId === method.id
-                          ? "border-teal-500 bg-teal-50"
-                          : "border-black/50 bg-[#f9f9f9]"
-                      }`}
-                    >
-                      <div
-                        onClick={() => {
-                          setSelectedPaymentMethodId(method.id);
-                          setSelectedMSI(null);
-                        }}
-                        className="flex items-center justify-center gap-3 mx-auto cursor-pointer"
-                      >
-                        <div>{getCardTypeIcon(method.cardBrand)}</div>
-                        <div>
-                          <p className="text-black">
-                            •••• •••• •••• {method.lastFourDigits}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div
-                        onClick={() => {
-                          setSelectedPaymentMethodId(method.id);
-                          setSelectedMSI(null);
-                        }}
-                        className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
-                          selectedPaymentMethodId === method.id
-                            ? "border-teal-500 bg-teal-500"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        {selectedPaymentMethodId === method.id && (
-                          <div className="w-full h-full rounded-full bg-white scale-50"></div>
-                        )}
-                      </div>
-
-                      {/* Delete Button - No mostrar para tarjeta del sistema */}
-                      {method.id !== "system-default-card" && (
-                        <button
-                          onClick={() => handleDeleteCard(method.id)}
-                          disabled={deletingCardId === method.id}
-                          className="pl-2 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 cursor-pointer"
-                          title="Eliminar tarjeta"
-                        >
-                          {deletingCardId === method.id ? (
-                            <Loader2 className="size-5 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-5" />
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Apple Pay Button */}
-                  {!applePayUnavailable && (
-                    <div
-                      id="apple-pay-container"
-                      className={`w-full rounded-full overflow-hidden`}
-                    />
-                  )}
+                {/* Botón agregar tarjeta */}
+                <div className="mb-2.5">
+                  <button
+                    onClick={handleAddCard}
+                    className="border border-black/50 flex justify-center items-center gap-1 w-full text-black py-3 rounded-full cursor-pointer transition-colors bg-[#f9f9f9] hover:bg-gray-100"
+                  >
+                    <Plus className="size-5" />
+                    Agregar método de pago
+                  </button>
                 </div>
               </div>
-
-              {/* Botón agregar tarjeta */}
-              <div className="mb-2.5">
-                <button
-                  onClick={handleAddCard}
-                  className="border border-black/50 flex justify-center items-center gap-1 w-full text-black py-3 rounded-full cursor-pointer transition-colors bg-[#f9f9f9] hover:bg-gray-100"
-                >
-                  <Plus className="size-5" />
-                  Agregar método de pago
-                </button>
-              </div>
-
-              {/* Botón de pago */}
-              <button
-                onClick={handleInitiatePayment}
-                disabled={isProcessing || !selectedPaymentMethodId}
-                className={`w-full text-white py-3 rounded-full cursor-pointer transition-all active:scale-90 ${
-                  isProcessing || !selectedPaymentMethodId
-                    ? "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed"
-                    : "bg-gradient-to-r from-[#34808C] to-[#173E44] animate-pulse-button"
-                }`}
-              >
-                {isProcessing ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Procesando pago...</span>
-                  </div>
-                ) : !selectedPaymentMethodId ? (
-                  "Selecciona una tarjeta"
-                ) : (
-                  "Pagar y ordenar"
-                )}
-              </button>
             </div>
           </div>
+        </div>
+
+        {/* Barra inferior fija — total + botón pagar */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          <button
+            onClick={handleInitiatePayment}
+            disabled={isProcessing || !selectedPaymentMethodId}
+            className={`py-3 text-white rounded-full cursor-pointer font-normal h-fit w-full flex items-center justify-center text-base active:scale-95 transition-transform ${
+              isProcessing || !selectedPaymentMethodId
+                ? "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed px-10"
+                : "bg-gradient-to-r from-[#34808C] to-[#173E44] px-10 animate-pulse-button"
+            }`}
+          >
+            {isProcessing ? (
+              <div className="flex items-center justify-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Procesando...</span>
+              </div>
+            ) : !selectedPaymentMethodId ? (
+              "Selecciona tarjeta"
+            ) : (
+              "Pagar y ordenar"
+            )}
+          </button>
         </div>
 
         {/* Modal de opciones de pago */}
