@@ -1021,6 +1021,13 @@ export default function DishDetailPage() {
                 value={specialInstructions}
                 onChange={(e) => setSpecialInstructions(e.target.value)}
                 maxLength={60}
+                onBlur={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
+                }}
               />
               <p className="text-right text-sm text-gray-400 mt-1">
                 {specialInstructions.length}/60

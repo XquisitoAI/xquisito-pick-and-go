@@ -195,13 +195,18 @@ export default function CartView() {
                       placeholder="Comentarios generales para el restaurante..."
                       value={orderNotes}
                       onChange={(e) => setOrderNotes(e.target.value)}
-                      onBlur={(e) => updateOrderNotes(e.target.value)}
+                      onBlur={(e) => {
+                        updateOrderNotes(e.target.value);
+                        const scrollable = e.currentTarget.closest(
+                          ".overflow-y-auto",
+                        ) as HTMLElement | null;
+                        scrollable?.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
                       maxLength={80}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
                           e.currentTarget.blur();
-                          window.scrollTo({ top: 0, behavior: "smooth" });
                         }
                       }}
                       onFocus={(e) => {

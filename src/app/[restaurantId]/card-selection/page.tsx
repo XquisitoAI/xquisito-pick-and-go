@@ -952,7 +952,7 @@ export default function CardSelectionPage() {
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="bg-white rounded-t-4xl flex-1 flex flex-col px-8 overflow-hidden">
+            <div className="bg-white rounded-t-4xl flex-1 flex flex-col px-8 overflow-hidden z-10">
               <div className="flex-1 overflow-y-auto py-8 pb-[120px] flex flex-col gap-4">
                 {/* Subtotal row */}
                 <div className="flex justify-between items-center">
@@ -1248,7 +1248,12 @@ export default function CardSelectionPage() {
                     {!applePayUnavailable && (
                       <div
                         id="apple-pay-container"
-                        className={`w-full rounded-full overflow-hidden`}
+                        className="w-full rounded-full"
+                        style={{
+                          WebkitMaskImage:
+                            "-webkit-radial-gradient(white, black)",
+                          overflow: "hidden",
+                        }}
                       />
                     )}
                   </div>
