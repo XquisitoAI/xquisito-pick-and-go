@@ -206,7 +206,7 @@ export default function CartView() {
                           if (scrollContainerRef.current) {
                             scrollContainerRef.current.scrollTop = 0;
                           }
-                        }, 50);
+                        }, 300);
                       }}
                       maxLength={80}
                       onKeyDown={(e) => {
