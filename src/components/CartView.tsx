@@ -201,9 +201,12 @@ export default function CartView() {
                       onChange={(e) => setOrderNotes(e.target.value)}
                       onBlur={(e) => {
                         updateOrderNotes(e.target.value);
-                        if (scrollContainerRef.current) {
-                          scrollContainerRef.current.scrollTop = 0;
-                        }
+                        setTimeout(() => {
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                          if (scrollContainerRef.current) {
+                            scrollContainerRef.current.scrollTop = 0;
+                          }
+                        }, 50);
                       }}
                       maxLength={80}
                       onKeyDown={(e) => {
