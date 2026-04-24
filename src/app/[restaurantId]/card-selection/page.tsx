@@ -1246,15 +1246,7 @@ export default function CardSelectionPage() {
 
                     {/* Apple Pay Button */}
                     {!applePayUnavailable && (
-                      <div
-                        id="apple-pay-container"
-                        className="w-full rounded-full"
-                        style={{
-                          WebkitMaskImage:
-                            "-webkit-radial-gradient(white, black)",
-                          overflow: "hidden",
-                        }}
-                      />
+                      <div id="apple-pay-container" className="w-full" />
                     )}
                   </div>
                 </div>

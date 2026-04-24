@@ -351,12 +351,24 @@ body {
 
 /* Modal sheet animations (MenuView, etc.) */
 @keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0.6; }
-  to   { transform: translateY(0);    opacity: 1; }
+  from {
+    transform: translateY(100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 @keyframes slideDownModal {
-  from { transform: translateY(0);    opacity: 1; }
-  to   { transform: translateY(100%); opacity: 0.6; }
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0.6;
+  }
 }
 
 @layer components {
@@ -438,6 +450,15 @@ body {
 .min-h-new {
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Apple Pay button border radius */
+#apple-pay-container apple-pay-button {
+  --apple-pay-button-border-radius: 9999px;
+}
+
+#apple-pay-container > * {
+  border-radius: 9999px !important;
 }
 
 /* Fix para inputs en Safari/iOS - evita deformación y zoom */
