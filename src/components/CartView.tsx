@@ -221,7 +221,7 @@ export default function CartView() {
                             behavior: "smooth",
                             block: "center",
                           });
-                        }, 300);
+                        }, 200);
                       }}
                     />
                     <p className="text-right text-sm text-gray-400 mt-1">

@@ -573,7 +573,7 @@ export default function DishDetailPage() {
   const { dish, section } = dishData;
 
   return (
-    <div className="min-h-screen bg-white relative">
+    <div className="h-dvh bg-white relative overflow-y-auto">
       <RestaurantClosedModal
         isOpen={showClosedModal}
         onClose={() => setShowClosedModal(false)}
@@ -1016,7 +1016,7 @@ export default function DishDetailPage() {
                 ¿Algo que debamos saber?
               </span>
               <textarea
-                className="h-24 md:h-28 lg:h-32 text-base md:text-lg lg:text-xl w-full bg-[#f9f9f9] border border-[#bfbfbf] px-3 md:px-4 lg:px-5 py-2 md:py-3 lg:py-4 rounded-lg md:rounded-xl resize-none focus:outline-none mt-2 md:mt-3 lg:mt-4"
+                className="h-24 md:h-28 lg:h-32 text-base md:text-lg lg:text-xl w-full bg-[#f9f9f9] border border-[#bfbfbf] px-3 md:px-4 py-2 md:py-3 rounded-lg resize-none focus:outline-none mt-2 md:mt-3"
                 placeholder="Alergias, instrucciones especiales, comentarios..."
                 value={specialInstructions}
                 onChange={(e) => setSpecialInstructions(e.target.value)}
