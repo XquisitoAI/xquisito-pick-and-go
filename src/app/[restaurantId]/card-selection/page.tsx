@@ -266,7 +266,11 @@ export default function CardSelectionPage() {
         currency: "MXN",
         countryCode: "MX",
         supportedNetworks: ["visa", "masterCard", "amex"],
-        merchantCapabilities: ["supports3DS"],
+        merchantCapabilities: [
+          "supports3DS",
+          "supportsDebit",
+          "supportsCredit",
+        ],
         buttonStyle: "black",
         buttonType: "pay",
       });
