@@ -5,7 +5,7 @@ import { useCart } from "@/context/CartContext";
 import { useNavigation } from "@/hooks/useNavigation";
 import { usePayment } from "@/context/PaymentContext";
 import { useRestaurant } from "@/context/RestaurantContext";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useGuest } from "@/context/GuestContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
@@ -71,6 +71,8 @@ export default function CardSelectionPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
   const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+
+  const applePayListenersRef = useRef(false);
 
   // Estado para mostrar animación y guardar orderId e items
   const [showAnimation, setShowAnimation] = useState(false);
@@ -206,46 +208,56 @@ export default function CardSelectionPage() {
       const appleOrderId =
         (orderResult as any).orderId ?? orderResult.data?.orderId;
       if (!orderResult.success || !appleOrderId) {
-        console.warn("⚠️ Apple Pay: no se pudo crear la orden", orderResult);
+        const orderErr = `[AP-ORDER] No se pudo crear la orden: ${JSON.stringify(orderResult.error ?? orderResult)}`;
+        console.warn("⚠️ Apple Pay:", orderErr);
+        setErrorMessage(orderErr);
         return;
       }
 
       const applePaySDK = await getApplePaySDK();
       if (!applePaySDK) {
-        console.warn("⚠️ Apple Pay SDK no disponible en window.Pay.ApplePay");
+        const sdkErr = "[AP-SDK] SDK no disponible en window.Pay.ApplePay";
+        console.warn("⚠️", sdkErr);
+        setErrorMessage(sdkErr);
         return;
       }
 
       console.log("ORDER RESULT:", orderResult);
 
-      // Register listeners before render (SDK dispatches to window, not returned object)
-      applePaySDK.on("ready", () => {
-        console.log("✅ Apple Pay botón listo");
-        setApplePayReady(true);
-      });
-      applePaySDK.on("unavailable", () => {
-        console.log("ℹ️ Apple Pay no disponible en este dispositivo/cuenta");
-        setApplePayUnavailable(true);
-      });
-      applePaySDK.on("cancel", () => {
-        console.log("🚫 Apple Pay cancelado por el usuario");
-        setIsApplePayProcessing(false);
-      });
-      applePaySDK.on("error", (err: any) => {
-        console.error("❌ Apple Pay error:", err);
-        setIsApplePayProcessing(false);
-        setApplePayUnavailable(true);
-      });
-      applePaySDK.on("success", async () => {
-        console.log("💳 Apple Pay: pago autorizado");
-        const applePayId = `apple-pay-${Date.now()}`;
-        setApplePayPaymentId(applePayId);
-        setIsApplePayProcessing(true);
-        setCompletedOrderItems([...cartState.items]);
-        const userName = profile?.firstName || cartState.userName || "Usuario";
-        setCompletedUserName(userName);
-        setShowAnimation(true);
-      });
+      // Register listeners only once to avoid duplicates on re-renders
+      if (!applePayListenersRef.current) {
+        applePayListenersRef.current = true;
+        applePaySDK.on("ready", () => {
+          console.log("✅ Apple Pay botón listo");
+          setApplePayReady(true);
+        });
+        applePaySDK.on("unavailable", () => {
+          console.log("ℹ️ Apple Pay no disponible en este dispositivo/cuenta");
+          setApplePayUnavailable(true);
+        });
+        applePaySDK.on("cancel", () => {
+          console.log("🚫 Apple Pay cancelado por el usuario");
+          setIsApplePayProcessing(false);
+        });
+        applePaySDK.on("error", (err: any) => {
+          const errMsg = `[AP-ERROR] ${typeof err === "object" ? JSON.stringify(err) : String(err)}`;
+          console.error("❌ Apple Pay error:", err);
+          setIsApplePayProcessing(false);
+          setApplePayUnavailable(true);
+          setErrorMessage(errMsg);
+        });
+        applePaySDK.on("success", async () => {
+          console.log("💳 Apple Pay: pago autorizado");
+          const applePayId = `apple-pay-${Date.now()}`;
+          setApplePayPaymentId(applePayId);
+          setIsApplePayProcessing(true);
+          setCompletedOrderItems([...cartState.items]);
+          const userName =
+            profile?.firstName || cartState.userName || "Usuario";
+          setCompletedUserName(userName);
+          setShowAnimation(true);
+        });
+      }
 
       applePaySDK.render({
         container: "#apple-pay-container",
@@ -259,7 +271,9 @@ export default function CardSelectionPage() {
         buttonType: "pay",
       });
     } catch (err) {
+      const errMsg = `[AP-INIT] ${err instanceof Error ? err.message : JSON.stringify(err)}`;
       console.error("❌ Error inicializando Apple Pay:", err);
+      setErrorMessage(errMsg);
     }
   }, [totalAmount, restaurantId, cartState.items, cartState.userName, profile]);
 
@@ -271,6 +285,193 @@ export default function CardSelectionPage() {
 
   const handleConfirmPayment = async (): Promise<void> => {
     // Esta función se ejecuta después de que expira el período de cancelación
+
+    // Flujo Apple Pay — pago ya autorizado por Apple, solo crear la orden
+    if (isApplePayProcessing) {
+      setIsProcessing(true);
+      try {
+        let customerPhone: string | null = null;
+        if (user?.id && user?.phone) customerPhone = user.phone;
+
+        const customerName =
+          profile?.firstName || cartState.userName || "Invitado";
+        const customerEmail = user?.email || null;
+        const userId = user?.id || guestId || null;
+
+        if (!completedOrderItems || completedOrderItems.length === 0) {
+          throw new Error("El carrito está vacío");
+        }
+
+        const pickAndGoOrderResult = await pickAndGoService.createOrder({
+          clerk_user_id: userId,
+          customer_name: customerName,
+          customer_email: customerEmail || undefined,
+          customer_phone: customerPhone || undefined,
+          restaurant_id: parseInt(restaurantId),
+          branch_number: selectedBranchNumber || branchNumber || 1,
+          total_amount: totalAmount,
+          session_data: {
+            source: "card-selection",
+            payment_method_id: null,
+            total_amount: totalAmount,
+            base_amount: baseAmount,
+            tip_amount: tipAmount,
+          },
+          prep_metadata: {
+            estimated_minutes: 25,
+            items_count: completedOrderItems.length,
+            scheduled_pickup_time: scheduledPickupTime,
+          },
+          order_notes: orderNotes.trim() || null,
+        });
+        updateOrderNotes("");
+
+        if (!pickAndGoOrderResult.success || !pickAndGoOrderResult.data) {
+          const errorMsg =
+            typeof pickAndGoOrderResult.error === "string"
+              ? pickAndGoOrderResult.error
+              : (pickAndGoOrderResult.error as any)?.message ||
+                "Error al crear la orden Pick & Go";
+          throw new Error(errorMsg);
+        }
+
+        const pickAndGoOrderId = pickAndGoOrderResult.data.id;
+
+        for (const item of completedOrderItems) {
+          const images =
+            item.images && Array.isArray(item.images) && item.images.length > 0
+              ? item.images.filter((img) => img && typeof img === "string")
+              : [];
+          const customFields =
+            item.customFields &&
+            Array.isArray(item.customFields) &&
+            item.customFields.length > 0
+              ? item.customFields
+              : null;
+
+          const dishOrderResult = await pickAndGoService.createDishOrder(
+            pickAndGoOrderId,
+            {
+              item: item.name,
+              price: item.price,
+              quantity: item.quantity || 1,
+              userId: user?.id || null,
+              guestId: guestId || null,
+              guestName: customerName,
+              images,
+              customFields: customFields ?? undefined,
+              extraPrice: item.extraPrice || 0,
+              pickAndGoOrderId,
+              menuItemId: item.id?.toString(),
+            },
+          );
+
+          if (!dishOrderResult.success)
+            throw new Error("Error al crear el dish order");
+        }
+
+        await pickAndGoService.updatePaymentStatus(pickAndGoOrderId, "paid");
+        await pickAndGoService.updateOrderStatus(pickAndGoOrderId, "confirmed");
+
+        try {
+          const xquisitoRateApplied =
+            subtotalForCommission > 0
+              ? (xquisitoCommissionTotal / subtotalForCommission) * 100
+              : 0;
+          await pickAndGoService.recordPaymentTransaction({
+            payment_method_id: null,
+            restaurant_id: parseInt(restaurantId),
+            id_table_order: null,
+            id_tap_orders_and_pay: null,
+            pick_and_go_order_id: pickAndGoOrderId,
+            base_amount: baseAmount,
+            tip_amount: tipAmount,
+            iva_tip: ivaTip,
+            xquisito_commission_total: xquisitoCommissionTotal,
+            xquisito_commission_client: xquisitoCommissionClient,
+            xquisito_commission_restaurant: xquisitoCommissionRestaurant,
+            iva_xquisito_client: ivaXquisitoClient,
+            iva_xquisito_restaurant: ivaXquisitoRestaurant,
+            xquisito_client_charge: xquisitoClientCharge,
+            xquisito_restaurant_charge: xquisitoRestaurantCharge,
+            xquisito_rate_applied: xquisitoRateApplied,
+            total_amount_charged: totalAmount,
+          });
+        } catch (transactionError) {
+          console.error(
+            "❌ Error recording payment transaction:",
+            transactionError,
+          );
+        }
+
+        const userName = profile?.firstName || cartState.userName || "Usuario";
+        const paymentDetailsForSuccess = {
+          orderId: pickAndGoOrderId,
+          paymentId: applePayPaymentId || `apple-pay-${pickAndGoOrderId}`,
+          transactionId: pickAndGoOrderId,
+          totalAmountCharged: totalAmount,
+          amount: totalAmount,
+          baseAmount,
+          tipAmount,
+          xquisitoCommissionClient: xquisitoCommissionClient || 0,
+          ivaXquisitoClient: ivaXquisitoClient || 0,
+          xquisitoCommissionTotal: xquisitoCommissionTotal || 0,
+          userName,
+          customerName,
+          customerEmail,
+          customerPhone,
+          cardLast4: "AP",
+          cardBrand: "apple",
+          orderStatus: "confirmed",
+          paymentStatus: "paid",
+          createdAt: new Date().toISOString(),
+          dishOrders: completedOrderItems.map((item) => ({
+            dish_order_id: `item-${item.id}-${Date.now()}`,
+            item: item.name,
+            quantity: item.quantity || 1,
+            price: item.price,
+            extra_price: item.extraPrice || 0,
+            total_price:
+              item.price * (item.quantity || 1) + (item.extraPrice || 0),
+            guest_name: userName,
+            custom_fields: item.customFields || null,
+            image_url: item.images?.[0] || null,
+          })),
+          restaurantId: parseInt(restaurantId),
+          paymentMethodId: null,
+          scheduledPickupTime,
+          timestamp: Date.now(),
+        };
+
+        localStorage.setItem(
+          "xquisito-completed-payment",
+          JSON.stringify(paymentDetailsForSuccess),
+        );
+        const uniqueKey = `xquisito-payment-success-${pickAndGoOrderId}`;
+        sessionStorage.setItem(
+          uniqueKey,
+          JSON.stringify(paymentDetailsForSuccess),
+        );
+        sessionStorage.setItem("xquisito-current-payment-key", uniqueKey);
+        sessionStorage.setItem("xquisito-current-order-id", pickAndGoOrderId);
+
+        await clearCart();
+        setCompletedOrderId(pickAndGoOrderId);
+      } catch (error) {
+        console.error("Apple Pay order error:", error);
+        sessionStorage.removeItem("xquisito-current-order-id");
+        sessionStorage.removeItem("xquisito-current-payment-key");
+        setCompletedOrderId(null);
+        setErrorMessage(
+          error instanceof Error ? error.message : "Error desconocido",
+        );
+        setShowAnimation(false);
+      } finally {
+        setIsProcessing(false);
+      }
+      return;
+    }
+
     if (!selectedPaymentMethodId) {
       console.error("Missing required data for payment confirmation");
       setShowAnimation(false);
