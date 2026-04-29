@@ -45,7 +45,6 @@ export default function AuthSelectionPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [gender, setGender] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
@@ -196,7 +195,6 @@ export default function AuthSelectionPage() {
         firstName,
         lastName,
         birthDate,
-        gender: gender as "male" | "female" | "other",
       });
       if (response.success) {
         await refreshProfile();
@@ -429,28 +427,9 @@ export default function AuthSelectionPage() {
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-1">
-                  Género
-                </label>
-                <select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                  className="h-[48px] w-full px-3 text-gray-700 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0a8b9b] cursor-pointer"
-                  disabled={loading}
-                  required
-                >
-                  <option value="">Selecciona...</option>
-                  <option value="male">Masculino</option>
-                  <option value="female">Femenino</option>
-                  <option value="other">Otro</option>
-                </select>
-              </div>
               <button
                 type="submit"
-                disabled={
-                  loading || !firstName || !lastName || !birthDate || !gender
-                }
+                disabled={loading || !firstName || !lastName || !birthDate}
                 className="w-full bg-black hover:bg-stone-950 text-white py-3.5 rounded-full font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2 active:scale-95"
               >
                 {loading ? "Guardando..." : "Continuar"}

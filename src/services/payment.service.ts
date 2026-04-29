@@ -119,6 +119,19 @@ class PaymentService {
       body: JSON.stringify(params),
     });
   }
+
+  // Crea una orden en Ecart Pay para Google Pay y regresa el orderId
+  async createGooglePayOrder(params: {
+    amount: number;
+    currency: string;
+    tableNumber?: string;
+    restaurantId?: string;
+  }): Promise<ApiResponse<{ orderId: string }>> {
+    return this.request("/payments/google-pay/order", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
   /**
    * Migrar métodos de pago de guest a usuario autenticado
    */
