@@ -1749,14 +1749,16 @@ export default function CardSelectionPage() {
                     ))}
 
                     {/* Apple Pay Button */}
-                    {!applePayUnavailable && (
-                      <div id="apple-pay-container" className="w-full" />
-                    )}
+                    <div
+                      id="apple-pay-container"
+                      className={`w-full ${!applePayReady || applePayUnavailable ? "hidden" : ""}`}
+                    />
 
                     {/* Google Pay Button */}
-                    {!googlePayUnavailable && (
-                      <div id="google-pay-container" className="w-full" />
-                    )}
+                    <div
+                      id="google-pay-container"
+                      className={`w-full ${!googlePayReady || googlePayUnavailable ? "hidden" : ""}`}
+                    />
                   </div>
                 </div>
 
