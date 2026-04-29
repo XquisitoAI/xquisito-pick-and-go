@@ -391,6 +391,11 @@ export default function CardSelectionPage() {
 
   useEffect(() => {
     if (!isLoadingInitial && totalAmount > 0) {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        setGooglePayUnavailable(true);
+        return;
+      }
       initGooglePay();
     }
   }, [isLoadingInitial, totalAmount, initGooglePay]);

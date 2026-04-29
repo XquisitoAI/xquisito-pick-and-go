@@ -18,7 +18,7 @@ export function middleware(request: NextRequest) {
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: blob: ${backendUrl} https://*.supabase.co https://www.gstatic.com;
     font-src 'self' https://applepay.cdn-apple.com;
-    connect-src 'self' ${backendUrl} ${wsProtocol}://${backendHost}${devUrls} https://*.ecartpay.com https://pay.ecart.com https://applepay.cdn-apple.com https://checkoutdev.ecartpay.com https://pay.google.com https://google.com;
+    connect-src 'self' ${backendUrl} ${wsProtocol}://${backendHost}${devUrls} https://*.ecartpay.com https://pay.ecart.com https://applepay.cdn-apple.com https://checkoutdev.ecartpay.com https://pay.google.com https://google.com https://www.google.com;
     frame-src https://ecartpay.com https://pay.ecart.com https://applepay.cdn-apple.com https://*.apple.com https://pay.google.com;
     object-src 'none';
     base-uri 'self';
