@@ -36,6 +36,8 @@ export interface PickAndGoItem {
   custom_fields: Record<string, any>;
   extra_price: number;
   pick_and_go_order_id: string;
+  menu_item_id?: number;
+  special_instructions?: string | null;
 }
 
 export interface CreateOrderRequest {
@@ -228,6 +230,7 @@ class PickAndGoService {
       order_status?: string;
       payment_status?: string;
       limit?: number;
+      restaurant_id?: number;
     },
   ): Promise<ApiResponse<PickAndGoOrder[]>> {
     console.log("👤 Getting user orders for:", userId);
@@ -238,6 +241,8 @@ class PickAndGoService {
     if (filters?.payment_status)
       queryParams.append("payment_status", filters.payment_status);
     if (filters?.limit) queryParams.append("limit", filters.limit.toString());
+    if (filters?.restaurant_id)
+      queryParams.append("restaurant_id", filters.restaurant_id.toString());
 
     const url = `/pick-and-go/user/${userId}/orders${queryParams.toString() ? "?" + queryParams.toString() : ""}`;
 

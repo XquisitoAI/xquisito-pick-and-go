@@ -22,6 +22,8 @@ import {
 import { getCardTypeIcon } from "../../../utils/cardIcons";
 import { useAuth } from "../../../context/AuthContext";
 import { pickAndGoService } from "../../../services/pickandgo.service";
+import { useCart } from "../../../context/CartContext";
+import { MenuItemData } from "../../../interfaces/menuItemData";
 
 export default function PaymentSuccessPage() {
   const params = useParams();
@@ -57,6 +59,8 @@ export default function PaymentSuccessPage() {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [hasRated, setHasRated] = useState(false); // Track if user has already rated
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const { addItem } = useCart();
   // No abrir el modal si el usuario viene de auth redirect
   const cameFromAuth =
     typeof window !== "undefined" &&
@@ -373,6 +377,39 @@ export default function PaymentSuccessPage() {
     navigateWithRestaurantId("/menu");
   };
 
+  const handleReorder = async () => {
+    const orderId = paymentDetails?.orderId || paymentId;
+    if (!orderId) return;
+    setIsReordering(true);
+    try {
+      const detail = await pickAndGoService.getOrder(orderId);
+      const dishes = detail.data?.items?.filter((d) => d.menu_item_id);
+      if (!dishes?.length) return;
+
+      for (const dish of dishes) {
+        const menuItem: MenuItemData = {
+          id: dish.menu_item_id!,
+          name: dish.item,
+          description: "",
+          price: dish.price,
+          images: dish.images,
+          features: [],
+          discount: 0,
+          customFields:
+            (dish.custom_fields as MenuItemData["customFields"]) ?? [],
+          extraPrice: dish.extra_price,
+        };
+        await addItem(menuItem, dish.quantity, dish.special_instructions);
+      }
+
+      navigateWithRestaurantId("/cart");
+    } catch (error) {
+      console.error("Error al reordenar:", error);
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
   // Handle rating selection
   const handleRatingClick = (starRating: number) => {
     if (hasRated) {
@@ -450,16 +487,18 @@ export default function PaymentSuccessPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-t-4xl relative z-10 flex flex-col min-h-96 justify-center px-6 md:px-8 lg:px-10 flex-1 py-8 md:py-10 lg:py-12">
+          <div className="bg-white rounded-t-4xl relative z-10 flex flex-col min-h-80 justify-center px-6 md:px-8 lg:px-10 flex-1">
             {/* Rating Prompt */}
+            {/*
             <div className="text-center mb-8 md:mb-10 lg:mb-12">
               <p className="text-xl md:text-2xl lg:text-3xl font-medium text-black mb-2 md:mb-3 lg:mb-4">
                 {hasRated
                   ? "¡Gracias por tu calificación!"
                   : "Califica tu experiencia en el restaurante"}
               </p>
-              <div className="flex flex-col items-center gap-3 md:gap-3.5 lg:gap-4">
+              <div className="flex flex-col items-center gap-3 md:gap-3.5 lg:gap-4">*}
                 {/* Stars container */}
+            {/*
                 <div className="flex gap-1 md:gap-1.5 lg:gap-2">
                   {[1, 2, 3, 4, 5].map((starIndex) => {
                     const currentRating = hoveredRating || rating;
@@ -479,7 +518,6 @@ export default function PaymentSuccessPage() {
                           !hasRated && handleRatingClick(starIndex)
                         }
                       >
-                        {/* Estrella */}
                         <svg
                           className={`size-8 md:size-10 lg:size-12 transition-all ${
                             isFilled ? "text-yellow-400" : "text-white"
@@ -488,16 +526,16 @@ export default function PaymentSuccessPage() {
                           stroke={isFilled ? "#facc15" : "black"}
                           strokeWidth="1"
                           viewBox="0 0 24 24"
-                        >
+                          >
                           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                         </svg>
                       </div>
                     );
                   })}
                 </div>
+                          */}
 
-                {/* Submit button - appears when a rating is selected */}
-                {rating > 0 && !hasRated && (
+            {/*{rating > 0 && !hasRated && (
                   <button
                     onClick={handleSubmitRating}
                     className="px-5 md:px-6 py-1.5 md:py-2 bg-gradient-to-r from-[#34808C] to-[#173E44] hover:from-[#2a6d77] hover:to-[#12323a] text-white text-sm md:text-base font-medium rounded-full transition-all duration-300 hover:scale-105 hover:shadow-lg animate-fade-in"
@@ -508,6 +546,7 @@ export default function PaymentSuccessPage() {
                 )}
               </div>
             </div>
+                */}
 
             {/* Action Buttons */}
             <div
@@ -516,6 +555,23 @@ export default function PaymentSuccessPage() {
                 paddingBottom: "max(0rem, env(safe-area-inset-bottom))",
               }}
             >
+              {/* Reordenar btn */}
+              <button
+                onClick={handleReorder}
+                disabled={isReordering}
+                className="w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-white py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-gradient-to-r from-[#34808C] to-[#173E44] text-base md:text-lg lg:text-xl disabled:opacity-70 animate-pulse-button"
+              >
+                {isReordering ? (
+                  <Loader2 className="size-5 md:size-6 lg:size-7 animate-spin" />
+                ) : (
+                  <Utensils
+                    className="size-5 md:size-6 lg:size-7"
+                    strokeWidth={1.5}
+                  />
+                )}
+                Reordenar
+              </button>
+
               <button
                 onClick={handleGoHome}
                 className="w-full text-white py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-gradient-to-r from-[#34808C] to-[#173E44] text-base md:text-lg lg:text-xl"

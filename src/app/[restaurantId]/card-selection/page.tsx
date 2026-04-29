@@ -60,11 +60,15 @@ export default function CardSelectionPage() {
   const [applePayReady, setApplePayReady] = useState(false);
   const [applePayUnavailable, setApplePayUnavailable] = useState(false);
   const [isApplePayProcessing, setIsApplePayProcessing] = useState(false);
-  const [applePayPaymentId, setApplePayPaymentId] = useState<string | null>(null);
+  const [applePayPaymentId, setApplePayPaymentId] = useState<string | null>(
+    null,
+  );
   const [googlePayReady, setGooglePayReady] = useState(false);
   const [googlePayUnavailable, setGooglePayUnavailable] = useState(false);
   const [isGooglePayProcessing, setIsGooglePayProcessing] = useState(false);
-  const [googlePayPaymentId, setGooglePayPaymentId] = useState<string | null>(null);
+  const [googlePayPaymentId, setGooglePayPaymentId] = useState<string | null>(
+    null,
+  );
 
   // Estados para tarjetas
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
@@ -332,7 +336,9 @@ export default function CardSelectionPage() {
           setGooglePayReady(true);
         });
         googlePaySDK.on("unavailable", () => {
-          console.log("ℹ️ Google Pay no disponible en este dispositivo/navegador");
+          console.log(
+            "ℹ️ Google Pay no disponible en este dispositivo/navegador",
+          );
           setGooglePayUnavailable(true);
         });
         googlePaySDK.on("cancel", () => {
@@ -352,7 +358,8 @@ export default function CardSelectionPage() {
           setGooglePayPaymentId(gpPayId);
           setIsGooglePayProcessing(true);
           setCompletedOrderItems([...cartState.items]);
-          const userName = profile?.firstName || cartState.userName || "Usuario";
+          const userName =
+            profile?.firstName || cartState.userName || "Usuario";
           setCompletedUserName(userName);
           setShowAnimation(true);
         });
@@ -584,7 +591,8 @@ export default function CardSelectionPage() {
         let customerPhone: string | null = null;
         if (user?.id && user?.phone) customerPhone = user.phone;
 
-        const customerName = profile?.firstName || cartState.userName || "Invitado";
+        const customerName =
+          profile?.firstName || cartState.userName || "Invitado";
         const customerEmail = user?.email || null;
         const userId = user?.id || guestId || null;
 
@@ -633,7 +641,9 @@ export default function CardSelectionPage() {
               ? item.images.filter((img) => img && typeof img === "string")
               : [];
           const customFields =
-            item.customFields && Array.isArray(item.customFields) && item.customFields.length > 0
+            item.customFields &&
+            Array.isArray(item.customFields) &&
+            item.customFields.length > 0
               ? item.customFields
               : null;
 
@@ -654,7 +664,8 @@ export default function CardSelectionPage() {
             },
           );
 
-          if (!dishOrderResult.success) throw new Error("Error al crear el dish order");
+          if (!dishOrderResult.success)
+            throw new Error("Error al crear el dish order");
         }
 
         await pickAndGoService.updatePaymentStatus(pickAndGoOrderId, "paid");
@@ -685,7 +696,10 @@ export default function CardSelectionPage() {
             total_amount_charged: totalAmount,
           });
         } catch (transactionError) {
-          console.error("❌ Error recording payment transaction:", transactionError);
+          console.error(
+            "❌ Error recording payment transaction:",
+            transactionError,
+          );
         }
 
         const userName = profile?.firstName || cartState.userName || "Usuario";
@@ -715,7 +729,8 @@ export default function CardSelectionPage() {
             quantity: item.quantity || 1,
             price: item.price,
             extra_price: item.extraPrice || 0,
-            total_price: item.price * (item.quantity || 1) + (item.extraPrice || 0),
+            total_price:
+              item.price * (item.quantity || 1) + (item.extraPrice || 0),
             guest_name: userName,
             custom_fields: item.customFields || null,
             image_url: item.images?.[0] || null,
@@ -726,9 +741,15 @@ export default function CardSelectionPage() {
           timestamp: Date.now(),
         };
 
-        localStorage.setItem("xquisito-completed-payment", JSON.stringify(paymentDetailsForSuccess));
+        localStorage.setItem(
+          "xquisito-completed-payment",
+          JSON.stringify(paymentDetailsForSuccess),
+        );
         const uniqueKey = `xquisito-payment-success-${pickAndGoOrderId}`;
-        sessionStorage.setItem(uniqueKey, JSON.stringify(paymentDetailsForSuccess));
+        sessionStorage.setItem(
+          uniqueKey,
+          JSON.stringify(paymentDetailsForSuccess),
+        );
         sessionStorage.setItem("xquisito-current-payment-key", uniqueKey);
         sessionStorage.setItem("xquisito-current-order-id", pickAndGoOrderId);
 
@@ -739,7 +760,9 @@ export default function CardSelectionPage() {
         sessionStorage.removeItem("xquisito-current-order-id");
         sessionStorage.removeItem("xquisito-current-payment-key");
         setCompletedOrderId(null);
-        setErrorMessage(error instanceof Error ? error.message : "Error desconocido");
+        setErrorMessage(
+          error instanceof Error ? error.message : "Error desconocido",
+        );
         setShowAnimation(false);
       } finally {
         setIsProcessing(false);

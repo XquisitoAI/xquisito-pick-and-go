@@ -38,6 +38,7 @@ import {
   type ActiveOrderResponse,
 } from "../../services/pickandgo.service";
 import { useGuest } from "@/context/GuestContext";
+import { MenuItemData } from "../../interfaces/menuItemData";
 
 const ChatView = lazy(() => import("../ChatView"));
 const AuthView = lazy(() => import("./../AuthView"));
@@ -144,8 +145,10 @@ export default function MenuView() {
   const [activeOrderIndex, setActiveOrderIndex] = useState(0);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasLastOrder, setHasLastOrder] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
   const { user, profile, isAuthenticated } = useAuth();
-  const { state } = useCart();
+  const { state, addItem } = useCart();
   const { restaurant, menu, error } = useRestaurant();
   const { branches, selectedBranchNumber } = useBranch();
   const { navigateWithRestaurantId } = useNavigation();
@@ -226,6 +229,58 @@ export default function MenuView() {
     setIsRefreshing(true);
     await checkActiveOrder();
     setIsRefreshing(false);
+  };
+
+  useEffect(() => {
+    const checkLastOrder = async () => {
+      const clientId = user?.id || guestId;
+      if (!clientId || !restaurant?.id) return;
+      const response = await pickAndGoService.getUserOrders(clientId, {
+        limit: 1,
+        restaurant_id: restaurant.id,
+      });
+      setHasLastOrder(!!(response.success && response.data?.length));
+    };
+    checkLastOrder();
+  }, [user?.id, guestId, restaurant?.id]);
+
+  const handleReorder = async () => {
+    const clientId = user?.id || guestId;
+    if (!clientId || !restaurant?.id) return;
+    setIsReordering(true);
+    try {
+      const response = await pickAndGoService.getUserOrders(clientId, {
+        limit: 1,
+        restaurant_id: restaurant.id,
+      });
+      if (!response.success || !response.data?.length) return;
+
+      const detail = await pickAndGoService.getOrder(response.data[0].id);
+      const dishes = detail.data?.items?.filter((d) => d.menu_item_id);
+      if (!dishes?.length) return;
+
+      for (const dish of dishes) {
+        const menuItem: MenuItemData = {
+          id: dish.menu_item_id!,
+          name: dish.item,
+          description: "",
+          price: dish.price,
+          images: dish.images,
+          features: [],
+          discount: 0,
+          customFields:
+            (dish.custom_fields as MenuItemData["customFields"]) ?? [],
+          extraPrice: dish.extra_price,
+        };
+        await addItem(menuItem, dish.quantity, dish.special_instructions);
+      }
+
+      navigateWithRestaurantId("/cart");
+    } catch (error) {
+      console.error("Error al reordenar:", error);
+    } finally {
+      setIsReordering(false);
+    }
   };
 
   // Mostrar barra sticky al hacer scroll past el trigger
@@ -412,14 +467,32 @@ export default function MenuView() {
               </div>
             )}
 
-            {/* Botón de pedidos activos */}
+            {/* Botón de pedidos activos + Reordenar */}
             {activeOrders.length > 0 && (
-              <button
-                onClick={() => setTimeout(() => setShowStatusModal(true), 400)}
-                className="bg-[#f9f9f9] border border-[#8e8e8e] rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium text-black w-fit mx-auto active:scale-90 transition-all"
-              >
-                {activeOrders.length > 1 ? "Ver pedidos" : "Estatus de pedido"}
-              </button>
+              <div className="flex gap-2 w-fit mx-auto">
+                <button
+                  onClick={() =>
+                    setTimeout(() => setShowStatusModal(true), 400)
+                  }
+                  className="bg-[#f9f9f9] border border-[#8e8e8e] rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium text-black w-fit active:scale-90 transition-all"
+                >
+                  {activeOrders.length > 1
+                    ? "Ver pedidos"
+                    : "Estatus de pedido"}
+                </button>
+                {hasLastOrder && (
+                  <button
+                    onClick={handleReorder}
+                    disabled={isReordering}
+                    className="bg-[#eab3f4] text-white border border-[#8e8e8e] rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium w-fit active:scale-90 transition-all disabled:opacity-70 flex items-center gap-1.5"
+                  >
+                    {isReordering && (
+                      <Loader2 className="size-4 animate-spin" />
+                    )}
+                    Reordenar
+                  </button>
+                )}
+              </div>
             )}
           </div>
 

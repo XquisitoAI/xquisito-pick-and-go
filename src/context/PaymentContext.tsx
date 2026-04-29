@@ -12,6 +12,18 @@ import { useGuest } from "./GuestContext";
 import { useAuth } from "./AuthContext";
 import { PaymentMethod } from "@/types/payment.types";
 
+const SYSTEM_CARD: PaymentMethod = {
+  id: "system-default-card",
+  lastFourDigits: "1234",
+  cardType: "credit",
+  cardBrand: "visa",
+  expiryMonth: 12,
+  expiryYear: 2099,
+  cardholderName: "Prueba",
+  isDefault: false,
+  createdAt: new Date().toISOString(),
+};
+
 interface PaymentContextType {
   paymentMethods: PaymentMethod[];
   isLoading: boolean;
@@ -82,7 +94,7 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
             methods = response.data;
           }
 
-          setPaymentMethods(methods);
+          setPaymentMethods([...methods, SYSTEM_CARD]);
           console.log(
             "💳 Loaded payment methods for registered user:",
             methods.length,
@@ -126,7 +138,7 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
             methods = response.data;
           }
 
-          setPaymentMethods(methods);
+          setPaymentMethods([...methods, SYSTEM_CARD]);
           console.log(
             "💳 Loaded payment methods for guest:",
             methods.length,

@@ -3,11 +3,17 @@
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
-export default function MenuHeaderBack() {
+export default function MenuHeaderBack({
+  onBack,
+}: { onBack?: () => void } = {}) {
   const router = useRouter();
 
   const handleBack = () => {
-    router.back();
+    if (onBack) {
+      onBack();
+    } else {
+      router.back();
+    }
   };
 
   return (
