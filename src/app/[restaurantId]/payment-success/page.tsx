@@ -559,14 +559,14 @@ export default function PaymentSuccessPage() {
               <button
                 onClick={handleReorder}
                 disabled={isReordering}
-                className="w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-white py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-gradient-to-r from-[#34808C] to-[#173E44] text-base md:text-lg lg:text-xl disabled:opacity-70 animate-pulse-button"
+                className="w-full flex items-center justify-center gap-2 md:gap-3 lg:gap-4 text-white py-3 md:py-4 lg:py-5 rounded-full cursor-pointer transition-all active:scale-90 bg-[#eab3f4] text-base md:text-lg lg:text-xl disabled:opacity-70 animate-pulse-button-pink font-medium border-0 border-[#8e8e8e]"
               >
                 {isReordering ? (
                   <Loader2 className="size-5 md:size-6 lg:size-7 animate-spin" />
                 ) : (
                   <RefreshCw
                     className="size-5 md:size-6 lg:size-7"
-                    strokeWidth={1.5}
+                    strokeWidth={2.5}
                   />
                 )}
                 Reordenar
