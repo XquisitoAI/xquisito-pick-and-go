@@ -490,6 +490,7 @@ export default function MenuView() {
                       <Loader2 className="size-4 animate-spin" />
                     )}
                     Reordenar
+                    <RefreshCw className="size-4" />
                   </button>
                 )}
               </div>

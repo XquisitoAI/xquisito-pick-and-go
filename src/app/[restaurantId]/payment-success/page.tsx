@@ -564,7 +564,7 @@ export default function PaymentSuccessPage() {
                 {isReordering ? (
                   <Loader2 className="size-5 md:size-6 lg:size-7 animate-spin" />
                 ) : (
-                  <Utensils
+                  <RefreshCw
                     className="size-5 md:size-6 lg:size-7"
                     strokeWidth={1.5}
                   />
