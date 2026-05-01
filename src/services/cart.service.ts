@@ -18,6 +18,7 @@ export interface CartItem {
       optionId: string;
       optionName: string;
       price: number;
+      quantity?: number;
     }>;
   }>;
   specialInstructions?: string | null;
@@ -66,7 +67,7 @@ class CartService {
 
   private async request<T>(
     endpoint: string,
-    options?: RequestInit
+    options?: RequestInit,
   ): Promise<ApiResponse<T>> {
     return requestWithAuth<T>(endpoint, options);
   }
@@ -99,7 +100,7 @@ class CartService {
     customFields: CartItem["customFields"] = [],
     extraPrice: number = 0,
     price?: number,
-    specialInstructions?: string | null
+    specialInstructions?: string | null,
   ): Promise<ApiResponse<{ cart_item_id: string }>> {
     const userId = this.getUserIdentifier();
 
@@ -166,7 +167,7 @@ class CartService {
    */
   async updateCartItemQuantity(
     cartItemId: string,
-    quantity: number
+    quantity: number,
   ): Promise<ApiResponse<{ message: string }>> {
     return this.request<{ message: string }>(`/cart/items/${cartItemId}`, {
       method: "PATCH",
@@ -178,7 +179,7 @@ class CartService {
    * Eliminar item del carrito
    */
   async removeFromCart(
-    cartItemId: string
+    cartItemId: string,
   ): Promise<ApiResponse<{ message: string }>> {
     return this.request<{ message: string }>(`/cart/items/${cartItemId}`, {
       method: "DELETE",
@@ -204,7 +205,9 @@ class CartService {
   /**
    * Actualizar notas de la orden
    */
-  async updateOrderNotes(orderNotes: string | null): Promise<ApiResponse<{ message: string }>> {
+  async updateOrderNotes(
+    orderNotes: string | null,
+  ): Promise<ApiResponse<{ message: string }>> {
     const userId = this.getUserIdentifier();
 
     return this.request<{ message: string }>("/cart/notes", {
@@ -230,7 +233,7 @@ class CartService {
    */
   async migrateGuestCart(
     guestId: string,
-    userId: string
+    userId: string,
   ): Promise<
     ApiResponse<{ items_migrated: number; cart_id: string; message: string }>
   > {
@@ -253,7 +256,7 @@ class CartService {
    * Actualizar branch_number de los items del carrito en la base de datos
    */
   async updateCartBranch(
-    newBranchNumber: number
+    newBranchNumber: number,
   ): Promise<ApiResponse<{ message: string; items_updated: number }>> {
     const userId = this.getUserIdentifier();
 
@@ -266,7 +269,7 @@ class CartService {
           restaurant_id: this.restaurantId,
           new_branch_number: newBranchNumber,
         }),
-      }
+      },
     );
   }
 }

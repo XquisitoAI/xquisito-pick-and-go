@@ -110,7 +110,16 @@ function convertApiItemToCartItem(apiItem: ApiCartItem): CartItem {
     images: apiItem.images || [],
     features: apiItem.features || [],
     discount: apiItem.discount || 0,
-    customFields: apiItem.customFields || [],
+    customFields: (apiItem.customFields || []).map((field) => ({
+      fieldId: field.fieldId,
+      fieldName: field.fieldName,
+      selectedOptions: field.selectedOptions.map((opt) => ({
+        optionId: opt.optionId,
+        optionName: opt.optionName,
+        price: opt.price,
+        quantity: opt.quantity ?? 0,
+      })),
+    })),
     extraPrice: apiItem.extraPrice || 0,
     specialInstructions: apiItem.specialInstructions || null,
     quantity: apiItem.quantity,
@@ -121,9 +130,13 @@ function convertApiItemToCartItem(apiItem: ApiCartItem): CartItem {
 // Contexto del carrito con funciones
 interface CartContextType {
   state: CartState;
-  addItem: (item: MenuItemData, quantity?: number, specialInstructions?: string | null) => Promise<void>;
+  addItem: (
+    item: MenuItemData,
+    quantity?: number,
+    specialInstructions?: string | null,
+  ) => Promise<void>;
   removeItem: (itemId: number) => Promise<void>;
-  updateQuantity: (itemId: number, quantity: number) => Promise<void>;
+  updateQuantity: (cartItemId: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
   refreshCart: () => Promise<void>;
   setUserName: (name: string) => void;
@@ -264,7 +277,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   // Agregar item al carrito
-  const addItem = async (item: MenuItemData, quantity: number = 1, specialInstructions?: string | null) => {
+  const addItem = async (
+    item: MenuItemData,
+    quantity: number = 1,
+    specialInstructions?: string | null,
+  ) => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
 
@@ -318,20 +335,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   // Actualizar cantidad de un item
-  const updateQuantity = async (itemId: number, quantity: number) => {
+  const updateQuantity = async (cartItemId: string, quantity: number) => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
 
-      // Buscar el cartItemId del item
-      const item = state.items.find((i) => i.id === itemId);
-      if (!item || !item.cartItemId) {
-        console.error("Cart item not found");
-        dispatch({ type: "SET_LOADING", payload: false });
-        return;
-      }
-
       const response = await cartService.updateCartItemQuantity(
-        item.cartItemId,
+        cartItemId,
         quantity,
       );
 
