@@ -81,6 +81,20 @@ export default function CardSelectionPage() {
   const applePayListenersRef = useRef(false);
   const googlePayListenersRef = useRef(false);
 
+  // Refs para valores frescos en los success handlers sin ser dependencias del useCallback
+  const cartItemsRef = useRef(cartState.items);
+  const cartUserNameRef = useRef(cartState.userName);
+  const profileRef = useRef(profile);
+  useEffect(() => {
+    cartItemsRef.current = cartState.items;
+  }, [cartState.items]);
+  useEffect(() => {
+    cartUserNameRef.current = cartState.userName;
+  }, [cartState.userName]);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
   // Estado para mostrar animación y guardar orderId e items
   const [showAnimation, setShowAnimation] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
@@ -199,6 +213,9 @@ export default function CardSelectionPage() {
   // Inicializar Apple Pay SDK cuando los datos estén listos
   const initApplePay = useCallback(async () => {
     if (typeof window === "undefined" || !totalAmount) return;
+    // Guard: solo inicializar una vez aunque el callback se recree
+    if (applePayListenersRef.current) return;
+    applePayListenersRef.current = true;
 
     try {
       // Crear orden en Ecart Pay para obtener orderId
@@ -228,40 +245,36 @@ export default function CardSelectionPage() {
 
       console.log("ORDER RESULT:", orderResult);
 
-      // Register listeners only once to avoid duplicates on re-renders
-      if (!applePayListenersRef.current) {
-        applePayListenersRef.current = true;
-        applePaySDK.on("ready", () => {
-          console.log("✅ Apple Pay botón listo");
-          setApplePayReady(true);
-        });
-        applePaySDK.on("unavailable", () => {
-          console.log("ℹ️ Apple Pay no disponible en este dispositivo/cuenta");
-          setApplePayUnavailable(true);
-        });
-        applePaySDK.on("cancel", () => {
-          console.log("🚫 Apple Pay cancelado por el usuario");
-          setIsApplePayProcessing(false);
-        });
-        applePaySDK.on("error", (err: any) => {
-          const errMsg = `[AP-ERROR] ${typeof err === "object" ? JSON.stringify(err) : String(err)}`;
-          console.error("❌ Apple Pay error:", err);
-          setIsApplePayProcessing(false);
-          setApplePayUnavailable(true);
-          setErrorMessage(errMsg);
-        });
-        applePaySDK.on("success", async () => {
-          console.log("💳 Apple Pay: pago autorizado");
-          const applePayId = `apple-pay-${Date.now()}`;
-          setApplePayPaymentId(applePayId);
-          setIsApplePayProcessing(true);
-          setCompletedOrderItems([...cartState.items]);
-          const userName =
-            profile?.firstName || cartState.userName || "Usuario";
-          setCompletedUserName(userName);
-          setShowAnimation(true);
-        });
-      }
+      applePaySDK.on("ready", () => {
+        console.log("✅ Apple Pay botón listo");
+        setApplePayReady(true);
+      });
+      applePaySDK.on("unavailable", () => {
+        console.log("ℹ️ Apple Pay no disponible en este dispositivo/cuenta");
+        setApplePayUnavailable(true);
+      });
+      applePaySDK.on("cancel", () => {
+        console.log("🚫 Apple Pay cancelado por el usuario");
+        setIsApplePayProcessing(false);
+      });
+      applePaySDK.on("error", (err: any) => {
+        const errMsg = `[AP-ERROR] ${typeof err === "object" ? JSON.stringify(err) : String(err)}`;
+        console.error("❌ Apple Pay error:", err);
+        setIsApplePayProcessing(false);
+        setApplePayUnavailable(true);
+        setErrorMessage(errMsg);
+      });
+      applePaySDK.on("success", async () => {
+        console.log("💳 Apple Pay: pago autorizado");
+        const applePayId = `apple-pay-${Date.now()}`;
+        setApplePayPaymentId(applePayId);
+        setIsApplePayProcessing(true);
+        setCompletedOrderItems([...cartItemsRef.current]);
+        const userName =
+          profileRef.current?.firstName || cartUserNameRef.current || "Usuario";
+        setCompletedUserName(userName);
+        setShowAnimation(true);
+      });
 
       applePaySDK.render({
         container: "#apple-pay-container",
@@ -283,7 +296,7 @@ export default function CardSelectionPage() {
       console.error("❌ Error inicializando Apple Pay:", err);
       setErrorMessage(errMsg);
     }
-  }, [totalAmount, restaurantId, cartState.items, cartState.userName, profile]);
+  }, [totalAmount, restaurantId]);
 
   const getGooglePaySDK = () =>
     new Promise<any>((resolve) => {
