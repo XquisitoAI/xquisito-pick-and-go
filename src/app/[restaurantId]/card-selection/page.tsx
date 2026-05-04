@@ -165,7 +165,7 @@ export default function CardSelectionPage() {
 
     // Dispositivo compatible y proveedor es eCartPay — revelar sección y cargar SDK
     setApplePayUnavailable(false);
-    const src = "https://ecartpay.com/sdk/pay.js";
+    const src = "https://ecartpay.com/sdk/pay.js?v=2";
     if (!document.querySelector(`script[src="${src}"]`)) {
       const script = document.createElement("script");
       script.src = src;
