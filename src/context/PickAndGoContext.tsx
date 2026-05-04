@@ -310,10 +310,10 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
       guestId: authInfo.guestId || guestId || undefined,
     });
 
-    console.log("👤 Customer initialized:", {
+    /*console.log("👤 Customer initialized:", {
       authenticated: authInfo.isAuthenticated,
       name: authInfo.displayName,
-    });
+    });*/
   }, [isLoaded, user, profile, guestId, setCustomerInfo]);
 
   // Initialize customer info when user authentication changes
@@ -361,11 +361,11 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
     };
 
     dispatch({ type: "ADD_TO_CART", payload: cartItem });
-    console.log(
+    /*console.log(
       "🛒 Item added to cart:",
       cartItem.name,
       cartItem.customFields ? "with custom fields" : "",
-    );
+    );*/
   };
 
   const removeFromCart = (itemId: string, customFields?: CustomField[]) => {
@@ -373,11 +373,11 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
       type: "REMOVE_FROM_CART",
       payload: { id: itemId, customFields },
     });
-    console.log(
+    /*console.log(
       "🗑️ Item removed from cart:",
       itemId,
       customFields ? "with custom fields" : "",
-    );
+    );*/
   };
 
   const updateCartQuantity = (
@@ -389,17 +389,17 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
       type: "UPDATE_CART_QUANTITY",
       payload: { id: itemId, quantity, customFields },
     });
-    console.log(
+    /*console.log(
       "🔄 Cart quantity updated:",
       itemId,
       quantity,
       customFields ? "with custom fields" : "",
-    );
+    );*/
   };
 
   const clearCart = () => {
     dispatch({ type: "CLEAR_CART" });
-    console.log("🧹 Cart cleared");
+    //console.log("🧹 Cart cleared");
   };
 
   const syncCartTotals = () => {
@@ -420,7 +420,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
       guestId,
     });
 
-    console.log("👤 Guest info saved:", { name, guestId });
+    //console.log("👤 Guest info saved:", { name, guestId });
   };
 
   // ===============================================
@@ -481,7 +481,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
 
       dispatch({ type: "SET_CURRENT_ORDER", payload: mockOrder });
       setCurrentStep("checkout");
-      console.log("✅ Order prepared for checkout:", mockOrder.id);
+      //console.log("✅ Order prepared for checkout:", mockOrder.id);
 
       return mockOrder;
     } catch (error) {
@@ -528,12 +528,12 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
       const authInfo = getUserAuthInfo(isLoaded, user, profile);
 
       // Log authentication info for debugging
-      console.log("🔐 Auth info:", {
+      /*console.log("🔐 Auth info:", {
         isAuthenticated: authInfo.isAuthenticated,
         userId: authInfo.userId,
         guestId: authInfo.guestId,
         displayName: authInfo.displayName,
-      });
+      });*/
 
       // Ensure we have at least userId or guestName
       if (!authInfo.userId && !authInfo.displayName) {
@@ -543,7 +543,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
       }
 
       // STEP 1: Create Pick & Go order first
-      console.log("🆕 Creating Pick & Go order...");
+      //console.log("🆕 Creating Pick & Go order...");
       const orderResponse = await pickAndGoHook.createOrder({
         clerk_user_id: authInfo.userId,
         customer_name:
@@ -570,15 +570,15 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
         throw new Error("Failed to create Pick & Go order");
       }
 
-      console.log("✅ Pick & Go order created:", orderResponse.id);
+      //console.log("✅ Pick & Go order created:", orderResponse.id);
       dispatch({ type: "SET_CURRENT_ORDER", payload: orderResponse });
 
       // STEP 2: Create individual dish orders for each cart item
-      console.log(
+      /*console.log(
         "🍽️ Creating dish orders for",
         state.cartItems.length,
         "items",
-      );
+      );*/
 
       for (const item of state.cartItems) {
         const response = await pickAndGoService.createDishOrder(
@@ -603,7 +603,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
           );
         }
 
-        console.log("✅ Dish order created:", item.name, "x", item.quantity);
+        //console.log("✅ Dish order created:", item.name, "x", item.quantity);
       }
 
       // Clear cart and update state
@@ -611,7 +611,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
       setCurrentStep("confirmation");
       dispatch({ type: "SET_LOADING", payload: false });
 
-      console.log("🎉 All dish orders created successfully for Pick & Go!");
+      //console.log("🎉 All dish orders created successfully for Pick & Go!");
     } catch (error) {
       console.error("💥 Error confirming Pick & Go order:", error);
       dispatch({
@@ -627,7 +627,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
     try {
       await pickAndGoHook.getOrder(orderId);
       setCurrentStep("tracking");
-      console.log("✅ Now tracking order:", orderId);
+      //console.log("✅ Now tracking order:", orderId);
     } catch (error) {
       console.error("💥 Error tracking order:", error);
     }

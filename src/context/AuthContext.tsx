@@ -63,9 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Set auth token in AuthService first
         if (currentUser.token) {
           authService.setAuthToken(currentUser.token);
-          console.log(
-            "🔑 Auth token restored in AuthService from localStorage",
-          );
         }
 
         // Verificar si el token está por expirar o ya expiró
@@ -77,19 +74,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Si ya expiró o expira en menos de 5 minutos, refrescar ahora
           if (timeUntilExpiry < 300) {
-            const isExpired = timeUntilExpiry <= 0;
+            /*const isExpired = timeUntilExpiry <= 0;
             console.log(
               isExpired
                 ? "⚠️ Token already expired, attempting refresh..."
                 : "🔄 Token expiring soon, refreshing proactively...",
-            );
+            );*/
 
             try {
               const refreshResponse = await authService.refreshToken();
               if (refreshResponse.success && refreshResponse.data?.session) {
                 const newToken = refreshResponse.data.session.access_token;
                 authService.setAuthToken(newToken);
-                console.log("✅ Token refreshed proactively on app load");
+                //console.log("✅ Token refreshed proactively on app load");
                 // Ahora sí establecer el usuario y cargar perfil
                 setUser(currentUser);
                 await loadProfileWithValidation();
@@ -146,13 +143,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const REFRESH_INTERVAL = 50 * 60 * 1000; // 50 minutos en ms
 
     const refreshTokenPeriodically = async () => {
-      console.log("🔄 Periodic token refresh...");
+      //console.log("🔄 Periodic token refresh...");
       try {
         const refreshResponse = await authService.refreshToken();
         if (refreshResponse.success && refreshResponse.data?.session) {
           const newToken = refreshResponse.data.session.access_token;
           authService.setAuthToken(newToken);
-          console.log("✅ Token refreshed periodically");
+          //console.log("✅ Token refreshed periodically");
         } else {
           console.warn("⚠️ Periodic refresh failed:", refreshResponse.error);
         }
@@ -174,11 +171,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Si ya expiró o expira en menos de 10 minutos, refrescar
           if (timeUntilExpiry < 600) {
-            console.log(
+            /*console.log(
               timeUntilExpiry <= 0
                 ? "⚠️ Token already expired, attempting refresh..."
                 : "🔄 Token expiring soon, refreshing...",
-            );
+            );*/
 
             try {
               const refreshResponse = await authService.refreshToken();
@@ -227,13 +224,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authService.clearAllSessionData();
     setUser(null);
     setProfile(null);
-    console.log("🔐 Session cleared due to token expiration");
+    //console.log("🔐 Session cleared due to token expiration");
   };
 
   const loadProfile = async () => {
     try {
       const response = await authService.getMyProfile();
-      console.log("📊 AuthContext loadProfile response:", response);
+      //console.log("📊 AuthContext loadProfile response:", response);
 
       if (response.success && response.data) {
         // El backend puede devolver data.data.profile o data.profile
@@ -242,14 +239,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           responseData?.data?.profile || responseData?.profile;
 
         if (profileData) {
-          console.log("✅ Profile loaded in AuthContext:", profileData);
+          //console.log("✅ Profile loaded in AuthContext:", profileData);
           setProfile(profileData);
         } else {
           console.warn("⚠️ No profile data found in response");
         }
       } else if (response.error?.includes("Sesión expirada")) {
         // Token refresh failed - user was logged out by authService
-        console.log("🔐 Session expired, user logged out");
+        //console.log("🔐 Session expired, user logged out");
         setUser(null);
         setProfile(null);
       } else {
@@ -264,7 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfileWithValidation = async (): Promise<boolean> => {
     try {
       const response = await authService.getMyProfile();
-      console.log("📊 AuthContext loadProfile response:", response);
+      //console.log("📊 AuthContext loadProfile response:", response);
 
       if (response.success && response.data) {
         const responseData = (response as any).data;
@@ -272,7 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           responseData?.data?.profile || responseData?.profile;
 
         if (profileData) {
-          console.log("✅ Profile loaded in AuthContext:", profileData);
+          //console.log("✅ Profile loaded in AuthContext:", profileData);
           setProfile(profileData);
           return true;
         } else {
@@ -316,7 +313,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Set auth token in AuthService immediately
       authService.setAuthToken(response.data.session.access_token);
-      console.log("🔑 Auth token set in AuthService after OTP verification");
+      //console.log("🔑 Auth token set in AuthService after OTP verification");
     }
 
     return response;
@@ -352,7 +349,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authService.clearAuthToken();
     // Clear all session data including Pick & Go context
     authService.clearAllSessionData();
-    console.log("🔐 Complete logout: auth token and session data cleared");
+    //console.log("🔐 Complete logout: auth token and session data cleared");
     setUser(null);
     setProfile(null);
   };

@@ -187,40 +187,40 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (!authLoading && user?.id && effectiveRestaurantId) {
         const storedGuestId = localStorage.getItem("xquisito-guest-id");
 
-        console.log("🔍 Migration check:", {
+        /*console.log("🔍 Migration check:", {
           authLoading,
           userId: user.id,
           restaurantId: effectiveRestaurantId,
           branchNumber: guestBranchNumber,
           storedGuestId,
           hasGuestId: !!storedGuestId,
-        });
+        });*/
 
         if (storedGuestId) {
-          console.log("🔄 Attempting to migrate guest cart to user...", {
+          /*console.log("🔄 Attempting to migrate guest cart to user...", {
             from_guest: storedGuestId,
             to_user: user.id,
             restaurant: effectiveRestaurantId,
             branch: guestBranchNumber,
-          });
+          });*/
           try {
             const response = await cartService.migrateGuestCart(
               storedGuestId,
               user.id,
             );
-            console.log("📦 Migration response:", response);
+            //console.log("📦 Migration response:", response);
 
             if (response.success && response.data) {
-              console.log(
+              /*console.log(
                 `✅ Cart migrated successfully: ${response.data.items_migrated || 0} items`,
-              );
+              );*/
 
               // IMPORTANT: DO NOT remove guest-id immediately
               // It's needed for payment methods migration which happens in PaymentContext
               // The guest-id will be removed by PaymentContext after all migrations complete
-              console.log(
+              /*console.log(
                 "ℹ️ Cart migration completed - preserving guest-id for payment methods migration",
-              );
+              );*/
 
               // Refrescar el carrito después de la migración
               await refreshCart();
@@ -234,7 +234,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             console.error("❌ Error migrating cart:", error);
           }
         } else {
-          console.log("ℹ️ No guest_id found, skipping migration");
+          //console.log("ℹ️ No guest_id found, skipping migration");
         }
       }
     };

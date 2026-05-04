@@ -60,7 +60,7 @@ export function RestaurantProvider({ children }: RestaurantProviderProps) {
   const refetchMenu = async () => {
     if (!restaurantId) return;
 
-    console.log("🔄 Refetching menu for restaurant:", restaurantId);
+    //console.log("🔄 Refetching menu for restaurant:", restaurantId);
     await fetchRestaurantData(restaurantId);
   };
   // Función para cargar datos del restaurante y menú
@@ -70,36 +70,36 @@ export function RestaurantProvider({ children }: RestaurantProviderProps) {
       setError(null);
 
       if (branch) {
-        console.log(
+        /*console.log(
           "📡 Fetching restaurant data for ID:",
           id,
           "branch:",
           branch,
-        );
+        );*/
         // Obtener restaurante y menú filtrado por sucursal
         const data = await restaurantService.getRestaurantWithMenuByBranch(
           id,
           branch,
         );
 
-        console.log("✅ Restaurant data loaded:", data.restaurant.name);
-        console.log(
+        //console.log("✅ Restaurant data loaded:", data.restaurant.name);
+        /*console.log(
           "✅ Menu loaded with",
           data.menu.length,
           "sections (filtered by branch",
           branch,
           ")",
-        );
+        );*/
 
         setRestaurant(data.restaurant);
         setMenu(data.menu);
       } else {
-        console.log("📡 Fetching restaurant data for ID:", id);
+        //console.log("📡 Fetching restaurant data for ID:", id);
         // Obtener restaurante y menú completo (sin filtrar por sucursal)
         const data = await restaurantService.getRestaurantWithMenu(id);
 
-        console.log("✅ Restaurant data loaded:", data.restaurant.name);
-        console.log("✅ Menu loaded with", data.menu.length, "sections");
+        //console.log("✅ Restaurant data loaded:", data.restaurant.name);
+        //console.log("✅ Menu loaded with", data.menu.length, "sections");
 
         setRestaurant(data.restaurant);
         setMenu(data.menu);

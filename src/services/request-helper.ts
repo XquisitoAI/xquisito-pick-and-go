@@ -13,7 +13,7 @@ export interface ApiResponse<T> {
  */
 export async function requestWithAuth<T>(
   endpoint: string,
-  options?: RequestInit
+  options?: RequestInit,
 ): Promise<ApiResponse<T>> {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -43,7 +43,7 @@ export async function requestWithAuth<T>(
 
     // Si recibimos 401 y tenemos auth token, intentar refresh
     if (response.status === 401 && authToken) {
-      console.log("🔄 Token expired, attempting refresh...");
+      //console.log("🔄 Token expired, attempting refresh...");
       const newToken = await authService.handleTokenRefresh();
 
       if (newToken) {

@@ -189,7 +189,7 @@ class PickAndGoService {
   async createOrder(
     orderData: CreateOrderRequest,
   ): Promise<ApiResponse<PickAndGoOrder>> {
-    console.log("🆕 Creating Pick & Go order:", orderData);
+    //console.log("🆕 Creating Pick & Go order:", orderData);
 
     // Si clerk_user_id ya viene en orderData, usarlo; si no, usar el interno
     const finalUserId =
@@ -219,7 +219,7 @@ class PickAndGoService {
 
   // Obtener orden por ID con items y pagos
   async getOrder(orderId: string): Promise<ApiResponse<PickAndGoOrder>> {
-    console.log("🔍 Getting Pick & Go order:", orderId);
+    //console.log("🔍 Getting Pick & Go order:", orderId);
     return this.request<PickAndGoOrder>(`/pick-and-go/orders/${orderId}`);
   }
 
@@ -233,7 +233,7 @@ class PickAndGoService {
       restaurant_id?: number;
     },
   ): Promise<ApiResponse<PickAndGoOrder[]>> {
-    console.log("👤 Getting user orders for:", userId);
+    //console.log("👤 Getting user orders for:", userId);
 
     const queryParams = new URLSearchParams();
     if (filters?.order_status)
@@ -254,7 +254,7 @@ class PickAndGoService {
     orderId: string,
     itemData: AddItemRequest,
   ): Promise<ApiResponse<PickAndGoItem>> {
-    console.log("🍽️ Adding item to order:", orderId, itemData);
+    //console.log("🍽️ Adding item to order:", orderId, itemData);
 
     return this.request<PickAndGoItem>(`/pick-and-go/orders/${orderId}/items`, {
       method: "POST",
@@ -268,7 +268,7 @@ class PickAndGoService {
     orderStatus: string,
     prepMetadata?: Record<string, any>,
   ): Promise<ApiResponse<PickAndGoOrder>> {
-    console.log("🔄 Updating order status:", orderId, "to", orderStatus);
+    //console.log("🔄 Updating order status:", orderId, "to", orderStatus);
 
     return this.request<PickAndGoOrder>(
       `/pick-and-go/orders/${orderId}/status`,
@@ -287,7 +287,7 @@ class PickAndGoService {
     orderId: string,
     paymentStatus: "pending" | "paid",
   ): Promise<ApiResponse<PickAndGoOrder>> {
-    console.log("💳 Updating payment status:", orderId, "to", paymentStatus);
+    //console.log("💳 Updating payment status:", orderId, "to", paymentStatus);
 
     return this.request<PickAndGoOrder>(
       `/pick-and-go/orders/${orderId}/payment-status`,
@@ -305,7 +305,7 @@ class PickAndGoService {
     items: Array<{ item: string; quantity: number }>,
     restaurantId?: number,
   ): Promise<ApiResponse<{ estimated_minutes: number }>> {
-    console.log("⏰ Estimating prep time for", items.length, "items");
+    //console.log("⏰ Estimating prep time for", items.length, "items");
 
     return this.request<{ estimated_minutes: number }>(
       "/pick-and-go/estimate-prep-time",
@@ -329,7 +329,7 @@ class PickAndGoService {
       date_to?: string;
     },
   ): Promise<ApiResponse<PickAndGoOrder[]>> {
-    console.log("🏪 Getting restaurant orders for:", restaurantId);
+    //console.log("🏪 Getting restaurant orders for:", restaurantId);
 
     const queryParams = new URLSearchParams();
     if (filters?.order_status)
@@ -354,9 +354,9 @@ class PickAndGoService {
       date_to?: string;
     },
   ): Promise<ApiResponse<PickAndGoOrder[]>> {
-    console.log(
+    /*console.log(
       `🏢 Getting branch orders for restaurant ${restaurantId}, branch ${branchNumber}`,
-    );
+    );*/
 
     const queryParams = new URLSearchParams();
     if (filters?.order_status)
@@ -374,10 +374,10 @@ class PickAndGoService {
     pickAndGoOrderId: string,
     orderData: CreateDishOrderRequest,
   ): Promise<ApiResponse<DishOrder>> {
-    console.log("🍽️ Creating Pick & Go dish order:", {
+    /*console.log("🍽️ Creating Pick & Go dish order:", {
       pickAndGoOrderId,
       orderData,
-    });
+    });*/
 
     // Usar el nuevo endpoint que NO requiere mesas
     return this.request<DishOrder>(
@@ -393,7 +393,7 @@ class PickAndGoService {
   async recordPaymentTransaction(
     transactionData: RecordPaymentTransactionRequest,
   ): Promise<ApiResponse<any>> {
-    console.log("💰 Recording payment transaction:", transactionData);
+    //console.log("💰 Recording payment transaction:", transactionData);
 
     return this.request<any>("/payment-transactions", {
       method: "POST",
@@ -406,7 +406,7 @@ class PickAndGoService {
     dishId: string,
     status: DishOrder["status"],
   ): Promise<ApiResponse<DishOrder>> {
-    console.log("🔄 Updating dish status:", dishId, "to", status);
+    //console.log("🔄 Updating dish status:", dishId, "to", status);
 
     return this.request<DishOrder>(`/dishes/${dishId}/status`, {
       method: "PUT",
@@ -419,12 +419,12 @@ class PickAndGoService {
     dishId: string,
     paymentStatus: DishOrder["payment_status"],
   ): Promise<ApiResponse<DishOrder>> {
-    console.log(
+    /*console.log(
       "💳 Updating dish payment status:",
       dishId,
       "to",
       paymentStatus,
-    );
+    );*/
 
     return this.request<DishOrder>(`/dishes/${dishId}/payment-status`, {
       method: "PUT",

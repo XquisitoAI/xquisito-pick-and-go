@@ -23,7 +23,7 @@ export default function CartPage() {
     setRestaurantId(parseInt(restaurantId));
     setPickAndGoRestaurantId(restaurantId);
 
-    console.log("🛒 Pick & Go Cart Page:", { restaurantId });
+    //console.log("🛒 Pick & Go Cart Page:", { restaurantId });
   }, [restaurantId, setRestaurantId, setPickAndGoRestaurantId, router]);
 
   if (!restaurantId || isNaN(parseInt(restaurantId))) {

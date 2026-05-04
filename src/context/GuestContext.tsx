@@ -54,7 +54,7 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
     if (user) {
       // User is registered - clear any guest session
       if (isGuest) {
-        console.log("🔐 Registered user detected - clearing guest session");
+        //console.log("🔐 Registered user detected - clearing guest session");
         clearGuestSession();
       }
     } else {
@@ -66,9 +66,9 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
 
       // Priority 1: If URL has restaurant/branch parameters, use them
       if (restaurantParam || storedRestaurantId) {
-        console.log(
+        /*console.log(
           "🏪 Restaurant/branch detected - Setting up guest session"
-        );
+        );*/
 
         // Use existing guest ID if available, or create new one
         const guestIdToUse = storedGuestId || generateGuestId();
@@ -90,13 +90,13 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
         if (restaurantIdToUse) {
           localStorage.setItem(
             "xquisito-restaurant-id",
-            restaurantIdToUse.toString()
+            restaurantIdToUse.toString(),
           );
         }
         if (branchNumberToUse) {
           localStorage.setItem(
             "xquisito-branch-number",
-            branchNumberToUse.toString()
+            branchNumberToUse.toString(),
           );
         }
 
@@ -105,12 +105,12 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
         setRestaurantId(restaurantIdToUse);
         setBranchNumber(branchNumberToUse);
 
-        console.log("👤 Guest session configured:", {
+        /*console.log("👤 Guest session configured:", {
           guestId: guestIdToUse,
           restaurantId: restaurantIdToUse,
           branchNumber: branchNumberToUse,
           wasRestored: !!storedGuestId,
-        });
+        });*/
         return;
       }
 
@@ -120,18 +120,18 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
         setIsGuest(true);
         setGuestId(storedGuestId);
         setRestaurantId(
-          storedRestaurantId ? parseInt(storedRestaurantId) : null
+          storedRestaurantId ? parseInt(storedRestaurantId) : null,
         );
         setBranchNumber(
-          storedBranchNumber ? parseInt(storedBranchNumber) : null
+          storedBranchNumber ? parseInt(storedBranchNumber) : null,
         );
         setGuestName(storedGuestName);
-        console.log("🔄 Restored guest session:", {
+        /*console.log("🔄 Restored guest session:", {
           guestId: storedGuestId,
           restaurantId: storedRestaurantId,
           branchNumber: storedBranchNumber,
           guestName: storedGuestName,
-        });
+        });*/
         return;
       }
 
@@ -144,13 +144,13 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
       setRestaurantId(null);
       setBranchNumber(null);
 
-      console.log("👤 Created new Pick & Go guest session:", {
+      /*console.log("👤 Created new Pick & Go guest session:", {
         guestId: newGuestId,
         restaurantId: null,
         branchNumber: null,
-      });
+      });*/
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, user, searchParams, isGuest]);
 
   const setAsGuest = (newRestaurantId?: number, newBranchNumber?: number) => {
@@ -164,20 +164,26 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
     setGuestId(generatedGuestId);
 
     if (newRestaurantId !== undefined) {
-      localStorage.setItem("xquisito-restaurant-id", newRestaurantId.toString());
+      localStorage.setItem(
+        "xquisito-restaurant-id",
+        newRestaurantId.toString(),
+      );
       setRestaurantId(newRestaurantId);
     }
 
     if (newBranchNumber !== undefined) {
-      localStorage.setItem("xquisito-branch-number", newBranchNumber.toString());
+      localStorage.setItem(
+        "xquisito-branch-number",
+        newBranchNumber.toString(),
+      );
       setBranchNumber(newBranchNumber);
     }
 
-    console.log("👤 Set as guest user:", {
+    /*console.log("👤 Set as guest user:", {
       guestId: generatedGuestId,
       restaurantId: newRestaurantId,
       branchNumber: newBranchNumber,
-    });
+    });*/
   };
 
   const clearGuestSession = useCallback(() => {
@@ -193,35 +199,38 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
     localStorage.removeItem("xquisito-branch-number");
     // NO eliminar xquisito-guest-id aquí - lo necesitamos para migrar el carrito
     // El CartContext lo eliminará después de la migración exitosa
-    console.log(
-      "🗑️ Guest session cleared (guest_id preserved for cart migration)"
-    );
+    /*console.log(
+      "🗑️ Guest session cleared (guest_id preserved for cart migration)",
+    );*/
   }, []);
 
-  const setAsAuthenticated = useCallback((userId: string) => {
-    // Clear guest session when user authenticates
-    clearGuestSession();
-    console.log("🔐 Set as authenticated user:", userId);
-  }, [clearGuestSession]);
+  const setAsAuthenticated = useCallback(
+    (userId: string) => {
+      // Clear guest session when user authenticates
+      clearGuestSession();
+      //console.log("🔐 Set as authenticated user:", userId);
+    },
+    [clearGuestSession],
+  );
 
   const setGuestNameHandler = (name: string) => {
     setGuestName(name);
     localStorage.setItem("xquisito-guest-name", name);
-    console.log("👤 Guest name set:", name);
+    //console.log("👤 Guest name set:", name);
   };
 
   const setRestaurantAndBranch = (
     newRestaurantId: number,
-    newBranchNumber: number
+    newBranchNumber: number,
   ) => {
     setRestaurantId(newRestaurantId);
     setBranchNumber(newBranchNumber);
     localStorage.setItem("xquisito-restaurant-id", newRestaurantId.toString());
     localStorage.setItem("xquisito-branch-number", newBranchNumber.toString());
-    console.log("🏪 Restaurant and branch set:", {
+    /*console.log("🏪 Restaurant and branch set:", {
       restaurantId: newRestaurantId,
       branchNumber: newBranchNumber,
-    });
+    });*/
   };
 
   // Helper function to generate guest ID

@@ -20,14 +20,14 @@ export default function Home() {
     const authFromPaymentFlow = sessionStorage.getItem("authFromPaymentFlow");
     const authFromMenu = sessionStorage.getItem("authFromMenu");
 
-    console.log("🔍 Root page debugging:", {
+    /*console.log("🔍 Root page debugging:", {
       isLoading,
       user,
       storedRestaurant,
       authFromPaymentFlow,
       authFromMenu,
       currentPath: window.location.pathname,
-    });
+    });*/
 
     // Determinar restaurantId
     const restaurantParam = searchParams.get("restaurant");
@@ -53,9 +53,9 @@ export default function Home() {
     }
 
     // Default redirect to restaurant 3 menu for Pick & Go (no table needed)
-    console.log(
+    /*console.log(
       `✅ Default redirect to /${DEFAULT_RESTAURANT_ID}/menu (Pick & Go)`,
-    );
+    );*/
     router.replace(`/${DEFAULT_RESTAURANT_ID}/menu`);
   }, [router, searchParams, user, isLoading]);
 

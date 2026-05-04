@@ -6,9 +6,7 @@ import {
   AddItemRequest,
 } from "@/services/pickandgo.service";
 
-/**
- * Hook personalizado para gestionar el estado y operaciones de Pick & Go
- */
+// Hook personalizado para gestionar el estado y operaciones de Pick & Go
 export const usePickAndGo = () => {
   // Estados del hook
   const [currentOrder, setCurrentOrder] = useState<PickAndGoOrder | null>(null);
@@ -16,9 +14,7 @@ export const usePickAndGo = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Crear nueva orden Pick & Go
-   */
+  // Crear nueva orden Pick & Go
   const createOrder = useCallback(async (orderData: CreateOrderRequest) => {
     try {
       setLoading(true);
@@ -28,7 +24,7 @@ export const usePickAndGo = () => {
 
       if (result.success && "data" in result && result.data) {
         setCurrentOrder(result.data);
-        console.log("✅ Order created in hook:", result.data.id);
+        //console.log("✅ Order created in hook:", result.data.id);
         return result.data;
       } else {
         throw new Error("Failed to create order");
@@ -44,9 +40,7 @@ export const usePickAndGo = () => {
     }
   }, []);
 
-  /**
-   * Obtener orden por ID
-   */
+  // Obtener orden por ID
   const getOrder = useCallback(async (orderId: string) => {
     try {
       setLoading(true);
@@ -56,7 +50,7 @@ export const usePickAndGo = () => {
 
       if (result.success && "data" in result && result.data) {
         setCurrentOrder(result.data);
-        console.log("✅ Order retrieved in hook:", result.data.id);
+        //console.log("✅ Order retrieved in hook:", result.data.id);
         return result.data;
       } else {
         throw new Error("Failed to get order");
@@ -72,9 +66,7 @@ export const usePickAndGo = () => {
     }
   }, []);
 
-  /**
-   * Obtener órdenes del usuario
-   */
+  // Obtener órdenes del usuario
   const getUserOrders = useCallback(
     async (
       userId: string,
@@ -82,7 +74,7 @@ export const usePickAndGo = () => {
         order_status?: string;
         payment_status?: string;
         limit?: number;
-      }
+      },
     ) => {
       try {
         setLoading(true);
@@ -92,7 +84,7 @@ export const usePickAndGo = () => {
 
         if (result.success && "data" in result && result.data) {
           setUserOrders(result.data);
-          console.log("✅ User orders retrieved in hook:", result.data.length);
+          //console.log("✅ User orders retrieved in hook:", result.data.length);
           return result.data;
         } else {
           throw new Error("Failed to get user orders");
@@ -107,12 +99,10 @@ export const usePickAndGo = () => {
         setLoading(false);
       }
     },
-    []
+    [],
   );
 
-  /**
-   * Agregar item a la orden actual
-   */
+  // Agregar item a la orden actual
   const addItemToOrder = useCallback(
     async (itemData: AddItemRequest) => {
       if (!currentOrder) {
@@ -125,7 +115,7 @@ export const usePickAndGo = () => {
 
         const result = await pickAndGoService.addItemToOrder(
           currentOrder.id,
-          itemData
+          itemData,
         );
 
         if (result.success && "data" in result && result.data) {
@@ -142,7 +132,7 @@ export const usePickAndGo = () => {
             };
           });
 
-          console.log("✅ Item added to order in hook:", result.data.id);
+          //console.log("✅ Item added to order in hook:", result.data.id);
           return result.data;
         } else {
           throw new Error("Failed to add item to order");
@@ -157,12 +147,10 @@ export const usePickAndGo = () => {
         setLoading(false);
       }
     },
-    [currentOrder]
+    [currentOrder],
   );
 
-  /**
-   * Actualizar estado de la orden actual
-   */
+  // Actualizar estado de la orden actual
   const updateOrderStatus = useCallback(
     async (orderStatus: string, prepMetadata?: Record<string, any>) => {
       if (!currentOrder) {
@@ -176,15 +164,15 @@ export const usePickAndGo = () => {
         const result = await pickAndGoService.updateOrderStatus(
           currentOrder.id,
           orderStatus,
-          prepMetadata
+          prepMetadata,
         );
 
         if (result.success && "data" in result && result.data) {
           setCurrentOrder(result.data);
-          console.log(
+          /*console.log(
             "✅ Order status updated in hook:",
-            result.data.order_status
-          );
+            result.data.order_status,
+          );*/
           return result.data;
         } else {
           throw new Error("Failed to update order status");
@@ -199,12 +187,10 @@ export const usePickAndGo = () => {
         setLoading(false);
       }
     },
-    [currentOrder]
+    [currentOrder],
   );
 
-  /**
-   * Actualizar estado de pago de la orden actual
-   */
+  // Actualizar estado de pago de la orden actual
   const updatePaymentStatus = useCallback(
     async (paymentStatus: "pending" | "paid") => {
       if (!currentOrder) {
@@ -217,15 +203,15 @@ export const usePickAndGo = () => {
 
         const result = await pickAndGoService.updatePaymentStatus(
           currentOrder.id,
-          paymentStatus
+          paymentStatus,
         );
 
         if (result.success && "data" in result && result.data) {
           setCurrentOrder(result.data);
-          console.log(
+          /*console.log(
             "✅ Payment status updated in hook:",
-            result.data.payment_status
-          );
+            result.data.payment_status,
+          );*/
           return result.data;
         } else {
           throw new Error("Failed to update payment status");
@@ -242,16 +228,14 @@ export const usePickAndGo = () => {
         setLoading(false);
       }
     },
-    [currentOrder]
+    [currentOrder],
   );
 
-  /**
-   * Calcular tiempo estimado de preparación
-   */
+  // Calcular tiempo estimado de preparación
   const estimatePrepTime = useCallback(
     async (
       items: Array<{ item: string; quantity: number }>,
-      restaurantId?: number
+      restaurantId?: number,
     ) => {
       try {
         setLoading(true);
@@ -259,15 +243,15 @@ export const usePickAndGo = () => {
 
         const result = await pickAndGoService.estimatePrepTime(
           items,
-          restaurantId
+          restaurantId,
         );
 
         if (result.success && "data" in result && result.data) {
-          console.log(
+          /*console.log(
             "✅ Prep time estimated in hook:",
             result.data.estimated_minutes,
-            "minutes"
-          );
+            "minutes",
+          );*/
           return result.data;
         } else {
           throw new Error("Failed to estimate prep time");
@@ -282,28 +266,22 @@ export const usePickAndGo = () => {
         setLoading(false);
       }
     },
-    []
+    [],
   );
 
-  /**
-   * Limpiar orden actual
-   */
+  // Limpiar orden actual
   const clearCurrentOrder = useCallback(() => {
     setCurrentOrder(null);
     setError(null);
-    console.log("🧹 Current order cleared");
+    //console.log("🧹 Current order cleared");
   }, []);
 
-  /**
-   * Limpiar errores
-   */
+  // Limpiar errores
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
-  /**
-   * Refrescar orden actual
-   */
+  // Refrescar orden actual
   const refreshCurrentOrder = useCallback(async () => {
     if (!currentOrder) return;
 
@@ -320,7 +298,7 @@ export const usePickAndGo = () => {
   const currentOrderTotal = currentOrder?.total_amount || 0;
   const currentOrderItemCount = currentOrderItems.reduce(
     (sum, item) => sum + item.quantity,
-    0
+    0,
   );
 
   return {

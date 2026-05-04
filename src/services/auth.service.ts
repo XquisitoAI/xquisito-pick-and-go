@@ -251,7 +251,7 @@ class AuthService {
 
       // Si recibimos 401, intentar refrescar el token
       if (response.status === 401) {
-        console.log("🔄 Token expired in getMyProfile, refreshing...");
+        //console.log("🔄 Token expired in getMyProfile, refreshing...");
         const newToken = await this.handleTokenRefresh();
 
         if (newToken) {

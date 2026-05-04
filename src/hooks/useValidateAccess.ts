@@ -43,7 +43,7 @@ export function useValidateAccess() {
           console.error("❌ Validation failed:", validation.error);
           setValidationError(validation.error || "VALIDATION_ERROR");
         } else {
-          console.log("✅ Validation successful");
+          //console.log("✅ Validation successful");
           setValidationError(null);
         }
       } catch (err) {
