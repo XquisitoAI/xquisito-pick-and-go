@@ -213,9 +213,7 @@ export default function CardSelectionPage() {
   // Inicializar Apple Pay SDK cuando los datos estén listos
   const initApplePay = useCallback(async () => {
     if (typeof window === "undefined" || !totalAmount) return;
-    // Guard: solo inicializar una vez aunque el callback se recree
     if (applePayListenersRef.current) return;
-    applePayListenersRef.current = true;
 
     try {
       // Crear orden en Ecart Pay para obtener orderId
@@ -243,29 +241,30 @@ export default function CardSelectionPage() {
         return;
       }
 
-      console.log("ORDER RESULT:", orderResult);
+      // Guard: solo activar después de obtener SDK y orden exitosamente
+      applePayListenersRef.current = true;
 
-      applePaySDK.on("ready", () => {
-        console.log("✅ Apple Pay botón listo");
+      applePaySDK.on("ready", function (event: any) {
+        console.log("Apple Pay ready. native:", event.detail?.native);
         setApplePayReady(true);
       });
-      applePaySDK.on("unavailable", () => {
-        console.log("ℹ️ Apple Pay no disponible en este dispositivo/cuenta");
+      applePaySDK.on("unavailable", function (event: any) {
+        console.warn("Apple Pay unavailable:", event.detail?.message);
         setApplePayUnavailable(true);
       });
       applePaySDK.on("cancel", () => {
         console.log("🚫 Apple Pay cancelado por el usuario");
         setIsApplePayProcessing(false);
       });
-      applePaySDK.on("error", (err: any) => {
-        const errMsg = `[AP-ERROR] ${typeof err === "object" ? JSON.stringify(err) : String(err)}`;
-        console.error("❌ Apple Pay error:", err);
+      applePaySDK.on("error", (event: any) => {
+        const errMsg = `[AP-ERROR] ${event?.detail?.message ?? JSON.stringify(event)}`;
+        console.error("❌ Apple Pay error:", event);
         setIsApplePayProcessing(false);
         setApplePayUnavailable(true);
         setErrorMessage(errMsg);
       });
-      applePaySDK.on("success", async () => {
-        console.log("💳 Apple Pay: pago autorizado");
+      applePaySDK.on("success", async (event: any) => {
+        console.log("Apple Pay: pago autorizado", event?.detail);
         const applePayId = `apple-pay-${Date.now()}`;
         setApplePayPaymentId(applePayId);
         setIsApplePayProcessing(true);
@@ -282,14 +281,13 @@ export default function CardSelectionPage() {
         amount: totalAmount,
         currency: "MXN",
         countryCode: "MX",
-        supportedNetworks: ["visa", "masterCard", "amex"],
-        merchantCapabilities: [
-          "supports3DS",
-          "supportsDebit",
-          "supportsCredit",
-        ],
+        label: "My Store",
         buttonStyle: "black",
         buttonType: "pay",
+        borderRadius: "8px",
+        supportedNetworks: ["visa", "masterCard", "amex"],
+        requiredShippingContactFields: ["postalAddress", "email", "phone"],
+        requiredBillingContactFields: ["postalAddress"],
       });
     } catch (err) {
       const errMsg = `[AP-INIT] ${err instanceof Error ? err.message : JSON.stringify(err)}`;
