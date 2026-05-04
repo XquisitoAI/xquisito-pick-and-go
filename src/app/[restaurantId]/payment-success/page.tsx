@@ -18,10 +18,15 @@ import {
   RefreshCw,
   Loader2,
   Clock,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { getCardTypeIcon } from "../../../utils/cardIcons";
 import { useAuth } from "../../../context/AuthContext";
-import { pickAndGoService } from "../../../services/pickandgo.service";
+import {
+  pickAndGoService,
+  type ActiveOrderResponse,
+} from "../../../services/pickandgo.service";
 import { useCart } from "../../../context/CartContext";
 import { MenuItemData } from "../../../interfaces/menuItemData";
 
@@ -42,7 +47,7 @@ export default function PaymentSuccessPage() {
   const isGuest = useIsGuest();
   const { guestId } = useGuest();
   const { fetchBranches } = useBranch();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   // Get payment details from URL or localStorage
   const paymentId =
@@ -252,12 +257,19 @@ export default function PaymentSuccessPage() {
   const amount =
     paymentDetails?.totalAmountCharged || paymentDetails?.amount || urlAmount;
 
-  // Estado para dish orders (obtenidos del backend)
+  // Estado para dish orders (obtenidos del backend) — usado por el ticket modal
   const [dishOrders, setDishOrders] = useState<any[]>([]);
   // Estado para la fecha de creación del pedido
   const [orderCreatedAt, setOrderCreatedAt] = useState<Date | null>(null);
   // Estado para el folio del pedido
   const [orderFolio, setOrderFolio] = useState<string | null>(null);
+
+  // Estado para todas las órdenes activas — usado por el status modal
+  const [activeOrders, setActiveOrders] = useState<
+    NonNullable<ActiveOrderResponse["data"]>[]
+  >([]);
+  const [activeOrderIndex, setActiveOrderIndex] = useState(0);
+  const activeOrder = activeOrders[activeOrderIndex] ?? null;
 
   // Función para obtener dish orders desde el backend
   const fetchDishOrders = async () => {
@@ -333,19 +345,45 @@ export default function PaymentSuccessPage() {
     setIsRefreshing(false);
   };
 
-  // Función para calcular el estatus general del pedido basado en los items
-  const getOverallStatus = (): "preparing" | "ready" | "delivered" => {
-    if (!dishOrders || dishOrders.length === 0) return "preparing";
+  // Cargar órdenes activas para el status modal
+  const fetchActiveOrders = async () => {
+    const clientId = user?.id || guestId;
+    if (!clientId || !restaurantId) return;
+    try {
+      const response: any = await pickAndGoService.getActiveOrderByUser(
+        clientId,
+        parseInt(restaurantId),
+      );
+      if (response.hasActiveOrder && response.orders?.length > 0) {
+        setActiveOrders(response.orders);
+        setActiveOrderIndex((prev) =>
+          prev < response.orders.length ? prev : 0,
+        );
+      } else {
+        setActiveOrders([]);
+      }
+    } catch (error) {
+      console.error("Error fetching active orders:", error);
+    }
+  };
 
-    const statuses = dishOrders.map((item) => item.status);
+  useEffect(() => {
+    fetchActiveOrders();
+  }, [user?.id, guestId, restaurantId]);
 
-    // Si TODOS están entregados
+  const handleRefreshStatus = async () => {
+    setIsRefreshing(true);
+    await fetchActiveOrders();
+    setIsRefreshing(false);
+  };
+
+  const getOverallStatus = (
+    dishes?: { status: string }[],
+  ): "preparing" | "ready" | "delivered" => {
+    if (!dishes || dishes.length === 0) return "preparing";
+    const statuses = dishes.map((d) => d.status);
     if (statuses.every((s) => s === "delivered")) return "delivered";
-
-    // Si TODOS están en ready (ninguno preparing)
     if (statuses.every((s) => s === "ready")) return "ready";
-
-    // Al menos uno preparing
     return "preparing";
   };
 
@@ -905,9 +943,29 @@ export default function PaymentSuccessPage() {
           onClick={() => setIsStatusModalOpen(false)}
         >
           <div
-            className="bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
+            className="relative bg-[#173E44]/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] w-full mx-4 md:mx-12 lg:mx-28 rounded-4xl z-[999] max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Flechas de navegación entre órdenes */}
+            {activeOrders.length > 1 && (
+              <>
+                <button
+                  onClick={() => setActiveOrderIndex((i) => i - 1)}
+                  disabled={activeOrderIndex === 0}
+                  className="absolute left-3 md:left-4 top-[30%] z-10 rounded-full size-9 md:size-10 flex items-center justify-center bg-white/10 border border-white/25 hover:bg-white/20 transition-colors active:scale-90 disabled:opacity-25 disabled:pointer-events-none"
+                >
+                  <ChevronLeft className="size-6 md:size-7 text-white" />
+                </button>
+                <button
+                  onClick={() => setActiveOrderIndex((i) => i + 1)}
+                  disabled={activeOrderIndex === activeOrders.length - 1}
+                  className="absolute right-3 md:right-4 top-[30%] z-10 rounded-full size-9 md:size-10 flex items-center justify-center bg-white/10 border border-white/25 hover:bg-white/20 transition-colors active:scale-90 disabled:opacity-25 disabled:pointer-events-none"
+                >
+                  <ChevronRight className="size-6 md:size-7 text-white" />
+                </button>
+              </>
+            )}
+
             {/* Header */}
             <div className="flex-shrink-0">
               <div className="w-full flex justify-end">
@@ -931,13 +989,14 @@ export default function PaymentSuccessPage() {
                   )}
                   <div className="flex flex-col items-center justify-center">
                     <h2 className="text-2xl md:text-3xl lg:text-4xl text-white font-semibold">
-                      Pedido #{orderFolio || "---"}
+                      Pedido #{activeOrder?.pick_and_go_order?.folio || "---"}
                     </h2>
-                    {paymentDetails?.userName && (
-                      <p className="text-base md:text-md lg:text-lg text-white/80 font-medium">
-                        {paymentDetails.userName}
-                      </p>
-                    )}
+                    <p className="text-base md:text-md lg:text-lg text-white/80 font-medium">
+                      {activeOrders.length > 1
+                        ? `${activeOrderIndex + 1} de ${activeOrders.length}`
+                        : activeOrder?.pick_and_go_order?.customer_name ||
+                          "Pick & Go"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -945,7 +1004,6 @@ export default function PaymentSuccessPage() {
               {/* Estatus General - 3 pasos */}
               <div className="px-6 md:px-8 lg:px-10 mb-4 md:mb-5 lg:mb-6">
                 <div className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8">
-                  {/* Recibido - siempre activo porque el pedido ya fue recibido */}
                   <div className="flex flex-col items-center gap-1.5 md:gap-2">
                     <div className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 bg-white border border-green-200">
                       <Clock className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-green-600" />
@@ -955,7 +1013,6 @@ export default function PaymentSuccessPage() {
                     </span>
                   </div>
 
-                  {/* Línea de progreso - siempre llena porque recibido siempre está completo */}
                   <div className="flex-1 max-w-12 md:max-w-16 lg:max-w-20 h-1 bg-white/10 rounded-full overflow-hidden">
                     <div className="h-full w-full rounded-full bg-gradient-to-r from-white to-green-200"></div>
                   </div>
@@ -964,16 +1021,16 @@ export default function PaymentSuccessPage() {
                   <div className="flex flex-col items-center gap-1.5 md:gap-2">
                     <div
                       className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
-                        getOverallStatus() === "ready" ||
-                        getOverallStatus() === "delivered"
-                          ? "bg-green-100 text-green-600 border border-green-100"
+                        getOverallStatus(activeOrder?.dishes) === "ready" ||
+                        getOverallStatus(activeOrder?.dishes) === "delivered"
+                          ? "bg-green-100 border border-green-100"
                           : "bg-white/10"
                       }`}
                     >
                       <Utensils
                         className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 ${
-                          getOverallStatus() === "ready" ||
-                          getOverallStatus() === "delivered"
+                          getOverallStatus(activeOrder?.dishes) === "ready" ||
+                          getOverallStatus(activeOrder?.dishes) === "delivered"
                             ? "text-green-600"
                             : "text-white"
                         }`}
@@ -981,8 +1038,8 @@ export default function PaymentSuccessPage() {
                     </div>
                     <span
                       className={`text-xs md:text-sm font-medium ${
-                        getOverallStatus() === "ready" ||
-                        getOverallStatus() === "delivered"
+                        getOverallStatus(activeOrder?.dishes) === "ready" ||
+                        getOverallStatus(activeOrder?.dishes) === "delivered"
                           ? "text-green-100"
                           : "text-white/60"
                       }`}
@@ -991,11 +1048,10 @@ export default function PaymentSuccessPage() {
                     </span>
                   </div>
 
-                  {/* Línea de progreso */}
                   <div className="flex-1 max-w-12 md:max-w-16 lg:max-w-20 h-1 bg-white/10 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
-                        getOverallStatus() === "delivered"
+                        getOverallStatus(activeOrder?.dishes) === "delivered"
                           ? "w-full bg-gradient-to-r from-green-200 to-green-300"
                           : "w-0"
                       }`}
@@ -1006,14 +1062,14 @@ export default function PaymentSuccessPage() {
                   <div className="flex flex-col items-center gap-1.5 md:gap-2">
                     <div
                       className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
-                        getOverallStatus() === "delivered"
-                          ? "bg-green-200 text-green-800 border border-green-300"
+                        getOverallStatus(activeOrder?.dishes) === "delivered"
+                          ? "bg-green-200 border border-green-300"
                           : "bg-white/10"
                       }`}
                     >
                       <svg
                         className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 ${
-                          getOverallStatus() === "delivered"
+                          getOverallStatus(activeOrder?.dishes) === "delivered"
                             ? "text-green-800"
                             : "text-white"
                         }`}
@@ -1029,7 +1085,7 @@ export default function PaymentSuccessPage() {
                     </div>
                     <span
                       className={`text-xs md:text-sm font-medium ${
-                        getOverallStatus() === "delivered"
+                        getOverallStatus(activeOrder?.dishes) === "delivered"
                           ? "text-green-100"
                           : "text-white/60"
                       }`}
@@ -1047,7 +1103,7 @@ export default function PaymentSuccessPage() {
                     Items ordenados
                   </h3>
                   <button
-                    onClick={handleRefreshOrders}
+                    onClick={handleRefreshStatus}
                     disabled={isRefreshing}
                     className="rounded-full hover:bg-white/10 p-1 md:p-1.5 lg:p-2 transition-colors disabled:opacity-50"
                   >
@@ -1065,19 +1121,19 @@ export default function PaymentSuccessPage() {
                 <div className="flex justify-center items-center py-12 md:py-16 lg:py-20">
                   <Loader2 className="size-8 md:size-10 lg:size-12 animate-spin text-white" />
                 </div>
-              ) : dishOrders && dishOrders.length > 0 ? (
+              ) : activeOrder?.dishes && activeOrder.dishes.length > 0 ? (
                 <div className="space-y-3 md:space-y-4 lg:space-y-5">
-                  {dishOrders.map((item, index) => (
+                  {activeOrder.dishes.map((dish: any, index: number) => (
                     <div
-                      key={item.dish_order_id || index}
+                      key={dish.id || index}
                       className="flex items-start gap-3 md:gap-4 lg:gap-5 bg-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 lg:p-5 border border-white/10"
                     >
                       <div className="flex-shrink-0">
                         <div className="size-16 md:size-20 lg:size-24 bg-gray-300 rounded-sm flex items-center justify-center overflow-hidden">
-                          {item.image_url ? (
+                          {dish.images?.[0] ? (
                             <img
-                              src={item.image_url}
-                              alt={item.item}
+                              src={dish.images[0]}
+                              alt={dish.item}
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -1091,22 +1147,21 @@ export default function PaymentSuccessPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-base md:text-lg lg:text-xl text-white font-medium capitalize">
-                          {item.item}
+                          {dish.item}
                         </h3>
-                        {/* Badge de estado */}
                         <div className="mt-1 md:mt-1.5 lg:mt-2">
                           <span
                             className={`inline-block px-2 md:px-3 lg:px-4 py-0.5 md:py-1 lg:py-1.5 text-xs md:text-sm lg:text-base font-medium rounded-full border ${
-                              item.status === "preparing"
+                              dish.status === "preparing"
                                 ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                                : item.status === "ready"
+                                : dish.status === "ready"
                                   ? "bg-orange-100 text-orange-800 border-orange-300"
                                   : "bg-green-100 text-green-800 border-green-300"
                             }`}
                           >
-                            {item.status === "preparing"
+                            {dish.status === "preparing"
                               ? "Preparando"
-                              : item.status === "ready"
+                              : dish.status === "ready"
                                 ? "Listo"
                                 : "Entregado"}
                           </span>
@@ -1114,10 +1169,10 @@ export default function PaymentSuccessPage() {
                       </div>
                       <div className="text-right flex flex-col items-end">
                         <p className="text-xs md:text-sm lg:text-base text-white/60">
-                          Cant: {item.quantity}
+                          Cant: {dish.quantity}
                         </p>
                         <p className="text-base md:text-lg lg:text-xl text-white font-medium">
-                          ${(Number(item.price) * item.quantity).toFixed(2)}
+                          ${(Number(dish.price) * dish.quantity).toFixed(2)}
                         </p>
                       </div>
                     </div>
