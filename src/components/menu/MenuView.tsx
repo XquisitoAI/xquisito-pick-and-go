@@ -36,9 +36,11 @@ const BranchSelectionModal = lazy(
 import {
   pickAndGoService,
   type ActiveOrderResponse,
+  type PickAndGoItem,
 } from "../../services/pickandgo.service";
 import { useGuest } from "@/context/GuestContext";
 import { MenuItemData } from "../../interfaces/menuItemData";
+const ReorderModal = lazy(() => import("../modals/ReorderModal"));
 
 const ChatView = lazy(() => import("../ChatView"));
 const AuthView = lazy(() => import("./../AuthView"));
@@ -146,7 +148,8 @@ export default function MenuView() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLastOrder, setHasLastOrder] = useState(false);
-  const [isReordering, setIsReordering] = useState(false);
+  const [showReorderModal, setShowReorderModal] = useState(false);
+  const [lastOrderItems, setLastOrderItems] = useState<PickAndGoItem[]>([]);
   const { user, profile, isAuthenticated } = useAuth();
   const { state, addItem } = useCart();
   const { restaurant, menu, error } = useRestaurant();
@@ -179,13 +182,18 @@ export default function MenuView() {
 
   // Scroll lock unificado para todos los modales
   useEffect(() => {
-    if (showPepperChat || showSettingsModal || showStatusModal) {
+    if (
+      showPepperChat ||
+      showSettingsModal ||
+      showStatusModal ||
+      showReorderModal
+    ) {
       lockScroll();
     } else {
       unlockScroll();
     }
     return unlockScroll;
-  }, [showPepperChat, showSettingsModal, showStatusModal]);
+  }, [showPepperChat, showSettingsModal, showStatusModal, showReorderModal]);
 
   // Precargar chunks lazy después de que la página ya es interactiva
   useEffect(() => {
@@ -239,49 +247,18 @@ export default function MenuView() {
         limit: 1,
         restaurant_id: restaurant.id,
       });
-      setHasLastOrder(!!(response.success && response.data?.length));
+      if (!response.success || !response.data?.length) return;
+      const detail = await pickAndGoService.getOrder(response.data[0].id);
+      const dishes = detail.data?.items?.filter((d) => d.menu_item_id);
+      if (dishes?.length) {
+        setLastOrderItems(dishes);
+        setHasLastOrder(true);
+      }
     };
     checkLastOrder();
   }, [user?.id, guestId, restaurant?.id]);
 
-  const handleReorder = async () => {
-    const clientId = user?.id || guestId;
-    if (!clientId || !restaurant?.id) return;
-    setIsReordering(true);
-    try {
-      const response = await pickAndGoService.getUserOrders(clientId, {
-        limit: 1,
-        restaurant_id: restaurant.id,
-      });
-      if (!response.success || !response.data?.length) return;
-
-      const detail = await pickAndGoService.getOrder(response.data[0].id);
-      const dishes = detail.data?.items?.filter((d) => d.menu_item_id);
-      if (!dishes?.length) return;
-
-      for (const dish of dishes) {
-        const menuItem: MenuItemData = {
-          id: dish.menu_item_id!,
-          name: dish.item,
-          description: "",
-          price: dish.price,
-          images: dish.images,
-          features: [],
-          discount: 0,
-          customFields:
-            (dish.custom_fields as MenuItemData["customFields"]) ?? [],
-          extraPrice: dish.extra_price,
-        };
-        await addItem(menuItem, dish.quantity, dish.special_instructions);
-      }
-
-      navigateWithRestaurantId("/cart");
-    } catch (error) {
-      console.error("Error al reordenar:", error);
-    } finally {
-      setIsReordering(false);
-    }
-  };
+  const handleReorder = () => setShowReorderModal(true);
 
   // Mostrar barra sticky al hacer scroll past el trigger
   useEffect(() => {
@@ -483,12 +460,8 @@ export default function MenuView() {
                 {hasLastOrder && (
                   <button
                     onClick={handleReorder}
-                    disabled={isReordering}
-                    className="bg-[#eab3f4] text-white border border-[#8e8e8e] rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium w-fit active:scale-90 transition-all disabled:opacity-70 flex items-center gap-1.5"
+                    className="bg-[#eab3f4] text-white border border-[#8e8e8e] rounded-full px-3 md:px-4 lg:px-5 py-1 md:py-1.5 text-sm md:text-lg lg:text-xl font-medium w-fit active:scale-90 transition-all flex items-center gap-1.5"
                   >
-                    {isReordering && (
-                      <Loader2 className="size-4 animate-spin" />
-                    )}
                     Reordenar
                     <RefreshCw className="size-4" />
                   </button>
@@ -981,6 +954,15 @@ export default function MenuView() {
           </div>
         </div>
       )}
+
+      {/* Reorder Modal */}
+      <Suspense fallback={null}>
+        <ReorderModal
+          isOpen={showReorderModal}
+          onClose={() => setShowReorderModal(false)}
+          items={lastOrderItems}
+        />
+      </Suspense>
 
       {/* Restaurant Closed Modal */}
       <Suspense fallback={null}>
