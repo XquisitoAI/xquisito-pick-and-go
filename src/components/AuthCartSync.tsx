@@ -17,7 +17,7 @@ export default function AuthCartSync() {
     if (profile?.firstName && !cartState.userName) {
       setUserName(profile.firstName);
     }
-  }, [profile?.firstName]);
+  }, [profile?.firstName, cartState.userName, setUserName]);
 
   return null;
 }

@@ -190,7 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   console.error(
                     "❌ Refresh failed and token expired, logging out user",
                   );
-                  logout();
+                  await performLogout();
                 } else {
                   console.warn(
                     "⚠️ Refresh failed on visibility change but token still valid",

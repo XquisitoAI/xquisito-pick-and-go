@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/context/AuthContext";
+import { authService } from "@/services/auth.service";
 import {
   User,
   Camera,
@@ -75,7 +76,7 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
       // Usuario autenticado pero sin perfil - intentar cargar de nuevo
       refreshProfile();
     }
-  }, [profile, isLoading, user]);
+  }, [profile, isLoading, user, refreshProfile]);
 
   const handleUpdateProfile = async () => {
     if (!isAuthenticated) return;
@@ -126,7 +127,7 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
     setIsUpdating(true);
 
     try {
-      const token = localStorage.getItem("xquisito_access_token");
+      let token = authService.getAccessToken();
       if (!token) {
         setErrorMessage("No estás autenticado");
         setIsUpdating(false);
@@ -136,16 +137,22 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
       const formData = new FormData();
       formData.append("photo", file);
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/profiles/upload-photo`,
-        {
+      const uploadUrl = `${process.env.NEXT_PUBLIC_API_URL}/profiles/upload-photo`;
+      let response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (response.status === 401) {
+        const newToken = await authService.handleTokenRefresh();
+        if (!newToken) throw new Error("Sesión expirada");
+        response = await fetch(uploadUrl, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${newToken}` },
           body: formData,
-        },
-      );
+        });
+      }
 
       const data = await response.json();
 

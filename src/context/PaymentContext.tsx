@@ -323,21 +323,27 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user?.id, isGuest, guestId, authLoading]);
 
-  // Auto-migrate guest payment methods when user logs in
+  // Migrar métodos de pago una vez que CartContext haya terminado su migración
   useEffect(() => {
-    const autoMigrate = async () => {
+    if (!user) return;
+
+    const handleCartMigrationComplete = async () => {
       const guestIdInStorage = localStorage.getItem("xquisito-guest-id");
-      if (user && guestIdInStorage) {
-        /*console.log(
-          "🔄 Auto-triggering payment methods migration after authentication",
-        );*/
-        // Wait for cart migration to complete first (handled in CartContext)
-        // Then migrate payment methods
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (guestIdInStorage) {
         await migrateGuestPaymentMethods();
       }
     };
-    autoMigrate();
+
+    window.addEventListener(
+      "xquisito:cartMigrationComplete",
+      handleCartMigrationComplete,
+    );
+    return () => {
+      window.removeEventListener(
+        "xquisito:cartMigrationComplete",
+        handleCartMigrationComplete,
+      );
+    };
   }, [user?.id]);
 
   const value: PaymentContextType = {

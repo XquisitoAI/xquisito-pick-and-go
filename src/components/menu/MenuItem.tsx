@@ -163,7 +163,8 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
     setLocalQuantity((prev) => Math.max(0, prev - 1));
 
     if (cartItem.quantity > 1) {
-      updateQuantity(cartItem.id, cartItem.quantity - 1);
+      if (cartItem.cartItemId)
+        updateQuantity(cartItem.cartItemId, cartItem.quantity - 1);
     } else {
       removeItem(cartItem.id);
     }

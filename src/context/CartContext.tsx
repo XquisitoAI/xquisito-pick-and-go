@@ -13,13 +13,11 @@ import { useAuth } from "./AuthContext";
 import { useGuest } from "./GuestContext";
 import { useRestaurant } from "./RestaurantContext";
 
-// Interfaz para un item del carrito (frontend)
 export interface CartItem extends MenuItemData {
   quantity: number;
-  cartItemId?: string; // ID del item en el carrito (del backend)
+  cartItemId?: string;
 }
 
-// Estado del carrito
 interface CartState {
   items: CartItem[];
   totalItems: number;
@@ -29,11 +27,21 @@ interface CartState {
   cartId: string | null;
 }
 
-// Acciones del carrito
 type CartAction =
-  | { type: "ADD_ITEM"; payload: MenuItemData }
-  | { type: "REMOVE_ITEM"; payload: number }
-  | { type: "UPDATE_QUANTITY"; payload: { id: number; quantity: number } }
+  | { type: "ADD_ITEM"; payload: CartItem }
+  | { type: "REMOVE_ITEM"; payload: string } // cartItemId
+  | {
+      type: "UPDATE_QUANTITY";
+      payload: { cartItemId: string; quantity: number };
+    }
+  | {
+      type: "SET_CART_ITEM_ID";
+      payload: {
+        menuItemId: number;
+        customFieldsKey: string;
+        cartItemId: string;
+      };
+    }
   | { type: "CLEAR_CART" }
   | { type: "SET_USER_NAME"; payload: string }
   | { type: "SET_LOADING"; payload: boolean }
@@ -47,7 +55,6 @@ type CartAction =
       };
     };
 
-// Estado inicial
 const initialState: CartState = {
   items: [],
   totalItems: 0,
@@ -57,14 +64,20 @@ const initialState: CartState = {
   cartId: null,
 };
 
-// Reducer del carrito
+function computeTotals(items: CartItem[]) {
+  return {
+    totalItems: items.reduce((s, i) => s + i.quantity, 0),
+    totalPrice: items.reduce(
+      (s, i) => s + (i.price + (i.extraPrice || 0)) * i.quantity,
+      0,
+    ),
+  };
+}
+
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case "SET_LOADING":
-      return {
-        ...state,
-        isLoading: action.payload,
-      };
+      return { ...state, isLoading: action.payload };
 
     case "SET_CART":
       return {
@@ -77,30 +90,65 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       };
 
     case "SET_USER_NAME":
-      return {
-        ...state,
-        userName: action.payload,
-      };
+      return { ...state, userName: action.payload };
 
     case "CLEAR_CART":
-      return {
-        ...initialState,
-        userName: state.userName, // Mantener userName
-      };
+      return { ...initialState, userName: state.userName };
 
-    // Las acciones ADD_ITEM, REMOVE_ITEM, UPDATE_QUANTITY ahora son manejadas por el provider
-    // usando la API, pero mantenemos los casos para actualización optimista
-    case "ADD_ITEM":
-    case "REMOVE_ITEM":
-    case "UPDATE_QUANTITY":
-      return state;
+    case "ADD_ITEM": {
+      const newItem = action.payload;
+      const cfKey = JSON.stringify(newItem.customFields || []);
+      const existing = state.items.find(
+        (i) =>
+          i.id === newItem.id &&
+          JSON.stringify(i.customFields || []) === cfKey &&
+          (i.extraPrice || 0) === (newItem.extraPrice || 0),
+      );
+      const newItems = existing
+        ? state.items.map((i) =>
+            i === existing
+              ? { ...i, quantity: i.quantity + newItem.quantity }
+              : i,
+          )
+        : [...state.items, { ...newItem, cartItemId: undefined }];
+      return { ...state, ...computeTotals(newItems), items: newItems };
+    }
+
+    case "REMOVE_ITEM": {
+      const newItems = state.items.filter(
+        (i) => i.cartItemId !== action.payload,
+      );
+      return { ...state, ...computeTotals(newItems), items: newItems };
+    }
+
+    case "UPDATE_QUANTITY": {
+      const { cartItemId, quantity } = action.payload;
+      const newItems =
+        quantity <= 0
+          ? state.items.filter((i) => i.cartItemId !== cartItemId)
+          : state.items.map((i) =>
+              i.cartItemId === cartItemId ? { ...i, quantity } : i,
+            );
+      return { ...state, ...computeTotals(newItems), items: newItems };
+    }
+
+    case "SET_CART_ITEM_ID": {
+      const { menuItemId, customFieldsKey, cartItemId } = action.payload;
+      const newItems = state.items.map((i) =>
+        i.id === menuItemId &&
+        !i.cartItemId &&
+        JSON.stringify(i.customFields || []) === customFieldsKey
+          ? { ...i, cartItemId }
+          : i,
+      );
+      return { ...state, items: newItems };
+    }
 
     default:
       return state;
   }
 }
 
-// Helper para convertir ApiCartItem a CartItem
 function convertApiItemToCartItem(apiItem: ApiCartItem): CartItem {
   return {
     id: apiItem.menu_item_id,
@@ -127,7 +175,6 @@ function convertApiItemToCartItem(apiItem: ApiCartItem): CartItem {
   };
 }
 
-// Contexto del carrito con funciones
 interface CartContextType {
   state: CartState;
   addItem: (
@@ -147,7 +194,6 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | null>(null);
 
-// Provider del carrito
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const [orderNotes, setOrderNotes] = React.useState("");
@@ -159,7 +205,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   } = useGuest();
   const { restaurantId } = useRestaurant();
 
-  // Establecer user_id y restaurant_id en cartService cuando cambien
   useEffect(() => {
     if (!authLoading) {
       cartService.setSupabaseUserId(user?.id || null);
@@ -187,43 +232,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (!authLoading && user?.id && effectiveRestaurantId) {
         const storedGuestId = localStorage.getItem("xquisito-guest-id");
 
-        /*console.log("🔍 Migration check:", {
-          authLoading,
-          userId: user.id,
-          restaurantId: effectiveRestaurantId,
-          branchNumber: guestBranchNumber,
-          storedGuestId,
-          hasGuestId: !!storedGuestId,
-        });*/
-
         if (storedGuestId) {
-          /*console.log("🔄 Attempting to migrate guest cart to user...", {
-            from_guest: storedGuestId,
-            to_user: user.id,
-            restaurant: effectiveRestaurantId,
-            branch: guestBranchNumber,
-          });*/
           try {
             const response = await cartService.migrateGuestCart(
               storedGuestId,
               user.id,
             );
-            //console.log("📦 Migration response:", response);
 
             if (response.success && response.data) {
-              /*console.log(
-                `✅ Cart migrated successfully: ${response.data.items_migrated || 0} items`,
-              );*/
-
-              // IMPORTANT: DO NOT remove guest-id immediately
-              // It's needed for payment methods migration which happens in PaymentContext
-              // The guest-id will be removed by PaymentContext after all migrations complete
-              /*console.log(
-                "ℹ️ Cart migration completed - preserving guest-id for payment methods migration",
-              );*/
-
-              // Refrescar el carrito después de la migración
               await refreshCart();
+
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(
+                  new CustomEvent("xquisito:cartMigrationComplete"),
+                );
+              }
             } else {
               console.warn(
                 "⚠️ Migration completed but no data returned:",
@@ -233,8 +256,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
           } catch (error) {
             console.error("❌ Error migrating cart:", error);
           }
-        } else {
-          //console.log("ℹ️ No guest_id found, skipping migration");
         }
       }
     };
@@ -249,7 +270,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     guestBranchNumber,
   ]);
 
-  // Función para refrescar el carrito desde el backend
+  // Refrescar carrito completo desde el backend (solo carga inicial y migración)
   const refreshCart = async () => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
@@ -261,8 +282,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           type: "SET_CART",
           payload: {
             items,
-            totalItems: response.data.total_items,
-            totalPrice: response.data.total_amount,
+            ...computeTotals(items),
             cartId: response.data.cart_id,
           },
         });
@@ -276,83 +296,141 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Agregar item al carrito
+  // Agregar item — optimistic update instantáneo, sin bloquear UI
   const addItem = async (
     item: MenuItemData,
     quantity: number = 1,
     specialInstructions?: string | null,
   ) => {
-    try {
-      dispatch({ type: "SET_LOADING", payload: true });
+    const previousItems = state.items;
+    const previousCartId = state.cartId;
+    const customFieldsKey = JSON.stringify(item.customFields || []);
 
+    dispatch({
+      type: "ADD_ITEM",
+      payload: {
+        ...item,
+        quantity,
+        cartItemId: undefined,
+        specialInstructions: specialInstructions || null,
+      } as CartItem,
+    });
+
+    try {
       const response = await cartService.addToCart(
         item.id,
         quantity,
         item.customFields || [],
         item.extraPrice || 0,
-        item.price, // Pasar el precio base (ya con descuento aplicado si lo hay)
+        item.price,
         specialInstructions,
       );
 
-      if (response.success) {
-        // Refrescar carrito después de agregar
-        await refreshCart();
+      if (response.success && response.data) {
+        // Actualizar cartItemId real (solo para items nuevos, no incrementos)
+        dispatch({
+          type: "SET_CART_ITEM_ID",
+          payload: {
+            menuItemId: item.id,
+            customFieldsKey,
+            cartItemId: response.data.cart_item_id,
+          },
+        });
       } else {
         console.error("Error adding item to cart:", response.error);
-        dispatch({ type: "SET_LOADING", payload: false });
+        dispatch({
+          type: "SET_CART",
+          payload: {
+            items: previousItems,
+            ...computeTotals(previousItems),
+            cartId: previousCartId,
+          },
+        });
       }
     } catch (error) {
       console.error("Error adding item to cart:", error);
-      dispatch({ type: "SET_LOADING", payload: false });
+      dispatch({
+        type: "SET_CART",
+        payload: {
+          items: previousItems,
+          ...computeTotals(previousItems),
+          cartId: previousCartId,
+        },
+      });
     }
   };
 
-  // Eliminar item del carrito
+  // Eliminar item — optimistic update instantáneo con rollback en error
   const removeItem = async (itemId: number) => {
+    const item = state.items.find((i) => i.id === itemId);
+    if (!item?.cartItemId) {
+      // Item aún pendiente de sincronización, refrescar primero
+      await refreshCart();
+      return;
+    }
+
+    const previousItems = state.items;
+    const previousCartId = state.cartId;
+    dispatch({ type: "REMOVE_ITEM", payload: item.cartItemId });
+
     try {
-      dispatch({ type: "SET_LOADING", payload: true });
-
-      // Buscar el cartItemId del item
-      const item = state.items.find((i) => i.id === itemId);
-      if (!item || !item.cartItemId) {
-        console.error("Cart item not found");
-        dispatch({ type: "SET_LOADING", payload: false });
-        return;
-      }
-
       const response = await cartService.removeFromCart(item.cartItemId);
-
-      if (response.success) {
-        await refreshCart();
-      } else {
+      if (!response.success) {
         console.error("Error removing item from cart:", response.error);
-        dispatch({ type: "SET_LOADING", payload: false });
+        dispatch({
+          type: "SET_CART",
+          payload: {
+            items: previousItems,
+            ...computeTotals(previousItems),
+            cartId: previousCartId,
+          },
+        });
       }
     } catch (error) {
       console.error("Error removing item from cart:", error);
-      dispatch({ type: "SET_LOADING", payload: false });
+      dispatch({
+        type: "SET_CART",
+        payload: {
+          items: previousItems,
+          ...computeTotals(previousItems),
+          cartId: previousCartId,
+        },
+      });
     }
   };
 
-  // Actualizar cantidad de un item
+  // Actualizar cantidad — optimistic update instantáneo con rollback en error
   const updateQuantity = async (cartItemId: string, quantity: number) => {
-    try {
-      dispatch({ type: "SET_LOADING", payload: true });
+    const previousItems = state.items;
+    const previousCartId = state.cartId;
+    dispatch({ type: "UPDATE_QUANTITY", payload: { cartItemId, quantity } });
 
+    try {
       const response = await cartService.updateCartItemQuantity(
         cartItemId,
         quantity,
       );
-
-      if (response.success) {
-        await refreshCart();
-      } else {
+      if (!response.success) {
         console.error("Error updating quantity:", response.error);
-        dispatch({ type: "SET_LOADING", payload: false });
+        dispatch({
+          type: "SET_CART",
+          payload: {
+            items: previousItems,
+            ...computeTotals(previousItems),
+            cartId: previousCartId,
+          },
+        });
       }
     } catch (error) {
       console.error("Error updating quantity:", error);
-      dispatch({ type: "SET_LOADING", payload: false });
+      dispatch({
+        type: "SET_CART",
+        payload: {
+          items: previousItems,
+          ...computeTotals(previousItems),
+          cartId: previousCartId,
+        },
+      });
     }
   };
 
@@ -360,7 +438,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearCart = async () => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
-
       const response = await cartService.clearCart();
 
       if (response.success) {
@@ -385,7 +462,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Actualizar nombre de usuario
   const setUserName = (name: string) => {
     dispatch({ type: "SET_USER_NAME", payload: name });
   };
@@ -403,12 +479,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     updateOrderNotes,
   };
 
-  // Cargar carrito al montar el componente o cuando cambie el restaurante
+  // Cargar carrito al montar o cuando cambie la identidad/restaurante
   useEffect(() => {
     const effectiveRestaurantId = restaurantId || guestRestaurantId;
     const hasIdentity = user?.id || guestId;
 
-    // Solo cargar el carrito si tenemos restaurantId Y (user_id O guest_id)
     if (effectiveRestaurantId && hasIdentity && !authLoading) {
       refreshCart();
     }
@@ -418,7 +493,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
-// Hook personalizado para usar el carrito
 export function useCart() {
   const context = useContext(CartContext);
   if (!context) {

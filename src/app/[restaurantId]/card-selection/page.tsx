@@ -1044,12 +1044,12 @@ export default function CardSelectionPage() {
 
         // Limpiar el carrito después de completar la orden
         await clearCart();
-        console.log("🧹 Cart cleared after successful order");
+        console.log("Cart cleared after successful order");
 
         // Guardar orderId para la navegación después de la animación
         setCompletedOrderId(pickAndGoOrderId);
         console.log(
-          "✅ Order processing completed, orderId saved:",
+          "Order processing completed, orderId saved:",
           pickAndGoOrderId,
         );
 
@@ -1057,13 +1057,6 @@ export default function CardSelectionPage() {
         // El timer navigateTimer (9s) en OrderAnimation se encargará de la redirección
         return;
       }
-
-      // Para tarjetas reales, continuar con el flujo normal de EcartPay
-      // La autenticación ya está gestionada por el AuthContext
-      console.log("🔑 User authenticated:", {
-        userId: user?.id,
-        hasProfile: !!profile,
-      });
 
       // Paso 1: Procesar pago con endpoint existente
       const paymentData = {
@@ -1087,7 +1080,7 @@ export default function CardSelectionPage() {
         throw new Error(errorMsg);
       }
 
-      console.log("✅ Payment successful:", paymentResult);
+      console.log("Payment successful:", paymentResult);
 
       let customerPhone: string | null = null;
 
@@ -1100,8 +1093,6 @@ export default function CardSelectionPage() {
         profile?.firstName || cartState.userName || "Invitado";
       const customerEmail = user?.email || null;
 
-      console.log("📦 Creating optimized Pick & Go order flow...");
-
       // Obtener user_id (puede ser el ID de Supabase Auth o el guest_id)
       const userId = user?.id || guestId || null;
 
@@ -1109,11 +1100,6 @@ export default function CardSelectionPage() {
       if (!cartState.items || cartState.items.length === 0) {
         throw new Error("El carrito está vacío");
       }
-
-      console.log("📦 Cart items to process:", cartState.items);
-
-      // PASO 3.1: Crear la orden Pick & Go PRIMERO
-      console.log("🚀 Creating Pick & Go order first...");
 
       const pickAndGoOrderData = {
         user_id: userId,
@@ -1200,19 +1186,7 @@ export default function CardSelectionPage() {
           console.error("❌ Failed to create dish order:", dishOrderResult);
           throw new Error("Error al crear el dish order");
         }
-
-        console.log("✅ Dish order created - Full response:", dishOrderResult);
-        console.log("✅ Dish order data:", dishOrderResult.data);
-
-        // Solo log del éxito de crear dish order (ya no necesitamos capturar IDs)
-        console.log(
-          "✅ Dish order created and linked to Pick & Go order:",
-          pickAndGoOrderId,
-        );
       }
-
-      // Paso 4: Actualizar el payment status y order status de la orden Pick & Go
-      console.log("📝 Updating Pick & Go order status...");
 
       // Actualizar payment status a 'paid'
       const paymentStatusResult = await pickAndGoService.updatePaymentStatus(
@@ -1226,7 +1200,7 @@ export default function CardSelectionPage() {
           paymentStatusResult.error,
         );
       } else {
-        console.log("✅ Pick & Go payment status updated to 'paid'");
+        console.log("Pick & Go payment status updated to 'paid'");
       }
 
       // Actualizar order status a 'confirmed' (no 'completed' aún, está en preparación)
@@ -1241,7 +1215,7 @@ export default function CardSelectionPage() {
           orderStatusResult.error,
         );
       } else {
-        console.log("✅ Pick & Go order status updated to 'confirmed'");
+        console.log("Pick & Go order status updated to 'confirmed'");
       }
 
       // Paso 5: Registrar transacción para trazabilidad
