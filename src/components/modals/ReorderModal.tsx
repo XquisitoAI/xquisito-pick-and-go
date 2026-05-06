@@ -222,7 +222,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
                           />
                         ) : (
                           <img
-                            src="/logo-short-green.webp"
+                            src="/logos/logo-short-green.webp"
                             alt="Logo Xquisito"
                             className="w-full h-full object-contain p-2"
                           />

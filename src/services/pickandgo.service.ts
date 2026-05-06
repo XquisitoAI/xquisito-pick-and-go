@@ -17,6 +17,7 @@ export interface PickAndGoOrder {
     | "preparing"
     | "completed"
     | "abandoned";
+  cooking_status: "preparing" | "ready" | "delivered";
   session_data: Record<string, any>;
   prep_metadata: Record<string, any>;
   created_at: string;
@@ -116,6 +117,7 @@ export type ActiveOrderData = {
     total_amount: number;
     payment_status: string;
     order_status: string;
+    cooking_status: string;
     restaurant_id: number;
     branch_number: number;
     created_at: string;

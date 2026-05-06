@@ -48,41 +48,6 @@ const DashboardView = lazy(() => import("./../DashboardView"));
 const RestaurantClosedModal = lazy(() => import("../RestaurantClosedModal"));
 
 // Pure functions — defined outside to avoid re-creation on every render
-function getStatusColor(status: string) {
-  switch (status) {
-    case "preparing":
-      return "bg-yellow-100 text-yellow-800 border-yellow-300";
-    case "ready":
-      return "bg-orange-100 text-orange-800 border-orange-300";
-    case "delivered":
-      return "bg-green-100 text-green-800 border-green-300";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-300";
-  }
-}
-
-function getStatusText(status: string) {
-  switch (status) {
-    case "preparing":
-      return "Preparando";
-    case "ready":
-      return "Listo";
-    case "delivered":
-      return "Entregado";
-    default:
-      return status;
-  }
-}
-
-function getOrderOverallStatus(
-  dishes: { status: string }[],
-): "preparing" | "ready" | "delivered" {
-  if (!dishes || dishes.length === 0) return "preparing";
-  const statuses = dishes.map((d) => d.status);
-  if (statuses.every((s) => s === "delivered")) return "delivered";
-  if (statuses.every((s) => s === "ready")) return "ready";
-  return "preparing";
-}
 
 function lockScroll() {
   const scrollY = window.scrollY;
@@ -636,19 +601,20 @@ export default function MenuView() {
                   <div className="flex flex-col items-center gap-1.5 md:gap-2">
                     <div
                       className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
-                        getOrderOverallStatus(activeOrder.dishes) === "ready" ||
-                        getOrderOverallStatus(activeOrder.dishes) ===
-                          "delivered"
+                        (activeOrder.pick_and_go_order?.cooking_status ??
+                          "preparing") === "ready" ||
+                        (activeOrder.pick_and_go_order?.cooking_status ??
+                          "preparing") === "delivered"
                           ? "bg-green-100 border border-green-100"
                           : "bg-white/10"
                       }`}
                     >
                       <Utensils
                         className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 ${
-                          getOrderOverallStatus(activeOrder.dishes) ===
-                            "ready" ||
-                          getOrderOverallStatus(activeOrder.dishes) ===
-                            "delivered"
+                          (activeOrder.pick_and_go_order?.cooking_status ??
+                            "preparing") === "ready" ||
+                          (activeOrder.pick_and_go_order?.cooking_status ??
+                            "preparing") === "delivered"
                             ? "text-green-600"
                             : "text-white"
                         }`}
@@ -656,9 +622,10 @@ export default function MenuView() {
                     </div>
                     <span
                       className={`text-xs md:text-sm font-medium ${
-                        getOrderOverallStatus(activeOrder.dishes) === "ready" ||
-                        getOrderOverallStatus(activeOrder.dishes) ===
-                          "delivered"
+                        (activeOrder.pick_and_go_order?.cooking_status ??
+                          "preparing") === "ready" ||
+                        (activeOrder.pick_and_go_order?.cooking_status ??
+                          "preparing") === "delivered"
                           ? "text-green-100"
                           : "text-white/60"
                       }`}
@@ -670,8 +637,8 @@ export default function MenuView() {
                   <div className="flex-1 max-w-12 md:max-w-16 lg:max-w-20 h-1 bg-white/10 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
-                        getOrderOverallStatus(activeOrder.dishes) ===
-                        "delivered"
+                        (activeOrder.pick_and_go_order?.cooking_status ??
+                          "preparing") === "delivered"
                           ? "w-full bg-gradient-to-r from-green-200 to-green-300"
                           : "w-0"
                       }`}
@@ -682,16 +649,16 @@ export default function MenuView() {
                   <div className="flex flex-col items-center gap-1.5 md:gap-2">
                     <div
                       className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
-                        getOrderOverallStatus(activeOrder.dishes) ===
-                        "delivered"
+                        (activeOrder.pick_and_go_order?.cooking_status ??
+                          "preparing") === "delivered"
                           ? "bg-green-200 border border-green-300"
                           : "bg-white/10"
                       }`}
                     >
                       <svg
                         className={`w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 ${
-                          getOrderOverallStatus(activeOrder.dishes) ===
-                          "delivered"
+                          (activeOrder.pick_and_go_order?.cooking_status ??
+                            "preparing") === "delivered"
                             ? "text-green-800"
                             : "text-white"
                         }`}
@@ -707,8 +674,8 @@ export default function MenuView() {
                     </div>
                     <span
                       className={`text-xs md:text-sm font-medium ${
-                        getOrderOverallStatus(activeOrder.dishes) ===
-                        "delivered"
+                        (activeOrder.pick_and_go_order?.cooking_status ??
+                          "preparing") === "delivered"
                           ? "text-green-100"
                           : "text-white/60"
                       }`}
@@ -748,7 +715,7 @@ export default function MenuView() {
                   {activeOrder.dishes.map((dish, index) => (
                     <div
                       key={dish.id || index}
-                      className="flex items-start gap-3 md:gap-4 lg:gap-5 bg-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 lg:p-5 border border-white/10"
+                      className="flex items-center gap-3 md:gap-4 lg:gap-5 bg-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 lg:p-5 border border-white/10"
                     >
                       <div className="flex-shrink-0">
                         <div className="size-16 md:size-20 lg:size-24 bg-gray-300 rounded-sm flex items-center justify-center overflow-hidden">
@@ -773,13 +740,6 @@ export default function MenuView() {
                         <h3 className="text-base md:text-lg lg:text-xl text-white font-medium capitalize">
                           {dish.item}
                         </h3>
-                        <div className="mt-1 md:mt-1.5 lg:mt-2">
-                          <span
-                            className={`inline-block px-2 md:px-3 lg:px-4 py-0.5 md:py-1 lg:py-1.5 text-xs md:text-sm lg:text-base font-medium rounded-full border ${getStatusColor(dish.status)}`}
-                          >
-                            {getStatusText(dish.status)}
-                          </span>
-                        </div>
                       </div>
                       <div className="text-right flex flex-col items-end">
                         <p className="text-xs md:text-sm lg:text-base text-white/60">

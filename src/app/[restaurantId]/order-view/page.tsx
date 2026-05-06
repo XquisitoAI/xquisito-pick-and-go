@@ -49,9 +49,10 @@ export default function OrderViewPage() {
         setOrder(result.data);
         console.log("Order loaded:", result.data);
       } else {
-        const errorMessage = typeof result.error === 'string'
-          ? result.error
-          : (result.error as any)?.message || "Error al cargar la orden";
+        const errorMessage =
+          typeof result.error === "string"
+            ? result.error
+            : (result.error as any)?.message || "Error al cargar la orden";
         setError(errorMessage);
       }
     } catch (err) {
@@ -79,34 +80,29 @@ export default function OrderViewPage() {
     navigateWithRestaurantId("/menu");
   };
 
-  const getStatusColor = (status: string) => {
+  const getCookingStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
+      case "preparing":
         return "bg-yellow-100 text-yellow-800 border-yellow-300";
-      case "in_progress":
-        return "bg-blue-100 text-blue-800 border-blue-300";
       case "ready":
         return "bg-green-100 text-green-800 border-green-300";
       case "delivered":
         return "bg-gray-100 text-gray-800 border-gray-300";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-300";
+        return "bg-yellow-100 text-yellow-800 border-yellow-300";
     }
   };
 
-  // Función para obtener el texto del status
-  const getStatusText = (status: string) => {
+  const getCookingStatusText = (status: string) => {
     switch (status) {
-      case "pending":
-        return "Pendiente";
-      case "in_progress":
-        return "En progreso";
+      case "preparing":
+        return "Preparando";
       case "ready":
-        return "Listo";
+        return "Listo para recoger";
       case "delivered":
         return "Entregado";
       default:
-        return status;
+        return "Preparando";
     }
   };
 
@@ -142,6 +138,17 @@ export default function OrderViewPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Badge de estado del pedido */}
+              {order && (
+                <div className="flex justify-center mb-4">
+                  <span
+                    className={`inline-block px-4 py-1.5 text-sm font-semibold rounded-full border ${getCookingStatusColor(order.cooking_status ?? "preparing")}`}
+                  >
+                    {getCookingStatusText(order.cooking_status ?? "preparing")}
+                  </span>
+                </div>
+              )}
 
               {isLoading ? (
                 <div className="flex justify-center items-center py-12">
@@ -199,32 +206,26 @@ export default function OrderViewPage() {
                                           </p>
                                         ))}
                                     </div>
-                                  )
+                                  ),
                                 )}
                               </div>
                             )}
-
-                          {/* Badge de estado */}
-                          <div className="mt-1">
-                            <span
-                              className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(dish.status)}`}
-                            >
-                              {getStatusText(dish.status)}
-                            </span>
-                          </div>
                         </div>
                         <div className="text-right flex flex-col items-end">
                           <p className="text-xs text-gray-500">
                             Cant: {dish.quantity}
                           </p>
                           <p className="text-base text-black">
-                            ${((dish.price + (dish.extra_price || 0)) * dish.quantity).toFixed(2)}
+                            $
+                            {(
+                              (dish.price + (dish.extra_price || 0)) *
+                              dish.quantity
+                            ).toFixed(2)}
                           </p>
                         </div>
                       </div>
                     ))}
                   </div>
-
                 </>
               ) : (
                 <div className="text-center py-8">

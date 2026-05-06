@@ -214,6 +214,7 @@ export default function CardSelectionPage() {
   const initApplePay = useCallback(async () => {
     if (typeof window === "undefined" || !totalAmount) return;
     if (applePayListenersRef.current) return;
+    applePayListenersRef.current = true;
 
     try {
       // Crear orden en Ecart Pay para obtener orderId
@@ -240,9 +241,6 @@ export default function CardSelectionPage() {
         setErrorMessage(sdkErr);
         return;
       }
-
-      // Guard: solo activar después de obtener SDK y orden exitosamente
-      applePayListenersRef.current = true;
 
       applePaySDK.on("ready", function (event: any) {
         console.log("Apple Pay ready. native:", event.detail?.native);
@@ -290,6 +288,7 @@ export default function CardSelectionPage() {
         requiredBillingContactFields: ["postalAddress"],
       });
     } catch (err) {
+      applePayListenersRef.current = false;
       const errMsg = `[AP-INIT] ${err instanceof Error ? err.message : JSON.stringify(err)}`;
       console.error("❌ Error inicializando Apple Pay:", err);
       setErrorMessage(errMsg);
