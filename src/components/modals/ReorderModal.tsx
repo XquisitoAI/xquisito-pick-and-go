@@ -47,11 +47,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
       )
       .map((item) => item.id);
     onClose();
-    void (async () => {
-      for (const id of idsToRemove) {
-        await removeItem(id);
-      }
-    })();
+    void Promise.all(idsToRemove.map((id) => removeItem(id)));
   };
 
   const handleCardTap = async (item: PickAndGoItem) => {
@@ -121,7 +117,7 @@ function ReorderModal({ isOpen, onClose, items }: ReorderModalProps) {
 
   const handleConfirm = () => {
     setIsNavigating(true);
-    navigateWithRestaurantId("/card-selection");
+    navigateWithRestaurantId("/order-confirm");
   };
 
   if (!isOpen) return null;
