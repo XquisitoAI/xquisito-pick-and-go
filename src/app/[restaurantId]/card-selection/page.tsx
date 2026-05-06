@@ -210,91 +210,6 @@ export default function CardSelectionPage() {
       }, 100);
     });
 
-  // Inicializar Apple Pay SDK cuando los datos estén listos
-  const initApplePay = useCallback(async () => {
-    if (typeof window === "undefined" || !totalAmount) return;
-    if (applePayListenersRef.current) return;
-    applePayListenersRef.current = true;
-
-    try {
-      // Crear orden en Ecart Pay para obtener orderId
-      const orderResult = await paymentService.createApplePayOrder({
-        amount: totalAmount,
-        currency: "MXN",
-        tableNumber: undefined,
-        restaurantId: restaurantId?.toString(),
-      });
-
-      const appleOrderId =
-        (orderResult as any).orderId ?? orderResult.data?.orderId;
-      if (!orderResult.success || !appleOrderId) {
-        const orderErr = `[AP-ORDER] No se pudo crear la orden: ${JSON.stringify(orderResult.error ?? orderResult)}`;
-        console.warn("⚠️ Apple Pay:", orderErr);
-        setErrorMessage(orderErr);
-        return;
-      }
-
-      const applePaySDK = await getApplePaySDK();
-      if (!applePaySDK) {
-        const sdkErr = "[AP-SDK] SDK no disponible en window.Pay.ApplePay";
-        console.warn("⚠️", sdkErr);
-        setErrorMessage(sdkErr);
-        return;
-      }
-
-      applePaySDK.on("ready", function (event: any) {
-        console.log("Apple Pay ready. native:", event.detail?.native);
-        setApplePayReady(true);
-      });
-      applePaySDK.on("unavailable", function (event: any) {
-        console.warn("Apple Pay unavailable:", event.detail?.message);
-        setApplePayUnavailable(true);
-      });
-      applePaySDK.on("cancel", () => {
-        console.log("🚫 Apple Pay cancelado por el usuario");
-        setIsApplePayProcessing(false);
-      });
-      applePaySDK.on("error", (event: any) => {
-        const errMsg = `[AP-ERROR] ${event?.detail?.message ?? JSON.stringify(event)}`;
-        console.error("❌ Apple Pay error:", event);
-        setIsApplePayProcessing(false);
-        setApplePayUnavailable(true);
-        setErrorMessage(errMsg);
-      });
-      applePaySDK.on("success", async (event: any) => {
-        console.log("Apple Pay: pago autorizado", event?.detail);
-        const applePayId = `apple-pay-${Date.now()}`;
-        setApplePayPaymentId(applePayId);
-        setIsApplePayProcessing(true);
-        setCompletedOrderItems([...cartItemsRef.current]);
-        const userName =
-          profileRef.current?.firstName || cartUserNameRef.current || "Usuario";
-        setCompletedUserName(userName);
-        setShowAnimation(true);
-      });
-
-      applePaySDK.render({
-        container: "#apple-pay-container",
-        orderId: appleOrderId,
-        amount: totalAmount,
-        currency: "MXN",
-        countryCode: "MX",
-        label: "My Store",
-        buttonStyle: "black",
-        buttonType: "pay",
-        borderRadius: "8px",
-        supportedNetworks: ["visa", "masterCard", "amex"],
-        requiredShippingContactFields: ["postalAddress", "email", "phone"],
-        requiredBillingContactFields: ["postalAddress"],
-      });
-    } catch (err) {
-      applePayListenersRef.current = false;
-      const errMsg = `[AP-INIT] ${err instanceof Error ? err.message : JSON.stringify(err)}`;
-      console.error("❌ Error inicializando Apple Pay:", err);
-      setErrorMessage(errMsg);
-    }
-  }, [totalAmount, restaurantId]);
-
   const getGooglePaySDK = () =>
     new Promise<any>((resolve) => {
       if ((window as any).Pay?.GooglePay) {
@@ -391,10 +306,88 @@ export default function CardSelectionPage() {
   }, [totalAmount, restaurantId, cartState.items, cartState.userName, profile]);
 
   useEffect(() => {
-    if (!isLoadingInitial && totalAmount > 0) {
-      initApplePay();
-    }
-  }, [isLoadingInitial, totalAmount, initApplePay]);
+    if (isLoadingInitial || totalAmount <= 0 || typeof window === "undefined")
+      return;
+    if (applePayListenersRef.current) return;
+    applePayListenersRef.current = true;
+
+    (async () => {
+      try {
+        const orderResult = await paymentService.createApplePayOrder({
+          amount: totalAmount,
+          currency: "MXN",
+          restaurantId: restaurantId?.toString(),
+        });
+
+        const appleOrderId =
+          (orderResult as any).orderId ?? orderResult.data?.orderId;
+        if (!orderResult.success || !appleOrderId) {
+          console.warn(
+            "⚠️ [AP-ORDER] No se pudo crear la orden:",
+            orderResult.error ?? orderResult,
+          );
+          applePayListenersRef.current = false;
+          return;
+        }
+
+        const applePaySDK = await getApplePaySDK();
+        if (!applePaySDK) {
+          console.warn("⚠️ [AP-SDK] SDK no disponible en window.Pay.ApplePay");
+          applePayListenersRef.current = false;
+          return;
+        }
+
+        applePaySDK.on("ready", () => {
+          console.log("✅ [AP-READY] SDK listo. orderId:", appleOrderId);
+          setApplePayReady(true);
+        });
+        applePaySDK.on("unavailable", () => setApplePayUnavailable(true));
+        applePaySDK.on("cancel", () => {
+          console.log("🚫 Apple Pay cancelado");
+          setIsApplePayProcessing(false);
+        });
+        applePaySDK.on("error", (event: any) => {
+          console.error("❌ Apple Pay error:", event);
+          setIsApplePayProcessing(false);
+          setApplePayUnavailable(true);
+          setErrorMessage(
+            `[AP-ERROR] ${event?.detail?.message ?? JSON.stringify(event)}`,
+          );
+        });
+        applePaySDK.on("success", (event: any) => {
+          console.log("✅ Apple Pay autorizado", event?.detail);
+          setApplePayPaymentId(`apple-pay-${Date.now()}`);
+          setIsApplePayProcessing(true);
+          setCompletedOrderItems([...cartItemsRef.current]);
+          setCompletedUserName(
+            profileRef.current?.firstName ||
+              cartUserNameRef.current ||
+              "Usuario",
+          );
+          setShowAnimation(true);
+        });
+
+        applePaySDK.render({
+          container: "#apple-pay-container",
+          orderId: appleOrderId,
+          amount: totalAmount,
+          currency: "MXN",
+          countryCode: "MX",
+          label: "My Store",
+          buttonStyle: "black",
+          buttonType: "pay",
+          borderRadius: "8px",
+          supportedNetworks: ["visa", "masterCard", "amex"],
+        });
+      } catch (err) {
+        applePayListenersRef.current = false;
+        console.error("❌ Error inicializando Apple Pay:", err);
+        setErrorMessage(
+          `[AP-INIT] ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+        );
+      }
+    })();
+  }, [isLoadingInitial, totalAmount, restaurantId]);
 
   useEffect(() => {
     if (!isLoadingInitial && totalAmount > 0) {
