@@ -112,6 +112,7 @@ class PaymentService {
     amount: number;
     currency: string;
     tableNumber?: string;
+    restaurantId?: string;
   }): Promise<ApiResponse<{ orderId: string }>> {
     return this.request("/payments/apple-pay/order", {
       method: "POST",
@@ -124,6 +125,7 @@ class PaymentService {
     amount: number;
     currency: string;
     tableNumber?: string;
+    restaurantId?: string;
   }): Promise<ApiResponse<{ orderId: string }>> {
     return this.request("/payments/google-pay/order", {
       method: "POST",

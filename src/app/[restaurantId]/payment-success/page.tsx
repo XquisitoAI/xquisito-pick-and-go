@@ -704,7 +704,11 @@ export default function PaymentSuccessPage() {
                         </div>
                       </div>
                       <span className="text-sm md:text-base lg:text-lg">
-                        **** {paymentDetails.cardLast4.slice(-4)}
+                        {paymentDetails.cardBrand === "apple"
+                          ? "Apple Pay"
+                          : paymentDetails.cardBrand === "google"
+                            ? "Google Pay"
+                            : `**** ${paymentDetails.cardLast4.slice(-4)}`}
                       </span>
                     </div>
                   )}

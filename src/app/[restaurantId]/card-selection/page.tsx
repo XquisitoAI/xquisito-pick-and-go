@@ -239,6 +239,7 @@ export default function CardSelectionPage() {
         const orderResult = await paymentService.createApplePayOrder({
           amount: totalAmount,
           currency: "MXN",
+          restaurantId: restaurantId,
         });
 
         const appleOrderId =
@@ -333,6 +334,7 @@ export default function CardSelectionPage() {
         const orderResult = await paymentService.createGooglePayOrder({
           amount: totalAmount,
           currency: "MXN",
+          restaurantId: restaurantId,
         });
 
         const googleOrderId =
