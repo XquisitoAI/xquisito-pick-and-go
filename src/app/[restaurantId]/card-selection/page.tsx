@@ -252,6 +252,11 @@ export default function CardSelectionPage() {
           return;
         }
 
+        const appleSDKSrc = "https://ecartpay.com/sdk/pay.js?v=2";
+        const appleSDKAlreadyLoaded = !!document.querySelector(
+          `script[src="${appleSDKSrc}"]`,
+        );
+
         const applePaySDK = await getApplePaySDK();
         if (!applePaySDK) {
           console.warn("⚠️ [AP-SDK] SDK no disponible en window.Pay.ApplePay");
@@ -303,6 +308,12 @@ export default function CardSelectionPage() {
           borderRadius: "8px",
           supportedNetworks: ["visa", "masterCard", "amex"],
         });
+
+        // En navegación client-side el SDK ya está inicializado y "ready" no vuelve a
+        // disparar — forzamos el estado manualmente después del render.
+        if (appleSDKAlreadyLoaded) {
+          setApplePayReady(true);
+        }
       } catch (err) {
         applePayListenersRef.current = false;
         console.error("❌ Error inicializando Apple Pay:", err);
@@ -345,6 +356,11 @@ export default function CardSelectionPage() {
           googlePayListenersRef.current = false;
           return;
         }
+
+        const googleSDKSrc = "https://ecartpay.com/sdk/pay.js?v=2";
+        const googleSDKAlreadyLoaded = !!document.querySelector(
+          `script[src="${googleSDKSrc}"]`,
+        );
 
         const googlePaySDK = await getGooglePaySDK();
         if (!googlePaySDK) {
@@ -401,6 +417,12 @@ export default function CardSelectionPage() {
           buttonColor: "black",
           buttonType: "pay",
         });
+
+        // En navegación client-side el SDK ya está inicializado y "ready" no vuelve a
+        // disparar — forzamos el estado manualmente después del render.
+        if (googleSDKAlreadyLoaded) {
+          setGooglePayReady(true);
+        }
       } catch (err) {
         googlePayListenersRef.current = false;
         console.error("❌ Error inicializando Google Pay:", err);
