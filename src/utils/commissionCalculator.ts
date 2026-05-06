@@ -109,13 +109,16 @@ export function calculateCommissions(
   const ivaXquisitoClient = xquisitoCommissionClient * 0.16;
   const ivaXquisitoRestaurant = xquisitoCommissionRestaurant * 0.16;
 
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+
   // Comisión Xquisito con IVA incluido
-  const xquisitoClientCharge = xquisitoCommissionClient + ivaXquisitoClient;
-  const xquisitoRestaurantCharge =
-    xquisitoCommissionRestaurant + ivaXquisitoRestaurant;
+  const xquisitoClientCharge = r2(xquisitoCommissionClient + ivaXquisitoClient);
+  const xquisitoRestaurantCharge = r2(
+    xquisitoCommissionRestaurant + ivaXquisitoRestaurant,
+  );
 
   // Total cobrado al cliente
-  const totalAmountCharged = baseAmount + tipAmount + xquisitoClientCharge;
+  const totalAmountCharged = r2(baseAmount + tipAmount + xquisitoClientCharge);
 
   return {
     baseAmount,
