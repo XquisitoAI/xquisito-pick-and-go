@@ -311,7 +311,7 @@ export default function CardSelectionPage() {
         );
       }
     })();
-  }, [isLoadingInitial, baseAmount, totalAmount, restaurantId]);
+  }, [isLoadingInitial, baseAmount, totalAmount]);
 
   useEffect(() => {
     if (
