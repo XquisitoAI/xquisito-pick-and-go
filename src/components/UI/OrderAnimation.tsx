@@ -33,6 +33,12 @@ const OrderAnimation = ({
   useEffect(() => {
     onConfirmRef.current = onConfirm;
   }, [onConfirm]);
+
+  const onContinueRef = useRef(onContinue);
+  useEffect(() => {
+    onContinueRef.current = onContinue;
+  }, [onContinue]);
+
   const [animationState, setAnimationState] = useState<
     "circle" | "content" | "greenCircle" | "success"
   >("circle");
@@ -150,10 +156,9 @@ const OrderAnimation = ({
   }, []);
 
   const handleContinue = () => {
-    if (onContinue) {
-      onContinue();
+    if (onContinueRef.current) {
+      onContinueRef.current();
     } else {
-      // Navegar a la página de tracking o confirmación
       router.push(`/${restaurantId}/order-tracking`);
     }
   };

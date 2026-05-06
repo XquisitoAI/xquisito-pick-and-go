@@ -224,7 +224,12 @@ export default function CardSelectionPage() {
     });
 
   useEffect(() => {
-    if (isLoadingInitial || totalAmount <= 0 || typeof window === "undefined")
+    if (
+      isLoadingInitial ||
+      cartState.isLoading ||
+      totalAmount <= 0 ||
+      typeof window === "undefined"
+    )
       return;
     if (applePayListenersRef.current) return;
     applePayListenersRef.current = true;
@@ -273,6 +278,8 @@ export default function CardSelectionPage() {
         });
         applePaySDK.on("success", (event: any) => {
           console.log("✅ Apple Pay autorizado", event?.detail);
+          sessionStorage.removeItem("xquisito-current-order-id");
+          sessionStorage.removeItem("xquisito-current-payment-key");
           setApplePayPaymentId(`apple-pay-${Date.now()}`);
           setIsApplePayProcessing(true);
           setCompletedOrderItems([...cartItemsRef.current]);
@@ -304,10 +311,15 @@ export default function CardSelectionPage() {
         );
       }
     })();
-  }, [isLoadingInitial, totalAmount, restaurantId]);
+  }, [isLoadingInitial, cartState.isLoading, totalAmount, restaurantId]);
 
   useEffect(() => {
-    if (isLoadingInitial || totalAmount <= 0 || typeof window === "undefined")
+    if (
+      isLoadingInitial ||
+      cartState.isLoading ||
+      totalAmount <= 0 ||
+      typeof window === "undefined"
+    )
       return;
     if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
       setGooglePayUnavailable(true);
@@ -365,6 +377,8 @@ export default function CardSelectionPage() {
         });
         googlePaySDK.on("success", () => {
           console.log("✅ Google Pay autorizado");
+          sessionStorage.removeItem("xquisito-current-order-id");
+          sessionStorage.removeItem("xquisito-current-payment-key");
           setGooglePayPaymentId(`google-pay-${Date.now()}`);
           setIsGooglePayProcessing(true);
           setCompletedOrderItems([...cartItemsRef.current]);
@@ -395,7 +409,7 @@ export default function CardSelectionPage() {
         );
       }
     })();
-  }, [isLoadingInitial, totalAmount, restaurantId]);
+  }, [isLoadingInitial, cartState.isLoading, totalAmount, restaurantId]);
 
   const handleConfirmPayment = async (): Promise<void> => {
     // Esta función se ejecuta después de que expira el período de cancelación
