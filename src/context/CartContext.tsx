@@ -362,11 +362,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Eliminar item — optimistic update instantáneo con rollback en error
   const removeItem = async (itemId: number) => {
-    const item = state.items.find((i) => i.id === itemId);
+    let item = state.items.find((i) => i.id === itemId);
     if (!item?.cartItemId) {
-      // Item aún pendiente de sincronización, refrescar primero
-      await refreshCart();
-      return;
+      // cartItemId aún no llegó — fetch fresco para obtenerlo
+      const fresh = await cartService.getCart();
+      if (fresh.success && fresh.data) {
+        const freshItems = fresh.data.items.map(convertApiItemToCartItem);
+        dispatch({
+          type: "SET_CART",
+          payload: {
+            items: freshItems,
+            ...computeTotals(freshItems),
+            cartId: fresh.data.cart_id,
+          },
+        });
+        item = freshItems.find((i) => i.id === itemId);
+      }
+      if (!item?.cartItemId) return;
     }
 
     const previousItems = state.items;
