@@ -226,7 +226,7 @@ export default function CardSelectionPage() {
   useEffect(() => {
     if (
       isLoadingInitial ||
-      cartState.isLoading ||
+      baseAmount <= 0 ||
       totalAmount <= 0 ||
       typeof window === "undefined"
     )
@@ -322,12 +322,12 @@ export default function CardSelectionPage() {
         );
       }
     })();
-  }, [isLoadingInitial, cartState.isLoading, totalAmount, restaurantId]);
+  }, [isLoadingInitial, baseAmount, totalAmount, restaurantId]);
 
   useEffect(() => {
     if (
       isLoadingInitial ||
-      cartState.isLoading ||
+      baseAmount <= 0 ||
       totalAmount <= 0 ||
       typeof window === "undefined"
     )
@@ -431,7 +431,7 @@ export default function CardSelectionPage() {
         );
       }
     })();
-  }, [isLoadingInitial, cartState.isLoading, totalAmount, restaurantId]);
+  }, [isLoadingInitial, baseAmount, totalAmount, restaurantId]);
 
   const handleConfirmPayment = async (): Promise<void> => {
     // Esta función se ejecuta después de que expira el período de cancelación

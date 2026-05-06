@@ -60,7 +60,7 @@ const initialState: CartState = {
   totalItems: 0,
   totalPrice: 0,
   userName: "",
-  isLoading: true,
+  isLoading: false,
   cartId: null,
 };
 
