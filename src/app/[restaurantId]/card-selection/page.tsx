@@ -5,7 +5,7 @@ import { useCart } from "@/context/CartContext";
 import { useNavigation } from "@/hooks/useNavigation";
 import { usePayment } from "@/context/PaymentContext";
 import { useRestaurant } from "@/context/RestaurantContext";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useGuest } from "@/context/GuestContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
@@ -128,7 +128,7 @@ export default function CardSelectionPage() {
       const defaultMethod =
         paymentMethods.find((pm) => pm.isDefault) || paymentMethods[0];
       setSelectedPaymentMethodId(defaultMethod.id);
-      console.log("💳 Auto-seleccionando tarjeta:", defaultMethod.id);
+      //console.log("💳 Auto-seleccionando tarjeta:", defaultMethod.id);
     }
     // Solo marcar como cargado cuando el carrito también esté listo
     if (!cartState.isLoading) {
@@ -139,14 +139,14 @@ export default function CardSelectionPage() {
   // Cargar el SDK de Ecart Pay para Apple Pay
   useEffect(() => {
     if (!isLoadingProvider) {
-      console.log(
+      /*console.log(
         `[PaymentProvider] Proveedor activo: ${provider ?? "null"} (restaurantId: ${restaurantId})`,
       );
       if (provider === "clip") {
         console.warn(
           "[PaymentProvider] Clip seleccionado — flujo no implementado aún, usando eCartPay como fallback",
         );
-      }
+      }*/
     }
   }, [provider, isLoadingProvider, restaurantId]);
 
@@ -190,7 +190,7 @@ export default function CardSelectionPage() {
   };
 
   const handleCancelPayment = () => {
-    console.log("❌ Payment cancelled by user");
+    //console.log("❌ Payment cancelled by user");
     setShowAnimation(false);
     setCompletedOrderItems([]);
     setCompletedUserName("");
@@ -222,88 +222,6 @@ export default function CardSelectionPage() {
         }
       }, 100);
     });
-
-  const initGooglePay = useCallback(async () => {
-    if (typeof window === "undefined" || !totalAmount) return;
-
-    try {
-      const orderResult = await paymentService.createGooglePayOrder({
-        amount: totalAmount,
-        currency: "MXN",
-        tableNumber: undefined,
-        restaurantId: restaurantId?.toString(),
-      });
-
-      const googleOrderId =
-        (orderResult as any).orderId ?? orderResult.data?.orderId;
-      if (!orderResult.success || !googleOrderId) {
-        const orderErr = `[GP-ORDER] No se pudo crear la orden: ${JSON.stringify(orderResult.error ?? orderResult)}`;
-        console.warn("⚠️ Google Pay:", orderErr);
-        setErrorMessage(orderErr);
-        return;
-      }
-
-      const googlePaySDK = await getGooglePaySDK();
-      if (!googlePaySDK) {
-        const sdkErr = "[GP-SDK] SDK no disponible en window.Pay.GooglePay";
-        console.warn("⚠️", sdkErr);
-        setErrorMessage(sdkErr);
-        return;
-      }
-
-      if (!googlePayListenersRef.current) {
-        googlePayListenersRef.current = true;
-        googlePaySDK.on("ready", () => {
-          console.log("✅ Google Pay botón listo");
-          setGooglePayReady(true);
-        });
-        googlePaySDK.on("unavailable", () => {
-          console.log(
-            "ℹ️ Google Pay no disponible en este dispositivo/navegador",
-          );
-          setGooglePayUnavailable(true);
-        });
-        googlePaySDK.on("cancel", () => {
-          console.log("🚫 Google Pay cancelado por el usuario");
-          setIsGooglePayProcessing(false);
-        });
-        googlePaySDK.on("error", (err: any) => {
-          const errMsg = `[GP-ERROR] ${err?.detail?.message || (typeof err === "object" ? JSON.stringify(err) : String(err))}`;
-          console.error("❌ Google Pay error:", err);
-          setIsGooglePayProcessing(false);
-          setGooglePayUnavailable(true);
-          setErrorMessage(errMsg);
-        });
-        googlePaySDK.on("success", async () => {
-          console.log("💳 Google Pay: pago autorizado");
-          const gpPayId = `google-pay-${Date.now()}`;
-          setGooglePayPaymentId(gpPayId);
-          setIsGooglePayProcessing(true);
-          setCompletedOrderItems([...cartState.items]);
-          const userName =
-            profile?.firstName || cartState.userName || "Usuario";
-          setCompletedUserName(userName);
-          setShowAnimation(true);
-        });
-      }
-
-      googlePaySDK.render({
-        container: "#google-pay-container",
-        orderId: googleOrderId,
-        amount: totalAmount,
-        currency: "MXN",
-        countryCode: "MX",
-        allowedCardNetworks: ["VISA", "MASTERCARD", "AMEX"],
-        allowedAuthMethods: ["PAN_ONLY", "CRYPTOGRAM_3DS"],
-        buttonColor: "black",
-        buttonType: "pay",
-      });
-    } catch (err) {
-      const errMsg = `[GP-INIT] ${err instanceof Error ? err.message : JSON.stringify(err)}`;
-      console.error("❌ Error inicializando Google Pay:", err);
-      setErrorMessage(errMsg);
-    }
-  }, [totalAmount, restaurantId, cartState.items, cartState.userName, profile]);
 
   useEffect(() => {
     if (isLoadingInitial || totalAmount <= 0 || typeof window === "undefined")
@@ -389,15 +307,95 @@ export default function CardSelectionPage() {
   }, [isLoadingInitial, totalAmount, restaurantId]);
 
   useEffect(() => {
-    if (!isLoadingInitial && totalAmount > 0) {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isIOS) {
-        setGooglePayUnavailable(true);
-        return;
-      }
-      initGooglePay();
+    if (isLoadingInitial || totalAmount <= 0 || typeof window === "undefined")
+      return;
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+      setGooglePayUnavailable(true);
+      return;
     }
-  }, [isLoadingInitial, totalAmount, initGooglePay]);
+    if (googlePayListenersRef.current) return;
+    googlePayListenersRef.current = true;
+
+    (async () => {
+      try {
+        const orderResult = await paymentService.createGooglePayOrder({
+          amount: totalAmount,
+          currency: "MXN",
+        });
+
+        const googleOrderId =
+          (orderResult as any).orderId ?? orderResult.data?.orderId;
+        if (!orderResult.success || !googleOrderId) {
+          console.warn(
+            "⚠️ [GP-ORDER] No se pudo crear la orden:",
+            orderResult.error ?? orderResult,
+          );
+          googlePayListenersRef.current = false;
+          return;
+        }
+
+        const googlePaySDK = await getGooglePaySDK();
+        if (!googlePaySDK) {
+          console.warn("⚠️ [GP-SDK] SDK no disponible en window.Pay.GooglePay");
+          googlePayListenersRef.current = false;
+          return;
+        }
+
+        googlePaySDK.on("ready", () => {
+          console.log("✅ [GP-READY] SDK listo. orderId:", googleOrderId);
+          setGooglePayReady(true);
+        });
+        googlePaySDK.on("unavailable", () => {
+          console.log(
+            "ℹ️ Google Pay no disponible en este dispositivo/navegador",
+          );
+          setGooglePayUnavailable(true);
+        });
+        googlePaySDK.on("cancel", () => {
+          console.log("🚫 Google Pay cancelado");
+          setIsGooglePayProcessing(false);
+        });
+        googlePaySDK.on("error", (err: any) => {
+          console.error("❌ Google Pay error:", err);
+          setIsGooglePayProcessing(false);
+          setGooglePayUnavailable(true);
+          setErrorMessage(
+            `[GP-ERROR] ${err?.detail?.message || (typeof err === "object" ? JSON.stringify(err) : String(err))}`,
+          );
+        });
+        googlePaySDK.on("success", () => {
+          console.log("✅ Google Pay autorizado");
+          setGooglePayPaymentId(`google-pay-${Date.now()}`);
+          setIsGooglePayProcessing(true);
+          setCompletedOrderItems([...cartItemsRef.current]);
+          setCompletedUserName(
+            profileRef.current?.firstName ||
+              cartUserNameRef.current ||
+              "Usuario",
+          );
+          setShowAnimation(true);
+        });
+
+        googlePaySDK.render({
+          container: "#google-pay-container",
+          orderId: googleOrderId,
+          amount: totalAmount,
+          currency: "MXN",
+          countryCode: "MX",
+          allowedCardNetworks: ["VISA", "MASTERCARD", "AMEX"],
+          allowedAuthMethods: ["PAN_ONLY", "CRYPTOGRAM_3DS"],
+          buttonColor: "black",
+          buttonType: "pay",
+        });
+      } catch (err) {
+        googlePayListenersRef.current = false;
+        console.error("❌ Error inicializando Google Pay:", err);
+        setErrorMessage(
+          `[GP-INIT] ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+        );
+      }
+    })();
+  }, [isLoadingInitial, totalAmount, restaurantId]);
 
   const handleConfirmPayment = async (): Promise<void> => {
     // Esta función se ejecuta después de que expira el período de cancelación
@@ -785,9 +783,9 @@ export default function CardSelectionPage() {
     try {
       // Si se seleccionó la tarjeta del sistema, omitir EcartPay y procesar directamente
       if (selectedPaymentMethodId === "system-default-card") {
-        console.log(
+        /*console.log(
           "💳 Sistema: Procesando pago con tarjeta del sistema (sin EcartPay)",
-        );
+        );*/
 
         // No necesitamos configurar token para tarjeta del sistema
         // La autenticación ya está gestionada por el AuthContext
@@ -803,7 +801,7 @@ export default function CardSelectionPage() {
           profile?.firstName || cartState.userName || "Invitado";
         const customerEmail = user?.email || null;
 
-        console.log("📦 Creating optimized Pick & Go order flow...");
+        //console.log("📦 Creating optimized Pick & Go order flow...");
 
         const userId = user?.id || guestId || null;
 
@@ -811,10 +809,10 @@ export default function CardSelectionPage() {
           throw new Error("El carrito está vacío");
         }
 
-        console.log("📦 Cart items to process:", cartState.items);
+        //console.log("📦 Cart items to process:", cartState.items);
 
         // PASO 1: Crear la orden Pick & Go PRIMERO
-        console.log("🚀 Creating Pick & Go order first...");
+        //console.log("🚀 Creating Pick & Go order first...");
 
         const pickAndGoOrderData = {
           clerk_user_id: userId,
@@ -857,10 +855,10 @@ export default function CardSelectionPage() {
         }
 
         const pickAndGoOrderId = pickAndGoOrderResult.data.id;
-        console.log(
+        /*console.log(
           "✅ Pick & Go order created successfully:",
           pickAndGoOrderId,
-        );
+        );*/
 
         // PASO 2: Crear dish orders vinculados a la orden Pick & Go
         for (const item of cartState.items) {
@@ -891,7 +889,7 @@ export default function CardSelectionPage() {
             specialInstructions: item.specialInstructions || null,
           };
 
-          console.log("Creating dish order:", dishOrderData);
+          //console.log("Creating dish order:", dishOrderData);
 
           const dishOrderResult = await pickAndGoService.createDishOrder(
             pickAndGoOrderId,
@@ -903,10 +901,10 @@ export default function CardSelectionPage() {
             throw new Error("Error al crear el dish order");
           }
 
-          console.log(
+          /*console.log(
             "✅ Dish order created - Full response:",
             dishOrderResult,
-          );
+          );*/
         }
 
         // Actualizar payment status y order status
@@ -921,7 +919,7 @@ export default function CardSelectionPage() {
             paymentStatusResult.error,
           );
         } else {
-          console.log("✅ Pick & Go payment status updated to 'paid'");
+          //console.log("✅ Pick & Go payment status updated to 'paid'");
         }
 
         const orderStatusResult = await pickAndGoService.updateOrderStatus(
@@ -935,7 +933,7 @@ export default function CardSelectionPage() {
             orderStatusResult.error,
           );
         } else {
-          console.log("✅ Pick & Go order status updated to 'confirmed'");
+          //console.log("✅ Pick & Go order status updated to 'confirmed'");
         }
 
         // Registrar transacción con payment_method_id null para la tarjeta del sistema
@@ -964,7 +962,7 @@ export default function CardSelectionPage() {
             xquisito_rate_applied: xquisitoRateApplied,
             total_amount_charged: totalAmount,
           });
-          console.log("✅ Payment transaction recorded successfully");
+          //console.log("✅ Payment transaction recorded successfully");
         } catch (transactionError) {
           console.error(
             "❌ Error recording payment transaction:",
@@ -1012,10 +1010,10 @@ export default function CardSelectionPage() {
           timestamp: Date.now(),
         };
 
-        console.log(
+        /*console.log(
           "💾 Saving payment details for payment-success:",
           paymentDetailsForSuccess,
-        );
+        );*/
         localStorage.setItem(
           "xquisito-completed-payment",
           JSON.stringify(paymentDetailsForSuccess),
@@ -1035,14 +1033,14 @@ export default function CardSelectionPage() {
 
         // Limpiar el carrito después de completar la orden
         await clearCart();
-        console.log("Cart cleared after successful order");
+        //console.log("Cart cleared after successful order");
 
         // Guardar orderId para la navegación después de la animación
         setCompletedOrderId(pickAndGoOrderId);
-        console.log(
+        /*console.log(
           "Order processing completed, orderId saved:",
           pickAndGoOrderId,
-        );
+        );*/
 
         // NO redirigir aquí - dejar que la animación continúe
         // El timer navigateTimer (9s) en OrderAnimation se encargará de la redirección
@@ -1061,7 +1059,7 @@ export default function CardSelectionPage() {
         installments: selectedMSI || undefined,
       };
 
-      console.log("💳 Processing payment:", paymentData);
+      //console.log("💳 Processing payment:", paymentData);
 
       const paymentResult = await paymentService.processPayment(paymentData);
 
@@ -1071,7 +1069,7 @@ export default function CardSelectionPage() {
         throw new Error(errorMsg);
       }
 
-      console.log("Payment successful:", paymentResult);
+      //console.log("Payment successful:", paymentResult);
 
       let customerPhone: string | null = null;
 
@@ -1133,7 +1131,7 @@ export default function CardSelectionPage() {
       }
 
       const pickAndGoOrderId = pickAndGoOrderResult.data.id;
-      console.log("✅ Pick & Go order created successfully:", pickAndGoOrderId);
+      //console.log("✅ Pick & Go order created successfully:", pickAndGoOrderId);
 
       // PASO 3.2: Crear dish orders vinculados a la orden Pick & Go
       for (const item of cartState.items) {
@@ -1166,7 +1164,7 @@ export default function CardSelectionPage() {
           specialInstructions: item.specialInstructions || null,
         };
 
-        console.log("Creating dish order:", dishOrderData);
+        //console.log("Creating dish order:", dishOrderData);
 
         const dishOrderResult = await pickAndGoService.createDishOrder(
           pickAndGoOrderId,
@@ -1191,7 +1189,7 @@ export default function CardSelectionPage() {
           paymentStatusResult.error,
         );
       } else {
-        console.log("Pick & Go payment status updated to 'paid'");
+        //console.log("Pick & Go payment status updated to 'paid'");
       }
 
       // Actualizar order status a 'confirmed' (no 'completed' aún, está en preparación)
@@ -1206,7 +1204,7 @@ export default function CardSelectionPage() {
           orderStatusResult.error,
         );
       } else {
-        console.log("Pick & Go order status updated to 'confirmed'");
+        //console.log("Pick & Go order status updated to 'confirmed'");
       }
 
       // Paso 5: Registrar transacción para trazabilidad
@@ -1236,7 +1234,7 @@ export default function CardSelectionPage() {
             xquisito_rate_applied: xquisitoRateApplied,
             total_amount_charged: totalAmount,
           });
-          console.log("✅ Payment transaction recorded successfully");
+          //console.log("✅ Payment transaction recorded successfully");
         } catch (transactionError) {
           console.error(
             "❌ Error recording payment transaction:",
@@ -1294,10 +1292,10 @@ export default function CardSelectionPage() {
       };
 
       // Guardar en localStorage para payment-success
-      console.log(
+      /*console.log(
         "💾 Saving payment details for payment-success:",
         paymentDetailsForSuccess,
-      );
+      );*/
       localStorage.setItem(
         "xquisito-completed-payment",
         JSON.stringify(paymentDetailsForSuccess),
@@ -1318,14 +1316,14 @@ export default function CardSelectionPage() {
 
       // Limpiar el carrito después de completar la orden
       await clearCart();
-      console.log("🧹 Cart cleared after successful order");
+      //console.log("🧹 Cart cleared after successful order");
 
       // Guardar orderId para la navegación después de la animación
       setCompletedOrderId(pickAndGoOrderId);
-      console.log(
+      /*console.log(
         "✅ Order processing completed, orderId saved:",
         pickAndGoOrderId,
-      );
+      );*/
 
       // NO redirigir aquí - dejar que la animación continúe
       // El timer navigateTimer (9s) en OrderAnimation se encargará de la redirección
@@ -1482,27 +1480,27 @@ export default function CardSelectionPage() {
           userName={completedUserName}
           orderedItems={completedOrderItems}
           onContinue={() => {
-            console.log("🔍 DEBUG - completedOrderId state:", completedOrderId);
+            //console.log("🔍 DEBUG - completedOrderId state:", completedOrderId);
 
             // PRIORIDAD 1: Intentar obtener desde sessionStorage directamente
             let orderId = sessionStorage.getItem("xquisito-current-order-id");
 
             if (orderId) {
-              console.log(
+              /*console.log(
                 "✅ Found orderId from sessionStorage (direct):",
                 orderId,
-              );
+              );*/
             } else {
               // PRIORIDAD 2: Usar el estado si está disponible
               orderId = completedOrderId;
 
               if (orderId) {
-                console.log("✅ Using completedOrderId from state:", orderId);
+                //console.log("✅ Using completedOrderId from state:", orderId);
               } else {
                 // PRIORIDAD 3: Buscar en sessionStorage por payment-success keys
-                console.log(
+                /*console.log(
                   "⚠️ completedOrderId is null, searching in sessionStorage...",
-                );
+                );*/
                 for (let i = 0; i < sessionStorage.length; i++) {
                   const key = sessionStorage.key(i);
                   if (key && key.startsWith("xquisito-payment-success-")) {
@@ -1511,12 +1509,12 @@ export default function CardSelectionPage() {
                       if (data) {
                         const parsed = JSON.parse(data);
                         orderId = parsed.orderId;
-                        console.log(
+                        /*console.log(
                           "📦 Found orderId from sessionStorage key:",
                           key,
                           "orderId:",
                           orderId,
-                        );
+                        );*/
                         break;
                       }
                     } catch (e) {
@@ -1527,7 +1525,7 @@ export default function CardSelectionPage() {
 
                 // PRIORIDAD 4: Último intento en localStorage
                 if (!orderId) {
-                  console.log("⚠️ Still no orderId, trying localStorage...");
+                  //console.log("⚠️ Still no orderId, trying localStorage...");
                   const paymentData = localStorage.getItem(
                     "xquisito-completed-payment",
                   );
@@ -1535,10 +1533,10 @@ export default function CardSelectionPage() {
                     try {
                       const parsed = JSON.parse(paymentData);
                       orderId = parsed.orderId;
-                      console.log(
+                      /*console.log(
                         "📦 Found orderId from localStorage:",
                         orderId,
-                      );
+                      );*/
                     } catch (e) {
                       console.error("Error parsing payment data:", e);
                     }
@@ -1547,13 +1545,13 @@ export default function CardSelectionPage() {
               }
             }
 
-            console.log("🔍 Final orderId for navigation:", orderId);
+            //console.log("🔍 Final orderId for navigation:", orderId);
 
             // Si no hay orderId válido, no navegar (hubo un error en el proceso)
             if (!orderId || orderId === "unknown") {
-              console.log(
+              /*console.log(
                 "❌ No valid orderId found, not navigating to payment-success",
-              );
+              );*/
               return;
             }
 
