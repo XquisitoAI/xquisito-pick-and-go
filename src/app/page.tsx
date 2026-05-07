@@ -56,7 +56,7 @@ export default function Home() {
     /*console.log(
       `✅ Default redirect to /${DEFAULT_RESTAURANT_ID}/menu (Pick & Go)`,
     );*/
-    router.replace(`/${DEFAULT_RESTAURANT_ID}/menu`);
+    //router.replace(`/${DEFAULT_RESTAURANT_ID}/menu`);
   }, [router, searchParams, user, isLoading]);
 
   return (

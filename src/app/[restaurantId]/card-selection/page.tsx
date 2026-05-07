@@ -7,7 +7,7 @@ import { usePayment } from "@/context/PaymentContext";
 import { useRestaurant } from "@/context/RestaurantContext";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useGuest } from "@/context/GuestContext";
+import { useGuest, useIsGuest } from "@/context/GuestContext";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
 import { Plus, Trash2, Loader2, CircleAlert, X } from "lucide-react";
 import { getCardTypeIcon } from "@/utils/cardIcons";
@@ -17,6 +17,7 @@ import { pickAndGoService } from "@/services/pickandgo.service";
 import { paymentService } from "@/services/payment.service";
 import { calculateCommissions } from "@/utils/commissionCalculator";
 import { usePaymentProvider } from "@/hooks/usePaymentProvider";
+import { useAgentStatus } from "@/hooks/useAgentStatus";
 
 export default function CardSelectionPage() {
   const params = useParams();
@@ -24,6 +25,13 @@ export default function CardSelectionPage() {
   const { setRestaurantId } = useRestaurant();
   const restaurantId = params?.restaurantId as string;
   const { provider, isLoadingProvider } = usePaymentProvider(restaurantId);
+  const { selectedBranchNumber } = useBranch();
+  const { isAgentRequired } = useAgentStatus(
+    restaurantId,
+    selectedBranchNumber ?? 1,
+  );
+  const isGuest = useIsGuest();
+  const { guestName } = useGuest();
 
   useEffect(() => {
     if (restaurantId && !isNaN(parseInt(restaurantId))) {
@@ -45,7 +53,6 @@ export default function CardSelectionPage() {
   const { paymentMethods, deletePaymentMethod } = usePayment();
   const { user, profile } = useAuth();
   const { guestId } = useGuest();
-  const { selectedBranchNumber } = useBranch();
 
   // Obtener monto base del carrito desde el contexto
   const baseAmount = cartState.totalPrice;
@@ -123,14 +130,12 @@ export default function CardSelectionPage() {
 
   // Set default payment method when payment methods are loaded
   useEffect(() => {
-    // Siempre hay al menos la tarjeta del sistema disponible
-    if (!selectedPaymentMethodId && paymentMethods.length > 0) {
+    const visibleMethods = paymentMethods.filter((pm) => pm.id !== "system-default-card");
+    if (!selectedPaymentMethodId && visibleMethods.length > 0) {
       const defaultMethod =
-        paymentMethods.find((pm) => pm.isDefault) || paymentMethods[0];
+        visibleMethods.find((pm) => pm.isDefault) || visibleMethods[0];
       setSelectedPaymentMethodId(defaultMethod.id);
-      //console.log("💳 Auto-seleccionando tarjeta:", defaultMethod.id);
     }
-    // Solo marcar como cargado cuando el carrito también esté listo
     if (!cartState.isLoading) {
       setIsLoadingInitial(false);
     }
@@ -275,6 +280,7 @@ export default function CardSelectionPage() {
           return;
         }
 
+        const sdkAlreadyLoaded = !!(window as any).Pay?.ApplePay;
         const applePaySDK = await getApplePaySDK();
         if (!applePaySDK) {
           console.warn("⚠️ [AP-SDK] SDK no disponible en window.Pay.ApplePay");
@@ -323,6 +329,11 @@ export default function CardSelectionPage() {
           borderRadius: "8px",
           supportedNetworks: ["visa", "masterCard", "amex"],
         });
+
+        // Si el SDK ya estaba cargado (segunda+ navegación), "ready" no se re-emite
+        if (sdkAlreadyLoaded) {
+          setApplePayReady(true);
+        }
       } catch (err) {
         applePayListenersRef.current = false;
         console.error("❌ Error inicializando Apple Pay:", err);
@@ -360,6 +371,7 @@ export default function CardSelectionPage() {
           return;
         }
 
+        const googleSdkAlreadyLoaded = !!(window as any).Pay?.GooglePay;
         const googlePaySDK = await getGooglePaySDK();
         if (!googlePaySDK) {
           console.warn("⚠️ [GP-SDK] SDK no disponible en window.Pay.GooglePay");
@@ -412,6 +424,11 @@ export default function CardSelectionPage() {
           buttonColor: "black",
           buttonType: "pay",
         });
+
+        // Si el SDK ya estaba cargado (segunda+ navegación), "ready" no se re-emite
+        if (googleSdkAlreadyLoaded) {
+          setGooglePayReady(true);
+        }
       } catch (err) {
         googlePayListenersRef.current = false;
         console.error("❌ Error inicializando Google Pay:", err);
@@ -509,6 +526,11 @@ export default function CardSelectionPage() {
         await pickAndGoService.updatePaymentStatus(pickAndGoOrderId, "paid");
         await pickAndGoService.updateOrderStatus(pickAndGoOrderId, "confirmed");
 
+        // Determinar nombre del pagador
+        const transactionBy = isGuest
+          ? guestName || "Invitado"
+          : [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
+
         try {
           const xquisitoRateApplied =
             subtotalForCommission > 0
@@ -532,6 +554,7 @@ export default function CardSelectionPage() {
             xquisito_restaurant_charge: xquisitoRestaurantCharge,
             xquisito_rate_applied: xquisitoRateApplied,
             total_amount_charged: totalAmount,
+            transaction_by: transactionBy,
           });
         } catch (transactionError) {
           console.error(
@@ -696,6 +719,9 @@ export default function CardSelectionPage() {
         await pickAndGoService.updateOrderStatus(pickAndGoOrderId, "confirmed");
 
         try {
+          const transactionBy = isGuest
+            ? guestName || "Invitado"
+            : [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
           const xquisitoRateApplied =
             subtotalForCommission > 0
               ? (xquisitoCommissionTotal / subtotalForCommission) * 100
@@ -718,6 +744,7 @@ export default function CardSelectionPage() {
             xquisito_restaurant_charge: xquisitoRestaurantCharge,
             xquisito_rate_applied: xquisitoRateApplied,
             total_amount_charged: totalAmount,
+            transaction_by: transactionBy,
           });
         } catch (transactionError) {
           console.error(
@@ -965,6 +992,10 @@ export default function CardSelectionPage() {
               ? (xquisitoCommissionTotal / subtotalForCommission) * 100
               : 0;
 
+          const transactionBy = isGuest
+            ? guestName || "Invitado"
+            : [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
+
           await pickAndGoService.recordPaymentTransaction({
             payment_method_id: null, // null para tarjeta del sistema
             restaurant_id: parseInt(restaurantId),
@@ -983,6 +1014,7 @@ export default function CardSelectionPage() {
             xquisito_restaurant_charge: xquisitoRestaurantCharge,
             xquisito_rate_applied: xquisitoRateApplied,
             total_amount_charged: totalAmount,
+            transaction_by: transactionBy,
           });
           //console.log("✅ Payment transaction recorded successfully");
         } catch (transactionError) {
@@ -1237,6 +1269,10 @@ export default function CardSelectionPage() {
               ? (xquisitoCommissionTotal / subtotalForCommission) * 100
               : 0;
 
+          const transactionBy = isGuest
+            ? guestName || "Invitado"
+            : [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
+
           await pickAndGoService.recordPaymentTransaction({
             payment_method_id: selectedPaymentMethodId,
             restaurant_id: parseInt(restaurantId),
@@ -1255,6 +1291,7 @@ export default function CardSelectionPage() {
             xquisito_restaurant_charge: xquisitoRestaurantCharge,
             xquisito_rate_applied: xquisitoRateApplied,
             total_amount_charged: totalAmount,
+            transaction_by: transactionBy,
           });
           //console.log("✅ Payment transaction recorded successfully");
         } catch (transactionError) {
@@ -1450,7 +1487,9 @@ export default function CardSelectionPage() {
 
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="bg-white rounded-t-4xl flex-1 flex flex-col px-8 overflow-hidden z-10">
-              <div className="flex-1 overflow-y-auto py-8 pb-[120px] flex flex-col gap-4">
+              <div
+                className={`flex-1 overflow-y-auto py-8 ${isAgentRequired ? "pb-[160px]" : "pb-[120px]"} flex flex-col gap-4`}
+              >
                 {/* Subtotal row */}
                 <div className="flex justify-between items-center">
                   <div className="h-4 w-20 bg-gray-200 rounded-full animate-pulse" />
@@ -1508,10 +1547,6 @@ export default function CardSelectionPage() {
             let orderId = sessionStorage.getItem("xquisito-current-order-id");
 
             if (orderId) {
-              /*console.log(
-                "✅ Found orderId from sessionStorage (direct):",
-                orderId,
-              );*/
             } else {
               // PRIORIDAD 2: Usar el estado si está disponible
               orderId = completedOrderId;
@@ -1602,7 +1637,9 @@ export default function CardSelectionPage() {
 
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="bg-white rounded-t-4xl flex-1 flex flex-col px-8 overflow-hidden z-50">
-              <div className="flex-1 overflow-y-auto py-8 pb-[120px]">
+              <div
+                className={`flex-1 overflow-y-auto py-8 ${isAgentRequired ? "pb-[160px]" : "pb-[120px]"}`}
+              >
                 {/* Resumen compacto del pedido */}
                 <div className="mb-3 space-y-2">
                   <div className="flex justify-between items-center text-base font-medium text-black">
@@ -1683,7 +1720,7 @@ export default function CardSelectionPage() {
                     Métodos de pago
                   </h3>
                   <div className="space-y-2.5">
-                    {paymentMethods.map((method) => (
+                    {paymentMethods.filter((method) => method.id !== "system-default-card").map((method) => (
                       <div
                         key={method.id}
                         className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
@@ -1831,11 +1868,19 @@ export default function CardSelectionPage() {
 
         {/* Barra inferior fija — total + botón pagar */}
         <div className="fixed bottom-0 left-0 right-0 bg-white mx-4 px-8 z-90 py-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          {isAgentRequired && (
+            <p className="text-red-500 text-xs text-center mb-6">
+              El sistema de caja no está disponible en este momento. Intenta más
+              tarde.
+            </p>
+          )}
           <button
             onClick={handleInitiatePayment}
-            disabled={isProcessing || !selectedPaymentMethodId}
+            disabled={
+              isProcessing || !selectedPaymentMethodId || isAgentRequired
+            }
             className={`py-3 text-white rounded-full cursor-pointer font-normal h-fit w-full flex items-center justify-center text-base active:scale-95 transition-transform ${
-              isProcessing || !selectedPaymentMethodId
+              isProcessing || !selectedPaymentMethodId || isAgentRequired
                 ? "bg-gradient-to-r from-[#34808C] to-[#173E44] opacity-50 cursor-not-allowed px-10"
                 : "bg-gradient-to-r from-[#34808C] to-[#173E44] px-10 animate-pulse-button"
             }`}

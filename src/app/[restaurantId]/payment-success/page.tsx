@@ -13,8 +13,6 @@ import {
   Calendar,
   Utensils,
   CircleAlert,
-  LogIn,
-  UserCircle2,
   RefreshCw,
   Loader2,
   Clock,
@@ -276,9 +274,26 @@ export default function PaymentSuccessPage() {
 
   // Función para obtener dish orders desde el backend
   const fetchDishOrders = async () => {
-    const orderId = paymentId || paymentDetails?.orderId;
+    let orderId = paymentId || paymentDetails?.orderId;
+
     if (!orderId) {
-      // Fallback a los datos del storage si no hay orderId
+      const clientId = user?.id || guestId;
+      if (clientId && restaurantId) {
+        try {
+          const lastOrders = await pickAndGoService.getUserOrders(clientId, {
+            limit: 1,
+            restaurant_id: parseInt(restaurantId),
+          });
+          if (lastOrders.success && lastOrders.data?.length) {
+            orderId = lastOrders.data[0].id;
+          }
+        } catch {
+          // si falla, caemos al storage
+        }
+      }
+    }
+
+    if (!orderId) {
       setDishOrders(paymentDetails?.dishOrders || []);
       if (paymentDetails?.createdAt) {
         setOrderCreatedAt(new Date(paymentDetails.createdAt));
@@ -291,23 +306,19 @@ export default function PaymentSuccessPage() {
       const response = await pickAndGoService.getOrder(orderId);
 
       if (response.success && response.data) {
-        // Guardar la fecha de creación del pedido
         if (response.data.created_at) {
           setOrderCreatedAt(new Date(response.data.created_at));
         }
 
-        // Guardar el folio del pedido
         if (response.data.folio) {
           setOrderFolio(response.data.folio);
         }
 
         if (response.data.items) {
           console.log("✅ Order items fetched:", response.data.items);
-          // Guardar items raw para el modal de reordenar
           setReorderItems(
             response.data.items.filter((d: any) => d.menu_item_id),
           );
-          // Transformar los items del backend al formato esperado
           const transformedItems = response.data.items.map((item: any) => ({
             dish_order_id: item.id,
             item: item.item,
@@ -323,7 +334,6 @@ export default function PaymentSuccessPage() {
           setDishOrders(transformedItems);
         }
       } else {
-        // Fallback a los datos del storage
         console.log("⚠️ Could not fetch from backend, using storage data");
         setDishOrders(paymentDetails?.dishOrders || []);
         if (paymentDetails?.createdAt) {
@@ -332,7 +342,6 @@ export default function PaymentSuccessPage() {
       }
     } catch (error) {
       console.error("❌ Error fetching order details:", error);
-      // Fallback a los datos del storage
       setDishOrders(paymentDetails?.dishOrders || []);
       if (paymentDetails?.createdAt) {
         setOrderCreatedAt(new Date(paymentDetails.createdAt));

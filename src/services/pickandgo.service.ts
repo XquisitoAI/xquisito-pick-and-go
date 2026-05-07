@@ -158,6 +158,7 @@ export interface RecordPaymentTransactionRequest {
   xquisito_restaurant_charge: number;
   xquisito_rate_applied: number;
   total_amount_charged: number;
+  transaction_by: string;
 }
 
 class PickAndGoService {
@@ -235,8 +236,6 @@ class PickAndGoService {
       restaurant_id?: number;
     },
   ): Promise<ApiResponse<PickAndGoOrder[]>> {
-    //console.log("👤 Getting user orders for:", userId);
-
     const queryParams = new URLSearchParams();
     if (filters?.order_status)
       queryParams.append("order_status", filters.order_status);
