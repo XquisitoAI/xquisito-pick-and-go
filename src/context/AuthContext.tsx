@@ -74,46 +74,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Si ya expiró o expira en menos de 5 minutos, refrescar ahora
           if (timeUntilExpiry < 300) {
-            /*const isExpired = timeUntilExpiry <= 0;
-            console.log(
-              isExpired
-                ? "⚠️ Token already expired, attempting refresh..."
-                : "🔄 Token expiring soon, refreshing proactively...",
-            );*/
-
             try {
               const refreshResponse = await authService.refreshToken();
               if (refreshResponse.success && refreshResponse.data?.session) {
                 const newToken = refreshResponse.data.session.access_token;
                 authService.setAuthToken(newToken);
-                //console.log("✅ Token refreshed proactively on app load");
-                // Ahora sí establecer el usuario y cargar perfil
-                setUser(currentUser);
-                await loadProfileWithValidation();
+                const profileOk = await loadProfileWithValidation();
+                if (profileOk) {
+                  setUser(currentUser);
+                } else {
+                  await performLogout();
+                }
               } else {
-                // Refresh falló - solo cerrar sesión si el token ya expiró
                 if (timeUntilExpiry <= 0) {
-                  console.error(
-                    "❌ Token expired and refresh failed, clearing session",
-                  );
                   await performLogout();
                 } else {
-                  console.warn(
-                    "⚠️ Token refresh failed but token still valid, continuing",
-                  );
-                  setUser(currentUser);
-                  await loadProfileWithValidation();
+                  const profileOk = await loadProfileWithValidation();
+                  if (profileOk) {
+                    setUser(currentUser);
+                  } else {
+                    await performLogout();
+                  }
                 }
               }
             } catch (error) {
-              // Error de red - no cerrar sesión, continuar con el token actual si no expiró
-              console.error(
-                "❌ Network error during token refresh on load:",
-                error,
-              );
               if (timeUntilExpiry > 0) {
-                setUser(currentUser);
-                await loadProfileWithValidation();
+                const profileOk = await loadProfileWithValidation();
+                if (profileOk) {
+                  setUser(currentUser);
+                } else {
+                  await performLogout();
+                }
               } else {
                 await performLogout();
               }
@@ -123,11 +114,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Token válido - establecer usuario y cargar perfil
-        setUser(currentUser);
-
-        // Cargar perfil - no cerrar sesión si falla (puede ser error de red o usuario nuevo)
-        await loadProfileWithValidation();
+        // Token válido - cargar perfil primero, luego establecer usuario
+        const profileOk = await loadProfileWithValidation();
+        if (profileOk) {
+          setUser(currentUser);
+        } else {
+          await performLogout();
+        }
       }
       setIsLoading(false);
     };
