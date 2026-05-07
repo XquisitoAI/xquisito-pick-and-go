@@ -295,9 +295,6 @@ export default function CardSelectionPage() {
           console.error("❌ Apple Pay error:", event);
           setIsApplePayProcessing(false);
           setApplePayUnavailable(true);
-          setErrorMessage(
-            `[AP-ERROR] ${event?.detail?.message ?? JSON.stringify(event)}`,
-          );
         });
         applePaySDK.on("success", (event: any) => {
           console.log("✅ Apple Pay autorizado", event?.detail);
@@ -329,9 +326,6 @@ export default function CardSelectionPage() {
       } catch (err) {
         applePayListenersRef.current = false;
         console.error("❌ Error inicializando Apple Pay:", err);
-        setErrorMessage(
-          `[AP-INIT] ${err instanceof Error ? err.message : JSON.stringify(err)}`,
-        );
       }
     })();
   }, [isLoadingInitial, baseAmount, totalAmount]);
@@ -391,9 +385,6 @@ export default function CardSelectionPage() {
           console.error("❌ Google Pay error:", err);
           setIsGooglePayProcessing(false);
           setGooglePayUnavailable(true);
-          setErrorMessage(
-            `[GP-ERROR] ${err?.detail?.message || (typeof err === "object" ? JSON.stringify(err) : String(err))}`,
-          );
         });
         googlePaySDK.on("success", (event: any) => {
           console.log("✅ Google Pay autorizado", event?.detail);
@@ -424,9 +415,6 @@ export default function CardSelectionPage() {
       } catch (err) {
         googlePayListenersRef.current = false;
         console.error("❌ Error inicializando Google Pay:", err);
-        setErrorMessage(
-          `[GP-INIT] ${err instanceof Error ? err.message : JSON.stringify(err)}`,
-        );
       }
     })();
   }, [isLoadingInitial, baseAmount, totalAmount, restaurantId]);
