@@ -174,6 +174,28 @@ export default function CardSelectionPage() {
     }
   }, [provider, isLoadingProvider]);
 
+  // Verificar soporte de Google Pay y cargar el SDK solo si aplica
+  useEffect(() => {
+    if (isLoadingProvider) return;
+
+    // Google Pay solo aplica cuando el proveedor es eCartPay (o null como fallback)
+    if (provider !== null && provider !== "ecartpay") return;
+
+    // Google Pay no está disponible en iOS — usar Apple Pay
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+      setGooglePayUnavailable(true);
+      return;
+    }
+
+    const src = "https://ecartpay.com/sdk/pay.js?v=2";
+    if (!document.querySelector(`script[src="${src}"]`)) {
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }, [provider, isLoadingProvider]);
+
   const handleInitiatePayment = (): void => {
     if (!selectedPaymentMethodId) {
       setErrorMessage("Por favor selecciona una tarjeta de pago");
@@ -322,10 +344,6 @@ export default function CardSelectionPage() {
       typeof window === "undefined"
     )
       return;
-    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-      setGooglePayUnavailable(true);
-      return;
-    }
     if (googlePayListenersRef.current) return;
     googlePayListenersRef.current = true;
 
@@ -347,11 +365,6 @@ export default function CardSelectionPage() {
           googlePayListenersRef.current = false;
           return;
         }
-
-        const googleSDKSrc = "https://ecartpay.com/sdk/pay.js?v=2";
-        const googleSDKAlreadyLoaded = !!document.querySelector(
-          `script[src="${googleSDKSrc}"]`,
-        );
 
         const googlePaySDK = await getGooglePaySDK();
         if (!googlePaySDK) {
@@ -382,8 +395,8 @@ export default function CardSelectionPage() {
             `[GP-ERROR] ${err?.detail?.message || (typeof err === "object" ? JSON.stringify(err) : String(err))}`,
           );
         });
-        googlePaySDK.on("success", () => {
-          console.log("✅ Google Pay autorizado");
+        googlePaySDK.on("success", (event: any) => {
+          console.log("✅ Google Pay autorizado", event?.detail);
           sessionStorage.removeItem("xquisito-current-order-id");
           sessionStorage.removeItem("xquisito-current-payment-key");
           setGooglePayPaymentId(`google-pay-${Date.now()}`);
@@ -408,12 +421,6 @@ export default function CardSelectionPage() {
           buttonColor: "black",
           buttonType: "pay",
         });
-
-        // En navegación client-side el SDK ya está inicializado y "ready" no vuelve a
-        // disparar — forzamos el estado manualmente después del render.
-        if (googleSDKAlreadyLoaded) {
-          setGooglePayReady(true);
-        }
       } catch (err) {
         googlePayListenersRef.current = false;
         console.error("❌ Error inicializando Google Pay:", err);
