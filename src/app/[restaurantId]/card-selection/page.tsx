@@ -71,7 +71,17 @@ export default function CardSelectionPage() {
     null,
   );
   const [googlePayReady, setGooglePayReady] = useState(false);
-  const [googlePayUnavailable, setGooglePayUnavailable] = useState(false);
+  const [googlePayUnavailable, setGooglePayUnavailable] = useState<boolean>(
+    () => {
+      if (typeof window === "undefined") return false;
+      const ua = navigator.userAgent;
+      return (
+        /iPhone|iPad|iPod/.test(ua) ||
+        (ua.includes("Macintosh") &&
+          navigator.vendor === "Apple Computer, Inc.")
+      );
+    },
+  );
   const [isGooglePayProcessing, setIsGooglePayProcessing] = useState(false);
   const [googlePayPaymentId, setGooglePayPaymentId] = useState<string | null>(
     null,
@@ -130,7 +140,9 @@ export default function CardSelectionPage() {
 
   // Set default payment method when payment methods are loaded
   useEffect(() => {
-    const visibleMethods = paymentMethods.filter((pm) => pm.id !== "system-default-card");
+    const visibleMethods = paymentMethods.filter(
+      (pm) => pm.id !== "system-default-card",
+    );
     if (!selectedPaymentMethodId && visibleMethods.length > 0) {
       const defaultMethod =
         visibleMethods.find((pm) => pm.isDefault) || visibleMethods[0];
@@ -1720,66 +1732,68 @@ export default function CardSelectionPage() {
                     Métodos de pago
                   </h3>
                   <div className="space-y-2.5">
-                    {paymentMethods.filter((method) => method.id !== "system-default-card").map((method) => (
-                      <div
-                        key={method.id}
-                        className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
-                          selectedPaymentMethodId === method.id
-                            ? "border-teal-500 bg-teal-50"
-                            : "border-black/50 bg-[#f9f9f9]"
-                        }`}
-                      >
+                    {paymentMethods
+                      .filter((method) => method.id !== "system-default-card")
+                      .map((method) => (
                         <div
-                          onClick={() => {
-                            setSelectedPaymentMethodId(method.id);
-                            setSelectedMSI(null);
-                          }}
-                          className="flex items-center justify-center gap-3 mx-auto cursor-pointer"
-                        >
-                          <div>{getCardTypeIcon(method.cardBrand)}</div>
-                          <div>
-                            <p className="text-black">
-                              •••• •••• •••• {method.lastFourDigits}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div
-                          onClick={() => {
-                            setSelectedPaymentMethodId(method.id);
-                            setSelectedMSI(null);
-                          }}
-                          className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
+                          key={method.id}
+                          className={`flex items-center py-1.5 px-5 pl-10 border rounded-full transition-colors ${
                             selectedPaymentMethodId === method.id
-                              ? "border-teal-500 bg-teal-500"
-                              : "border-gray-300"
+                              ? "border-teal-500 bg-teal-50"
+                              : "border-black/50 bg-[#f9f9f9]"
                           }`}
                         >
-                          {selectedPaymentMethodId === method.id && (
-                            <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                          <div
+                            onClick={() => {
+                              setSelectedPaymentMethodId(method.id);
+                              setSelectedMSI(null);
+                            }}
+                            className="flex items-center justify-center gap-3 mx-auto cursor-pointer"
+                          >
+                            <div>{getCardTypeIcon(method.cardBrand)}</div>
+                            <div>
+                              <p className="text-black">
+                                •••• •••• •••• {method.lastFourDigits}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div
+                            onClick={() => {
+                              setSelectedPaymentMethodId(method.id);
+                              setSelectedMSI(null);
+                            }}
+                            className={`w-4 h-4 rounded-full border-2 cursor-pointer ${
+                              selectedPaymentMethodId === method.id
+                                ? "border-teal-500 bg-teal-500"
+                                : "border-gray-300"
+                            }`}
+                          >
+                            {selectedPaymentMethodId === method.id && (
+                              <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                            )}
+                          </div>
+
+                          {/* Delete Button - No mostrar para tarjeta del sistema */}
+                          {method.id !== "system-default-card" && (
+                            <button
+                              onClick={() => handleDeleteCard(method.id)}
+                              disabled={deletingCardId === method.id}
+                              className="pl-2 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 cursor-pointer"
+                              title="Eliminar tarjeta"
+                            >
+                              {deletingCardId === method.id ? (
+                                <Loader2 className="size-5 animate-spin" />
+                              ) : (
+                                <Trash2 className="size-5" />
+                              )}
+                            </button>
                           )}
                         </div>
-
-                        {/* Delete Button - No mostrar para tarjeta del sistema */}
-                        {method.id !== "system-default-card" && (
-                          <button
-                            onClick={() => handleDeleteCard(method.id)}
-                            disabled={deletingCardId === method.id}
-                            className="pl-2 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 cursor-pointer"
-                            title="Eliminar tarjeta"
-                          >
-                            {deletingCardId === method.id ? (
-                              <Loader2 className="size-5 animate-spin" />
-                            ) : (
-                              <Trash2 className="size-5" />
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                      ))}
 
                     {/* Apple Pay Button */}
-                    {!applePayUnavailable && (
+                    {!applePayUnavailable && !isAgentRequired && (
                       <>
                         {!applePayReady && (
                           <div className="w-full h-[48px] rounded-full bg-black flex items-center justify-center gap-2">
@@ -1807,7 +1821,7 @@ export default function CardSelectionPage() {
                     )}
 
                     {/* Google Pay Button */}
-                    {!googlePayUnavailable && (
+                    {!googlePayUnavailable && !isAgentRequired && (
                       <>
                         {!googlePayReady && (
                           <div className="w-full h-[48px] rounded-full bg-black flex items-center justify-center gap-2">
