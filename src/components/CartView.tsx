@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Minus, Plus } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useNavigation } from "../hooks/useNavigation";
@@ -11,8 +11,16 @@ export default function CartView() {
   const { state, updateQuantity, orderNotes, setOrderNotes, updateOrderNotes } =
     useCart();
   const { navigateWithRestaurantId } = useNavigation();
-  const { isLoading, user, profile } = useAuth();
+  const { isLoading, user, profile, refreshProfile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Si el usuario está autenticado pero el perfil no cargó (ej. error de red al
+  // volver de fondo en móvil), intentar cargarlo para que el checkout funcione.
+  useEffect(() => {
+    if (!isLoading && user && !profile) {
+      refreshProfile();
+    }
+  }, [isLoading, user, profile, refreshProfile]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const handleOrder = async () => {

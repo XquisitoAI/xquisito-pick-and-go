@@ -5,6 +5,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useRef,
   ReactNode,
 } from "react";
 import {
@@ -54,6 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Ref para leer el perfil actual dentro de event handlers sin stale closures
+  const profileRef = useRef(profile);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   // Cargar usuario del localStorage al montar
   useEffect(() => {
@@ -199,14 +206,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
         }
+
+        // Si el perfil no está cargado, intentarlo ahora que la app es visible
+        if (!profileRef.current) {
+          await loadProfile();
+        }
+      }
+    };
+
+    // Cargar perfil cuando la red vuelve (móvil despertando con red inestable)
+    const handleNetworkOnline = async () => {
+      if (!profileRef.current) {
+        await loadProfile();
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleNetworkOnline);
 
     return () => {
       clearInterval(intervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", handleNetworkOnline);
     };
   }, [user]);
 
