@@ -302,7 +302,7 @@ export default function CardSelectionPage() {
 
         applePaySDK.on("ready", () => {
           console.log("✅ [AP-READY] SDK listo. orderId:", appleOrderId);
-          setApplePayReady(true);
+          setTimeout(() => setApplePayReady(true), 2800);
         });
         applePaySDK.on("unavailable", () => setApplePayUnavailable(true));
         applePaySDK.on("cancel", () => {
@@ -344,7 +344,7 @@ export default function CardSelectionPage() {
 
         // Si el SDK ya estaba cargado (segunda+ navegación), "ready" no se re-emite
         if (sdkAlreadyLoaded) {
-          setApplePayReady(true);
+          setTimeout(() => setApplePayReady(true), 2800);
         }
       } catch (err) {
         applePayListenersRef.current = false;
@@ -393,7 +393,7 @@ export default function CardSelectionPage() {
 
         googlePaySDK.on("ready", () => {
           console.log("✅ [GP-READY] SDK listo. orderId:", googleOrderId);
-          setGooglePayReady(true);
+          setTimeout(() => setGooglePayReady(true), 2800);
         });
         googlePaySDK.on("unavailable", () => {
           console.log(
@@ -439,7 +439,7 @@ export default function CardSelectionPage() {
 
         // Si el SDK ya estaba cargado (segunda+ navegación), "ready" no se re-emite
         if (googleSdkAlreadyLoaded) {
-          setGooglePayReady(true);
+          setTimeout(() => setGooglePayReady(true), 2800);
         }
       } catch (err) {
         googlePayListenersRef.current = false;
@@ -1794,9 +1794,10 @@ export default function CardSelectionPage() {
 
                     {/* Apple Pay Button */}
                     {!applePayUnavailable && !isAgentRequired && (
-                      <>
+                      <div className="relative w-full h-[48px]">
+                        <div id="apple-pay-container" className="w-full" />
                         {!applePayReady && (
-                          <div className="w-full h-[48px] rounded-full bg-black flex items-center justify-center gap-2">
+                          <div className="absolute inset-0 rounded-full bg-black flex items-center justify-center gap-2">
                             <span
                               className="text-white text-xl leading-none"
                               style={{
@@ -1813,18 +1814,15 @@ export default function CardSelectionPage() {
                             <Loader2 className="size-4 animate-spin text-white" />
                           </div>
                         )}
-                        <div
-                          id="apple-pay-container"
-                          className={`w-full ${!applePayReady ? "hidden" : ""}`}
-                        />
-                      </>
+                      </div>
                     )}
 
                     {/* Google Pay Button */}
                     {!googlePayUnavailable && !isAgentRequired && (
-                      <>
+                      <div className="relative w-full h-[48px]">
+                        <div id="google-pay-container" className="w-full" />
                         {!googlePayReady && (
-                          <div className="w-full h-[48px] rounded-full bg-black flex items-center justify-center gap-2">
+                          <div className="absolute inset-0 rounded-full bg-black flex items-center justify-center gap-2">
                             {/* Google "G" logo */}
                             <svg
                               width="18"
@@ -1856,11 +1854,7 @@ export default function CardSelectionPage() {
                             <Loader2 className="size-4 animate-spin text-white" />
                           </div>
                         )}
-                        <div
-                          id="google-pay-container"
-                          className={`w-full ${!googlePayReady ? "hidden" : ""}`}
-                        />
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
