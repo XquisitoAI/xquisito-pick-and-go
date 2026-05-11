@@ -180,6 +180,8 @@ export interface ConfirmOrderRequest {
   currency?: string;
   is_guest?: boolean;
   user_id?: string | null;
+  payment_source?: "apple_pay" | "google_pay" | "saved_card" | "dev" | null;
+  ecartpay_order_id?: string | null;
 }
 
 export interface ConfirmOrderResponse {

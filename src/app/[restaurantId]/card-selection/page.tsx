@@ -320,7 +320,7 @@ export default function CardSelectionPage() {
           console.log("✅ Apple Pay autorizado", event?.detail);
           sessionStorage.removeItem("xquisito-current-order-id");
           sessionStorage.removeItem("xquisito-current-payment-key");
-          setApplePayPaymentId(`apple-pay-${Date.now()}`);
+          setApplePayPaymentId(event?.detail?.id || appleOrderId);
           setIsApplePayProcessing(true);
           setCompletedOrderItems([...cartItemsRef.current]);
           setCompletedUserName(
@@ -416,7 +416,7 @@ export default function CardSelectionPage() {
           console.log("✅ Google Pay autorizado", event?.detail);
           sessionStorage.removeItem("xquisito-current-order-id");
           sessionStorage.removeItem("xquisito-current-payment-key");
-          setGooglePayPaymentId(`google-pay-${Date.now()}`);
+          setGooglePayPaymentId(event?.detail?.id || googleOrderId);
           setIsGooglePayProcessing(true);
           setCompletedOrderItems([...cartItemsRef.current]);
           setCompletedUserName(
@@ -593,6 +593,8 @@ export default function CardSelectionPage() {
         const result = await pickAndGoService.confirmOrder({
           ...commonBody,
           payment_method_id: null,
+          payment_source: "apple_pay",
+          ecartpay_order_id: applePayPaymentId,
           session_data: {
             source: "card-selection",
             payment_method_id: null,
@@ -630,6 +632,8 @@ export default function CardSelectionPage() {
         const result = await pickAndGoService.confirmOrder({
           ...commonBody,
           payment_method_id: null,
+          payment_source: "google_pay",
+          ecartpay_order_id: googlePayPaymentId,
           session_data: {
             source: "card-selection",
             payment_method_id: null,
@@ -672,6 +676,7 @@ export default function CardSelectionPage() {
         const result = await pickAndGoService.confirmOrder({
           ...commonBody,
           payment_method_id: null,
+          payment_source: "dev",
           session_data: {
             source: "card-selection",
             payment_method_id: null,
@@ -725,6 +730,7 @@ export default function CardSelectionPage() {
       const confirmResult = await pickAndGoService.confirmOrder({
         ...commonBody,
         payment_method_id: selectedPaymentMethodId,
+        payment_source: "saved_card",
         session_data: {
           source: "card-selection",
           payment_method_id: selectedPaymentMethodId,
@@ -1090,7 +1096,10 @@ export default function CardSelectionPage() {
                   </h3>
                   <div className="space-y-2.5">
                     {paymentMethods
-                      .filter((method) => isDev || method.id !== "system-default-card")
+                      .filter(
+                        (method) =>
+                          isDev || method.id !== "system-default-card",
+                      )
                       .map((method) => (
                         <div
                           key={method.id}
