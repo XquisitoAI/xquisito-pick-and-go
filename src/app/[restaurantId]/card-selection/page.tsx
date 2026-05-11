@@ -138,10 +138,12 @@ export default function CardSelectionPage() {
     rates,
   } = commissions;
 
+  const isDev = process.env.NODE_ENV === "development";
+
   // Set default payment method when payment methods are loaded
   useEffect(() => {
     const visibleMethods = paymentMethods.filter(
-      (pm) => pm.id !== "system-default-card",
+      (pm) => isDev || pm.id !== "system-default-card",
     );
     if (!selectedPaymentMethodId && visibleMethods.length > 0) {
       const defaultMethod =
@@ -449,901 +451,110 @@ export default function CardSelectionPage() {
   }, [isLoadingInitial, baseAmount, totalAmount, restaurantId]);
 
   const handleConfirmPayment = async (): Promise<void> => {
-    // Esta función se ejecuta después de que expira el período de cancelación
+    const items =
+      completedOrderItems.length > 0 ? completedOrderItems : cartState.items;
 
-    // Flujo Apple Pay — pago ya autorizado por Apple, solo crear la orden
-    if (isApplePayProcessing) {
-      setIsProcessing(true);
-      try {
-        let customerPhone: string | null = null;
-        if (user?.id && user?.phone) customerPhone = user.phone;
-
-        const customerName =
-          profile?.firstName || cartState.userName || "Invitado";
-        const customerEmail = user?.email || null;
-        const userId = user?.id || guestId || null;
-
-        if (!completedOrderItems || completedOrderItems.length === 0) {
-          throw new Error("El carrito está vacío");
-        }
-
-        const pickAndGoOrderResult = await pickAndGoService.createOrder({
-          clerk_user_id: userId,
-          customer_name: customerName,
-          customer_email: customerEmail || undefined,
-          customer_phone: customerPhone || undefined,
-          restaurant_id: parseInt(restaurantId),
-          branch_number: selectedBranchNumber || branchNumber || 1,
-          total_amount: totalAmount,
-          session_data: {
-            source: "card-selection",
-            payment_method_id: null,
-            total_amount: totalAmount,
-            base_amount: baseAmount,
-            tip_amount: tipAmount,
-          },
-          prep_metadata: {
-            estimated_minutes: 25,
-            items_count: completedOrderItems.length,
-            scheduled_pickup_time: scheduledPickupTime,
-          },
-          order_notes: orderNotes.trim() || null,
-        });
-        updateOrderNotes("");
-
-        if (!pickAndGoOrderResult.success || !pickAndGoOrderResult.data) {
-          const errorMsg =
-            typeof pickAndGoOrderResult.error === "string"
-              ? pickAndGoOrderResult.error
-              : (pickAndGoOrderResult.error as any)?.message ||
-                "Error al crear la orden Pick & Go";
-          throw new Error(errorMsg);
-        }
-
-        const pickAndGoOrderId = pickAndGoOrderResult.data.id;
-
-        for (const item of completedOrderItems) {
-          const images =
-            item.images && Array.isArray(item.images) && item.images.length > 0
-              ? item.images.filter((img) => img && typeof img === "string")
-              : [];
-          const customFields =
-            item.customFields &&
-            Array.isArray(item.customFields) &&
-            item.customFields.length > 0
-              ? item.customFields
-              : null;
-
-          const dishOrderResult = await pickAndGoService.createDishOrder(
-            pickAndGoOrderId,
-            {
-              item: item.name,
-              price: item.price,
-              quantity: item.quantity || 1,
-              userId: user?.id || null,
-              guestId: guestId || null,
-              guestName: customerName,
-              images,
-              customFields: customFields ?? undefined,
-              extraPrice: item.extraPrice || 0,
-              pickAndGoOrderId,
-              menuItemId: item.id?.toString(),
-            },
-          );
-
-          if (!dishOrderResult.success)
-            throw new Error("Error al crear el dish order");
-        }
-
-        await pickAndGoService.updatePaymentStatus(pickAndGoOrderId, "paid");
-        await pickAndGoService.updateOrderStatus(pickAndGoOrderId, "confirmed");
-
-        // Determinar nombre del pagador
-        const transactionBy = isGuest
-          ? guestName || "Invitado"
-          : [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
-
-        try {
-          const xquisitoRateApplied =
-            subtotalForCommission > 0
-              ? (xquisitoCommissionTotal / subtotalForCommission) * 100
-              : 0;
-          await pickAndGoService.recordPaymentTransaction({
-            payment_method_id: null,
-            restaurant_id: parseInt(restaurantId),
-            id_table_order: null,
-            id_tap_orders_and_pay: null,
-            pick_and_go_order_id: pickAndGoOrderId,
-            base_amount: baseAmount,
-            tip_amount: tipAmount,
-            iva_tip: ivaTip,
-            xquisito_commission_total: xquisitoCommissionTotal,
-            xquisito_commission_client: xquisitoCommissionClient,
-            xquisito_commission_restaurant: xquisitoCommissionRestaurant,
-            iva_xquisito_client: ivaXquisitoClient,
-            iva_xquisito_restaurant: ivaXquisitoRestaurant,
-            xquisito_client_charge: xquisitoClientCharge,
-            xquisito_restaurant_charge: xquisitoRestaurantCharge,
-            xquisito_rate_applied: xquisitoRateApplied,
-            total_amount_charged: totalAmount,
-            transaction_by: transactionBy,
-          });
-        } catch (transactionError) {
-          console.error(
-            "❌ Error recording payment transaction:",
-            transactionError,
-          );
-        }
-
-        const userName = profile?.firstName || cartState.userName || "Usuario";
-        const paymentDetailsForSuccess = {
-          orderId: pickAndGoOrderId,
-          paymentId: applePayPaymentId || `apple-pay-${pickAndGoOrderId}`,
-          transactionId: pickAndGoOrderId,
-          totalAmountCharged: totalAmount,
-          amount: totalAmount,
-          baseAmount,
-          tipAmount,
-          xquisitoCommissionClient: xquisitoCommissionClient || 0,
-          ivaXquisitoClient: ivaXquisitoClient || 0,
-          xquisitoCommissionTotal: xquisitoCommissionTotal || 0,
-          userName,
-          customerName,
-          customerEmail,
-          customerPhone,
-          cardLast4: "AP",
-          cardBrand: "apple",
-          orderStatus: "confirmed",
-          paymentStatus: "paid",
-          createdAt: new Date().toISOString(),
-          dishOrders: completedOrderItems.map((item) => ({
-            dish_order_id: `item-${item.id}-${Date.now()}`,
-            item: item.name,
-            quantity: item.quantity || 1,
-            price: item.price,
-            extra_price: item.extraPrice || 0,
-            total_price:
-              item.price * (item.quantity || 1) + (item.extraPrice || 0),
-            guest_name: userName,
-            custom_fields: item.customFields || null,
-            image_url: item.images?.[0] || null,
-          })),
-          restaurantId: parseInt(restaurantId),
-          paymentMethodId: null,
-          scheduledPickupTime,
-          timestamp: Date.now(),
-        };
-
-        localStorage.setItem(
-          "xquisito-completed-payment",
-          JSON.stringify(paymentDetailsForSuccess),
-        );
-        const uniqueKey = `xquisito-payment-success-${pickAndGoOrderId}`;
-        sessionStorage.setItem(
-          uniqueKey,
-          JSON.stringify(paymentDetailsForSuccess),
-        );
-        sessionStorage.setItem("xquisito-current-payment-key", uniqueKey);
-        sessionStorage.setItem("xquisito-current-order-id", pickAndGoOrderId);
-
-        await clearCart();
-        setCompletedOrderId(pickAndGoOrderId);
-      } catch (error) {
-        console.error("Apple Pay order error:", error);
-        sessionStorage.removeItem("xquisito-current-order-id");
-        sessionStorage.removeItem("xquisito-current-payment-key");
-        setCompletedOrderId(null);
-        setErrorMessage(
-          error instanceof Error ? error.message : "Error desconocido",
-        );
-        setShowAnimation(false);
-      } finally {
-        setIsProcessing(false);
-      }
-      return;
-    }
-
-    // Flujo Google Pay — pago ya autorizado por Google, solo crear la orden
-    if (isGooglePayProcessing) {
-      setIsProcessing(true);
-      try {
-        let customerPhone: string | null = null;
-        if (user?.id && user?.phone) customerPhone = user.phone;
-
-        const customerName =
-          profile?.firstName || cartState.userName || "Invitado";
-        const customerEmail = user?.email || null;
-        const userId = user?.id || guestId || null;
-
-        if (!completedOrderItems || completedOrderItems.length === 0) {
-          throw new Error("El carrito está vacío");
-        }
-
-        const pickAndGoOrderResult = await pickAndGoService.createOrder({
-          clerk_user_id: userId,
-          customer_name: customerName,
-          customer_email: customerEmail || undefined,
-          customer_phone: customerPhone || undefined,
-          restaurant_id: parseInt(restaurantId),
-          branch_number: selectedBranchNumber || branchNumber || 1,
-          total_amount: totalAmount,
-          session_data: {
-            source: "card-selection",
-            payment_method_id: null,
-            total_amount: totalAmount,
-            base_amount: baseAmount,
-            tip_amount: tipAmount,
-          },
-          prep_metadata: {
-            estimated_minutes: 25,
-            items_count: completedOrderItems.length,
-            scheduled_pickup_time: scheduledPickupTime,
-          },
-          order_notes: orderNotes.trim() || null,
-        });
-        updateOrderNotes("");
-
-        if (!pickAndGoOrderResult.success || !pickAndGoOrderResult.data) {
-          const errorMsg =
-            typeof pickAndGoOrderResult.error === "string"
-              ? pickAndGoOrderResult.error
-              : (pickAndGoOrderResult.error as any)?.message ||
-                "Error al crear la orden Pick & Go";
-          throw new Error(errorMsg);
-        }
-
-        const pickAndGoOrderId = pickAndGoOrderResult.data.id;
-
-        for (const item of completedOrderItems) {
-          const images =
-            item.images && Array.isArray(item.images) && item.images.length > 0
-              ? item.images.filter((img) => img && typeof img === "string")
-              : [];
-          const customFields =
-            item.customFields &&
-            Array.isArray(item.customFields) &&
-            item.customFields.length > 0
-              ? item.customFields
-              : null;
-
-          const dishOrderResult = await pickAndGoService.createDishOrder(
-            pickAndGoOrderId,
-            {
-              item: item.name,
-              price: item.price,
-              quantity: item.quantity || 1,
-              userId: user?.id || null,
-              guestId: guestId || null,
-              guestName: customerName,
-              images,
-              customFields: customFields ?? undefined,
-              extraPrice: item.extraPrice || 0,
-              pickAndGoOrderId,
-              menuItemId: item.id?.toString(),
-            },
-          );
-
-          if (!dishOrderResult.success)
-            throw new Error("Error al crear el dish order");
-        }
-
-        await pickAndGoService.updatePaymentStatus(pickAndGoOrderId, "paid");
-        await pickAndGoService.updateOrderStatus(pickAndGoOrderId, "confirmed");
-
-        try {
-          const transactionBy = isGuest
-            ? guestName || "Invitado"
-            : [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
-          const xquisitoRateApplied =
-            subtotalForCommission > 0
-              ? (xquisitoCommissionTotal / subtotalForCommission) * 100
-              : 0;
-          await pickAndGoService.recordPaymentTransaction({
-            payment_method_id: null,
-            restaurant_id: parseInt(restaurantId),
-            id_table_order: null,
-            id_tap_orders_and_pay: null,
-            pick_and_go_order_id: pickAndGoOrderId,
-            base_amount: baseAmount,
-            tip_amount: tipAmount,
-            iva_tip: ivaTip,
-            xquisito_commission_total: xquisitoCommissionTotal,
-            xquisito_commission_client: xquisitoCommissionClient,
-            xquisito_commission_restaurant: xquisitoCommissionRestaurant,
-            iva_xquisito_client: ivaXquisitoClient,
-            iva_xquisito_restaurant: ivaXquisitoRestaurant,
-            xquisito_client_charge: xquisitoClientCharge,
-            xquisito_restaurant_charge: xquisitoRestaurantCharge,
-            xquisito_rate_applied: xquisitoRateApplied,
-            total_amount_charged: totalAmount,
-            transaction_by: transactionBy,
-          });
-        } catch (transactionError) {
-          console.error(
-            "❌ Error recording payment transaction:",
-            transactionError,
-          );
-        }
-
-        const userName = profile?.firstName || cartState.userName || "Usuario";
-        const paymentDetailsForSuccess = {
-          orderId: pickAndGoOrderId,
-          paymentId: googlePayPaymentId || `google-pay-${pickAndGoOrderId}`,
-          transactionId: pickAndGoOrderId,
-          totalAmountCharged: totalAmount,
-          amount: totalAmount,
-          baseAmount,
-          tipAmount,
-          xquisitoCommissionClient: xquisitoCommissionClient || 0,
-          ivaXquisitoClient: ivaXquisitoClient || 0,
-          xquisitoCommissionTotal: xquisitoCommissionTotal || 0,
-          userName,
-          customerName,
-          customerEmail,
-          customerPhone,
-          cardLast4: "GP",
-          cardBrand: "google",
-          orderStatus: "confirmed",
-          paymentStatus: "paid",
-          createdAt: new Date().toISOString(),
-          dishOrders: completedOrderItems.map((item) => ({
-            dish_order_id: `item-${item.id}-${Date.now()}`,
-            item: item.name,
-            quantity: item.quantity || 1,
-            price: item.price,
-            extra_price: item.extraPrice || 0,
-            total_price:
-              item.price * (item.quantity || 1) + (item.extraPrice || 0),
-            guest_name: userName,
-            custom_fields: item.customFields || null,
-            image_url: item.images?.[0] || null,
-          })),
-          restaurantId: parseInt(restaurantId),
-          paymentMethodId: null,
-          scheduledPickupTime,
-          timestamp: Date.now(),
-        };
-
-        localStorage.setItem(
-          "xquisito-completed-payment",
-          JSON.stringify(paymentDetailsForSuccess),
-        );
-        const uniqueKey = `xquisito-payment-success-${pickAndGoOrderId}`;
-        sessionStorage.setItem(
-          uniqueKey,
-          JSON.stringify(paymentDetailsForSuccess),
-        );
-        sessionStorage.setItem("xquisito-current-payment-key", uniqueKey);
-        sessionStorage.setItem("xquisito-current-order-id", pickAndGoOrderId);
-
-        await clearCart();
-        setCompletedOrderId(pickAndGoOrderId);
-      } catch (error) {
-        console.error("Google Pay order error:", error);
-        sessionStorage.removeItem("xquisito-current-order-id");
-        sessionStorage.removeItem("xquisito-current-payment-key");
-        setCompletedOrderId(null);
-        setErrorMessage(
-          error instanceof Error ? error.message : "Error desconocido",
-        );
-        setShowAnimation(false);
-      } finally {
-        setIsProcessing(false);
-      }
-      return;
-    }
-
-    if (!selectedPaymentMethodId) {
-      console.error("Missing required data for payment confirmation");
+    if (!items || items.length === 0) {
+      setErrorMessage("El carrito está vacío");
       setShowAnimation(false);
       return;
     }
 
-    setIsProcessing(true);
-
-    try {
-      // Si se seleccionó la tarjeta del sistema, omitir EcartPay y procesar directamente
-      if (selectedPaymentMethodId === "system-default-card") {
-        /*console.log(
-          "💳 Sistema: Procesando pago con tarjeta del sistema (sin EcartPay)",
-        );*/
-
-        // No necesitamos configurar token para tarjeta del sistema
-        // La autenticación ya está gestionada por el AuthContext
-
-        // Continuar con la creación directa de la orden Pick & Go
-        let customerPhone: string | null = null;
-
-        if (user?.id && user?.phone) {
-          customerPhone = user.phone;
-        }
-
-        const customerName =
-          profile?.firstName || cartState.userName || "Invitado";
-        const customerEmail = user?.email || null;
-
-        //console.log("📦 Creating optimized Pick & Go order flow...");
-
-        const userId = user?.id || guestId || null;
-
-        if (!cartState.items || cartState.items.length === 0) {
-          throw new Error("El carrito está vacío");
-        }
-
-        //console.log("📦 Cart items to process:", cartState.items);
-
-        // PASO 1: Crear la orden Pick & Go PRIMERO
-        //console.log("🚀 Creating Pick & Go order first...");
-
-        const pickAndGoOrderData = {
-          clerk_user_id: userId,
-          customer_name: customerName,
-          customer_email: customerEmail || undefined,
-          customer_phone: customerPhone || undefined,
-          restaurant_id: parseInt(restaurantId),
-          branch_number: selectedBranchNumber || branchNumber || 1,
-          total_amount: totalAmount,
-          session_data: {
-            source: "card-selection",
-            payment_method_id: null, // null para tarjeta del sistema
-            total_amount: totalAmount,
-            base_amount: baseAmount,
-            tip_amount: tipAmount,
-          },
-          prep_metadata: {
-            estimated_minutes: 25,
-            items_count: cartState.items.length,
-            scheduled_pickup_time: scheduledPickupTime,
-          },
-          order_notes: orderNotes.trim() || null,
-        };
-
-        const pickAndGoOrderResult =
-          await pickAndGoService.createOrder(pickAndGoOrderData);
-        updateOrderNotes("");
-
-        if (!pickAndGoOrderResult.success || !pickAndGoOrderResult.data) {
-          console.error(
-            "❌ Failed to create Pick & Go order:",
-            pickAndGoOrderResult,
-          );
-          const errorMessage =
-            typeof pickAndGoOrderResult.error === "string"
-              ? pickAndGoOrderResult.error
-              : (pickAndGoOrderResult.error as any)?.message ||
-                "Error al crear la orden Pick & Go";
-          throw new Error(errorMessage);
-        }
-
-        const pickAndGoOrderId = pickAndGoOrderResult.data.id;
-        /*console.log(
-          "✅ Pick & Go order created successfully:",
-          pickAndGoOrderId,
-        );*/
-
-        // PASO 2: Crear dish orders vinculados a la orden Pick & Go
-        for (const item of cartState.items) {
-          const images =
-            item.images && Array.isArray(item.images) && item.images.length > 0
-              ? item.images.filter((img) => img && typeof img === "string")
-              : [];
-
-          const customFields =
-            item.customFields &&
-            Array.isArray(item.customFields) &&
-            item.customFields.length > 0
-              ? item.customFields
-              : null;
-
-          const dishOrderData: any = {
-            item: item.name,
-            price: item.price,
-            quantity: item.quantity || 1,
-            userId: user?.id || null, // Solo enviar userId si es un usuario autenticado
-            guestId: guestId || null,
-            guestName: customerName,
-            images: images,
-            customFields: customFields,
-            extraPrice: item.extraPrice || 0,
-            pickAndGoOrderId: pickAndGoOrderId,
-            menuItemId: item.id,
-            specialInstructions: item.specialInstructions || null,
-          };
-
-          //console.log("Creating dish order:", dishOrderData);
-
-          const dishOrderResult = await pickAndGoService.createDishOrder(
-            pickAndGoOrderId,
-            dishOrderData,
-          );
-
-          if (!dishOrderResult.success) {
-            console.error("❌ Failed to create dish order:", dishOrderResult);
-            throw new Error("Error al crear el dish order");
-          }
-
-          /*console.log(
-            "✅ Dish order created - Full response:",
-            dishOrderResult,
-          );*/
-        }
-
-        // Actualizar payment status y order status
-        const paymentStatusResult = await pickAndGoService.updatePaymentStatus(
-          pickAndGoOrderId,
-          "paid",
-        );
-
-        if (!paymentStatusResult.success) {
-          console.warn(
-            "⚠️ Failed to update Pick & Go payment status:",
-            paymentStatusResult.error,
-          );
-        } else {
-          //console.log("✅ Pick & Go payment status updated to 'paid'");
-        }
-
-        const orderStatusResult = await pickAndGoService.updateOrderStatus(
-          pickAndGoOrderId,
-          "confirmed",
-        );
-
-        if (!orderStatusResult.success) {
-          console.warn(
-            "⚠️ Failed to update Pick & Go order status:",
-            orderStatusResult.error,
-          );
-        } else {
-          //console.log("✅ Pick & Go order status updated to 'confirmed'");
-        }
-
-        // Registrar transacción con payment_method_id null para la tarjeta del sistema
-        try {
-          const xquisitoRateApplied =
-            subtotalForCommission > 0
-              ? (xquisitoCommissionTotal / subtotalForCommission) * 100
-              : 0;
-
-          const transactionBy = isGuest
-            ? guestName || "Invitado"
-            : [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
-
-          await pickAndGoService.recordPaymentTransaction({
-            payment_method_id: null, // null para tarjeta del sistema
-            restaurant_id: parseInt(restaurantId),
-            id_table_order: null,
-            id_tap_orders_and_pay: null,
-            pick_and_go_order_id: pickAndGoOrderId,
-            base_amount: baseAmount,
-            tip_amount: tipAmount,
-            iva_tip: ivaTip,
-            xquisito_commission_total: xquisitoCommissionTotal,
-            xquisito_commission_client: xquisitoCommissionClient,
-            xquisito_commission_restaurant: xquisitoCommissionRestaurant,
-            iva_xquisito_client: ivaXquisitoClient,
-            iva_xquisito_restaurant: ivaXquisitoRestaurant,
-            xquisito_client_charge: xquisitoClientCharge,
-            xquisito_restaurant_charge: xquisitoRestaurantCharge,
-            xquisito_rate_applied: xquisitoRateApplied,
-            total_amount_charged: totalAmount,
-            transaction_by: transactionBy,
-          });
-          //console.log("✅ Payment transaction recorded successfully");
-        } catch (transactionError) {
-          console.error(
-            "❌ Error recording payment transaction:",
-            transactionError,
-          );
-        }
-
-        // Preparar datos para guardar
-        const userName = profile?.firstName || cartState.userName || "Usuario";
-        const paymentDetailsForSuccess = {
-          orderId: pickAndGoOrderId,
-          paymentId: `pick-go-${pickAndGoOrderId}`,
-          transactionId: pickAndGoOrderId,
-          totalAmountCharged: totalAmount,
-          amount: totalAmount,
-          baseAmount: baseAmount,
-          tipAmount: tipAmount,
-          xquisitoCommissionClient: xquisitoCommissionClient || 0,
-          ivaXquisitoClient: ivaXquisitoClient || 0,
-          xquisitoCommissionTotal: xquisitoCommissionTotal || 0,
-          userName: userName,
-          customerName: customerName,
-          customerEmail: customerEmail,
-          customerPhone: customerPhone,
-          cardLast4: "1234",
-          cardBrand: "visa",
-          orderStatus: "confirmed",
-          paymentStatus: "paid",
-          createdAt: new Date().toISOString(),
-          dishOrders: cartState.items.map((item) => ({
-            dish_order_id: `item-${item.id}-${Date.now()}`,
-            item: item.name,
-            quantity: item.quantity || 1,
-            price: item.price,
-            extra_price: item.extraPrice || 0,
-            total_price:
-              item.price * (item.quantity || 1) + (item.extraPrice || 0),
-            guest_name: userName,
-            custom_fields: item.customFields || null,
-            image_url: item.images?.[0] || null,
-          })),
-          restaurantId: parseInt(restaurantId),
-          paymentMethodId: null,
-          scheduledPickupTime: scheduledPickupTime,
-          timestamp: Date.now(),
-        };
-
-        /*console.log(
-          "💾 Saving payment details for payment-success:",
-          paymentDetailsForSuccess,
-        );*/
-        localStorage.setItem(
-          "xquisito-completed-payment",
-          JSON.stringify(paymentDetailsForSuccess),
-        );
-
-        const uniqueKey = `xquisito-payment-success-${pickAndGoOrderId}`;
-        sessionStorage.setItem(
-          uniqueKey,
-          JSON.stringify(paymentDetailsForSuccess),
-        );
-
-        // Guardar referencia al key actual para fácil acceso
-        sessionStorage.setItem("xquisito-current-payment-key", uniqueKey);
-
-        // IMPORTANTE: Guardar el orderId directamente en sessionStorage para la navegación
-        sessionStorage.setItem("xquisito-current-order-id", pickAndGoOrderId);
-
-        // Limpiar el carrito después de completar la orden
-        await clearCart();
-        //console.log("Cart cleared after successful order");
-
-        // Guardar orderId para la navegación después de la animación
-        setCompletedOrderId(pickAndGoOrderId);
-        /*console.log(
-          "Order processing completed, orderId saved:",
-          pickAndGoOrderId,
-        );*/
-
-        // NO redirigir aquí - dejar que la animación continúe
-        // El timer navigateTimer (9s) en OrderAnimation se encargará de la redirección
-        return;
-      }
-
-      // Paso 1: Procesar pago con endpoint existente
-      const paymentData = {
-        paymentMethodId: selectedPaymentMethodId!,
-        amount: totalAmount,
-        currency: "MXN",
-        description: `Pick & Go Order - ${profile?.firstName || cartState.userName || "Invitado"}`,
-        orderId: `order-${Date.now()}`,
-        tableNumber: "PICKUP", // Pick & Go usa un valor especial
-        restaurantId,
-        installments: selectedMSI || undefined,
-      };
-
-      //console.log("💳 Processing payment:", paymentData);
-
-      const paymentResult = await paymentService.processPayment(paymentData);
-
-      if (!paymentResult.success) {
-        const errorMsg =
-          (paymentResult as any).error?.message || "Error al procesar el pago";
-        throw new Error(errorMsg);
-      }
-
-      //console.log("Payment successful:", paymentResult);
-
-      let customerPhone: string | null = null;
-
-      if (user?.id && user?.phone) {
-        customerPhone = user.phone;
-      }
-
-      // Paso 3: Crear dish orders individuales para cada item del carrito
-      const customerName =
-        profile?.firstName || cartState.userName || "Invitado";
-      const customerEmail = user?.email || null;
-
-      // Obtener user_id (puede ser el ID de Supabase Auth o el guest_id)
-      const userId = user?.id || guestId || null;
-
-      // Validar que hay items en el carrito
-      if (!cartState.items || cartState.items.length === 0) {
-        throw new Error("El carrito está vacío");
-      }
-
-      const pickAndGoOrderData = {
-        user_id: userId,
-        customer_name: customerName,
-        customer_email: customerEmail || undefined,
-        customer_phone: customerPhone || undefined,
-        restaurant_id: parseInt(restaurantId),
-        branch_number: selectedBranchNumber || branchNumber || 1,
-        total_amount: totalAmount,
-        session_data: {
-          source: "card-selection",
-          payment_method_id: selectedPaymentMethodId,
-          total_amount: totalAmount,
-          base_amount: baseAmount,
-          tip_amount: tipAmount,
-        },
-        prep_metadata: {
-          estimated_minutes: 25,
-          items_count: cartState.items.length,
-          scheduled_pickup_time: scheduledPickupTime,
-        },
-        order_notes: orderNotes.trim() || null,
-      };
-
-      const pickAndGoOrderResult =
-        await pickAndGoService.createOrder(pickAndGoOrderData);
-      updateOrderNotes("");
-
-      if (!pickAndGoOrderResult.success || !pickAndGoOrderResult.data) {
-        console.error(
-          "❌ Failed to create Pick & Go order:",
-          pickAndGoOrderResult,
-        );
-        const errorMessage =
-          typeof pickAndGoOrderResult.error === "string"
-            ? pickAndGoOrderResult.error
-            : (pickAndGoOrderResult.error as any)?.message ||
-              "Error al crear la orden Pick & Go";
-        throw new Error(errorMessage);
-      }
-
-      const pickAndGoOrderId = pickAndGoOrderResult.data.id;
-      //console.log("✅ Pick & Go order created successfully:", pickAndGoOrderId);
-
-      // PASO 3.2: Crear dish orders vinculados a la orden Pick & Go
-      for (const item of cartState.items) {
-        // Preparar images - filtrar solo strings válidos
-        const images =
-          item.images && Array.isArray(item.images) && item.images.length > 0
-            ? item.images.filter((img) => img && typeof img === "string")
-            : [];
-
-        // Preparar custom_fields
-        const customFields =
-          item.customFields &&
-          Array.isArray(item.customFields) &&
-          item.customFields.length > 0
-            ? item.customFields
-            : null;
-
-        const dishOrderData: any = {
-          item: item.name,
-          price: item.price,
-          quantity: item.quantity || 1,
-          userId: user?.id || null, // Solo enviar userId si es un usuario autenticado
-          guestId: guestId || null,
-          guestName: customerName,
-          images: images, // Array de strings
-          customFields: customFields, // JSONB o null
-          extraPrice: item.extraPrice || 0,
-          pickAndGoOrderId: pickAndGoOrderId, // 🔑 VINCULACIÓN CON PICK & GO ORDER
-          menuItemId: item.id,
-          specialInstructions: item.specialInstructions || null,
-        };
-
-        //console.log("Creating dish order:", dishOrderData);
-
-        const dishOrderResult = await pickAndGoService.createDishOrder(
-          pickAndGoOrderId,
-          dishOrderData,
-        );
-
-        if (!dishOrderResult.success) {
-          console.error("❌ Failed to create dish order:", dishOrderResult);
-          throw new Error("Error al crear el dish order");
-        }
-      }
-
-      // Actualizar payment status a 'paid'
-      const paymentStatusResult = await pickAndGoService.updatePaymentStatus(
-        pickAndGoOrderId,
-        "paid",
-      );
-
-      if (!paymentStatusResult.success) {
-        console.warn(
-          "⚠️ Failed to update Pick & Go payment status:",
-          paymentStatusResult.error,
-        );
-      } else {
-        //console.log("Pick & Go payment status updated to 'paid'");
-      }
-
-      // Actualizar order status a 'confirmed' (no 'completed' aún, está en preparación)
-      const orderStatusResult = await pickAndGoService.updateOrderStatus(
-        pickAndGoOrderId,
-        "confirmed",
-      );
-
-      if (!orderStatusResult.success) {
-        console.warn(
-          "⚠️ Failed to update Pick & Go order status:",
-          orderStatusResult.error,
-        );
-      } else {
-        //console.log("Pick & Go order status updated to 'confirmed'");
-      }
-
-      // Paso 5: Registrar transacción para trazabilidad
-      if (selectedPaymentMethodId) {
-        try {
-          const xquisitoRateApplied =
-            subtotalForCommission > 0
-              ? (xquisitoCommissionTotal / subtotalForCommission) * 100
-              : 0;
-
-          const transactionBy = isGuest
-            ? guestName || "Invitado"
-            : [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
-
-          await pickAndGoService.recordPaymentTransaction({
-            payment_method_id: selectedPaymentMethodId,
-            restaurant_id: parseInt(restaurantId),
-            id_table_order: null,
-            id_tap_orders_and_pay: null, // Para Pick & Go no hay tap_orders
-            pick_and_go_order_id: pickAndGoOrderId, // Nueva columna para Pick & Go
-            base_amount: baseAmount,
-            tip_amount: tipAmount,
-            iva_tip: ivaTip,
-            xquisito_commission_total: xquisitoCommissionTotal,
-            xquisito_commission_client: xquisitoCommissionClient,
-            xquisito_commission_restaurant: xquisitoCommissionRestaurant,
-            iva_xquisito_client: ivaXquisitoClient,
-            iva_xquisito_restaurant: ivaXquisitoRestaurant,
-            xquisito_client_charge: xquisitoClientCharge,
-            xquisito_restaurant_charge: xquisitoRestaurantCharge,
-            xquisito_rate_applied: xquisitoRateApplied,
-            total_amount_charged: totalAmount,
-            transaction_by: transactionBy,
-          });
-          //console.log("✅ Payment transaction recorded successfully");
-        } catch (transactionError) {
-          console.error(
-            "❌ Error recording payment transaction:",
-            transactionError,
-          );
-          // Don't throw - continue with payment flow even if transaction recording fails
-        }
-      }
-
-      // Preparar y guardar detalles del pago para payment-success
+    const customerName = profile?.firstName || cartState.userName || "Invitado";
+    const customerEmail = user?.email || null;
+    const customerPhone = user?.id && user?.phone ? user.phone : null;
+    const userId = user?.id || guestId || null;
+    const transactionBy =
+      (isGuest
+        ? guestName || "Invitado"
+        : [profile?.firstName, profile?.lastName].filter(Boolean).join(" ")) ||
+      customerName;
+    const xquisitoRateApplied =
+      subtotalForCommission > 0
+        ? (xquisitoCommissionTotal / subtotalForCommission) * 100
+        : 0;
+
+    const mappedItems = items.map((item) => ({
+      item: item.name,
+      price: item.price,
+      quantity: item.quantity || 1,
+      images:
+        item.images && Array.isArray(item.images) && item.images.length > 0
+          ? item.images.filter((img) => typeof img === "string")
+          : [],
+      customFields:
+        item.customFields &&
+        Array.isArray(item.customFields) &&
+        item.customFields.length > 0
+          ? item.customFields
+          : null,
+      extraPrice: item.extraPrice || 0,
+      menuItemId: item.id?.toString() ?? null,
+      specialInstructions: item.specialInstructions || null,
+    }));
+
+    const commonBody = {
+      clerk_user_id: userId,
+      customer_name: customerName,
+      customer_email: customerEmail,
+      customer_phone: customerPhone,
+      restaurant_id: parseInt(restaurantId),
+      branch_number: selectedBranchNumber || branchNumber || 1,
+      total_amount: totalAmount,
+      prep_metadata: {
+        estimated_minutes: 25,
+        items_count: items.length,
+        scheduled_pickup_time: scheduledPickupTime,
+      },
+      order_notes: orderNotes.trim() || null,
+      items: mappedItems,
+      base_amount: baseAmount,
+      tip_amount: tipAmount,
+      iva_tip: ivaTip,
+      xquisito_commission_total: xquisitoCommissionTotal,
+      xquisito_commission_client: xquisitoCommissionClient,
+      xquisito_commission_restaurant: xquisitoCommissionRestaurant,
+      iva_xquisito_client: ivaXquisitoClient,
+      iva_xquisito_restaurant: ivaXquisitoRestaurant,
+      xquisito_client_charge: xquisitoClientCharge,
+      xquisito_restaurant_charge: xquisitoRestaurantCharge,
+      xquisito_rate_applied: xquisitoRateApplied,
+      total_amount_charged: totalAmount,
+      transaction_by: transactionBy,
+      is_guest: isGuest,
+      user_id: userId,
+    };
+
+    const saveAndFinalize = (
+      pickAndGoOrderId: string,
+      paymentId: string,
+      transactionId: string,
+      cardLast4: string,
+      cardBrand: string,
+      paymentMethodId: string | null,
+    ) => {
       const userName = profile?.firstName || cartState.userName || "Usuario";
       const paymentDetailsForSuccess = {
         orderId: pickAndGoOrderId,
-        paymentId:
-          paymentResult.data?.paymentId || `pick-go-${pickAndGoOrderId}`,
-        transactionId: paymentResult.data?.transactionId || pickAndGoOrderId,
+        paymentId,
+        transactionId,
         totalAmountCharged: totalAmount,
         amount: totalAmount,
-        baseAmount: baseAmount,
-        tipAmount: tipAmount,
+        baseAmount,
+        tipAmount,
         xquisitoCommissionClient: xquisitoCommissionClient || 0,
         ivaXquisitoClient: ivaXquisitoClient || 0,
         xquisitoCommissionTotal: xquisitoCommissionTotal || 0,
-        userName: userName,
-        customerName: customerName,
-        customerEmail: customerEmail,
-        customerPhone: customerPhone,
-        cardLast4:
-          paymentMethods.find((pm) => pm.id === selectedPaymentMethodId)
-            ?.lastFourDigits || "****",
-        cardBrand:
-          paymentMethods.find((pm) => pm.id === selectedPaymentMethodId)
-            ?.cardBrand || "unknown",
+        userName,
+        customerName,
+        customerEmail,
+        customerPhone,
+        cardLast4,
+        cardBrand,
         orderStatus: "confirmed",
         paymentStatus: "paid",
         createdAt: new Date().toISOString(),
-        // Transform cart items to dishOrders format expected by payment-success
-        dishOrders: cartState.items.map((item) => ({
+        dishOrders: items.map((item) => ({
           dish_order_id: `item-${item.id}-${Date.now()}`,
           item: item.name,
           quantity: item.quantity || 1,
@@ -1355,59 +566,205 @@ export default function CardSelectionPage() {
           custom_fields: item.customFields || null,
           image_url: item.images?.[0] || null,
         })),
-        // Additional metadata
         restaurantId: parseInt(restaurantId),
-        paymentMethodId: selectedPaymentMethodId,
-        scheduledPickupTime: scheduledPickupTime,
+        paymentMethodId,
+        scheduledPickupTime,
         timestamp: Date.now(),
       };
 
-      // Guardar en localStorage para payment-success
-      /*console.log(
-        "💾 Saving payment details for payment-success:",
-        paymentDetailsForSuccess,
-      );*/
       localStorage.setItem(
         "xquisito-completed-payment",
         JSON.stringify(paymentDetailsForSuccess),
       );
-
-      // También guardarlo con ID único para evitar conflictos
       const uniqueKey = `xquisito-payment-success-${pickAndGoOrderId}`;
       sessionStorage.setItem(
         uniqueKey,
         JSON.stringify(paymentDetailsForSuccess),
       );
-
-      // Guardar referencia al key actual para fácil acceso
       sessionStorage.setItem("xquisito-current-payment-key", uniqueKey);
-
-      // IMPORTANTE: Guardar el orderId directamente en sessionStorage para la navegación
       sessionStorage.setItem("xquisito-current-order-id", pickAndGoOrderId);
+    };
 
-      // Limpiar el carrito después de completar la orden
+    setIsProcessing(true);
+
+    try {
+      // ── Apple Pay ──────────────────────────────────────────────────────────
+      if (isApplePayProcessing) {
+        const result = await pickAndGoService.confirmOrder({
+          ...commonBody,
+          payment_method_id: null,
+          session_data: {
+            source: "card-selection",
+            payment_method_id: null,
+            total_amount: totalAmount,
+            base_amount: baseAmount,
+            tip_amount: tipAmount,
+          },
+        });
+
+        if (!result.success || !result.data?.order) {
+          throw new Error(
+            (result.error as any)?.message ||
+              result.error ||
+              "Error al confirmar la orden",
+          );
+        }
+
+        const orderId = result.data.order.id;
+        updateOrderNotes("");
+        saveAndFinalize(
+          orderId,
+          applePayPaymentId || `apple-pay-${orderId}`,
+          orderId,
+          "AP",
+          "apple",
+          null,
+        );
+        await clearCart();
+        setCompletedOrderId(orderId);
+        return;
+      }
+
+      // ── Google Pay ─────────────────────────────────────────────────────────
+      if (isGooglePayProcessing) {
+        const result = await pickAndGoService.confirmOrder({
+          ...commonBody,
+          payment_method_id: null,
+          session_data: {
+            source: "card-selection",
+            payment_method_id: null,
+            total_amount: totalAmount,
+            base_amount: baseAmount,
+            tip_amount: tipAmount,
+          },
+        });
+
+        if (!result.success || !result.data?.order) {
+          throw new Error(
+            (result.error as any)?.message ||
+              result.error ||
+              "Error al confirmar la orden",
+          );
+        }
+
+        const orderId = result.data.order.id;
+        updateOrderNotes("");
+        saveAndFinalize(
+          orderId,
+          googlePayPaymentId || `google-pay-${orderId}`,
+          orderId,
+          "GP",
+          "google",
+          null,
+        );
+        await clearCart();
+        setCompletedOrderId(orderId);
+        return;
+      }
+
+      if (!selectedPaymentMethodId) {
+        setShowAnimation(false);
+        return;
+      }
+
+      // ── Tarjeta del sistema (sin EcartPay) ─────────────────────────────────
+      if (selectedPaymentMethodId === "system-default-card") {
+        const result = await pickAndGoService.confirmOrder({
+          ...commonBody,
+          payment_method_id: null,
+          session_data: {
+            source: "card-selection",
+            payment_method_id: null,
+            total_amount: totalAmount,
+            base_amount: baseAmount,
+            tip_amount: tipAmount,
+          },
+        });
+
+        if (!result.success || !result.data?.order) {
+          throw new Error(
+            (result.error as any)?.message ||
+              result.error ||
+              "Error al confirmar la orden",
+          );
+        }
+
+        const orderId = result.data.order.id;
+        updateOrderNotes("");
+        saveAndFinalize(
+          orderId,
+          `pick-go-${orderId}`,
+          orderId,
+          "1234",
+          "visa",
+          null,
+        );
+        await clearCart();
+        setCompletedOrderId(orderId);
+        return;
+      }
+
+      // ── Tarjeta guardada (EcartPay primero) ────────────────────────────────
+      const paymentResult = await paymentService.processPayment({
+        paymentMethodId: selectedPaymentMethodId,
+        amount: totalAmount,
+        currency: "MXN",
+        description: `Pick & Go Order - ${customerName}`,
+        orderId: `order-${Date.now()}`,
+        tableNumber: "PICKUP",
+        restaurantId,
+        installments: selectedMSI || undefined,
+      });
+
+      if (!paymentResult.success) {
+        throw new Error(
+          (paymentResult as any).error?.message || "Error al procesar el pago",
+        );
+      }
+
+      const confirmResult = await pickAndGoService.confirmOrder({
+        ...commonBody,
+        payment_method_id: selectedPaymentMethodId,
+        session_data: {
+          source: "card-selection",
+          payment_method_id: selectedPaymentMethodId,
+          total_amount: totalAmount,
+          base_amount: baseAmount,
+          tip_amount: tipAmount,
+        },
+      });
+
+      if (!confirmResult.success || !confirmResult.data?.order) {
+        throw new Error(
+          (confirmResult.error as any)?.message ||
+            confirmResult.error ||
+            "Error al confirmar la orden",
+        );
+      }
+
+      const orderId = confirmResult.data.order.id;
+      const selectedPM = paymentMethods.find(
+        (pm) => pm.id === selectedPaymentMethodId,
+      );
+      updateOrderNotes("");
+      saveAndFinalize(
+        orderId,
+        paymentResult.data?.paymentId || `pick-go-${orderId}`,
+        paymentResult.data?.transactionId || orderId,
+        selectedPM?.lastFourDigits || "****",
+        selectedPM?.cardBrand || "unknown",
+        selectedPaymentMethodId,
+      );
       await clearCart();
-      //console.log("🧹 Cart cleared after successful order");
-
-      // Guardar orderId para la navegación después de la animación
-      setCompletedOrderId(pickAndGoOrderId);
-      /*console.log(
-        "✅ Order processing completed, orderId saved:",
-        pickAndGoOrderId,
-      );*/
-
-      // NO redirigir aquí - dejar que la animación continúe
-      // El timer navigateTimer (9s) en OrderAnimation se encargará de la redirección
+      setCompletedOrderId(orderId);
     } catch (error) {
       console.error("Payment/Order error:", error);
-      // Limpiar IDs de orden para evitar navegación a payment-success con datos viejos
       sessionStorage.removeItem("xquisito-current-order-id");
       sessionStorage.removeItem("xquisito-current-payment-key");
       setCompletedOrderId(null);
-      const errMsg =
-        error instanceof Error ? error.message : "Error desconocido";
-      setErrorMessage(errMsg);
-      // Si hay error, ocultar la animación
+      setErrorMessage(
+        error instanceof Error ? error.message : "Error desconocido",
+      );
       setShowAnimation(false);
     } finally {
       setIsProcessing(false);
@@ -1733,7 +1090,7 @@ export default function CardSelectionPage() {
                   </h3>
                   <div className="space-y-2.5">
                     {paymentMethods
-                      .filter((method) => method.id !== "system-default-card")
+                      .filter((method) => isDev || method.id !== "system-default-card")
                       .map((method) => (
                         <div
                           key={method.id}

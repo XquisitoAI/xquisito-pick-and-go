@@ -140,6 +140,53 @@ export interface ActiveOrderResponse {
   orders?: ActiveOrderData[];
 }
 
+export interface ConfirmOrderItem {
+  item: string;
+  price: number;
+  quantity: number;
+  images?: string[];
+  customFields?: any[] | null;
+  extraPrice?: number;
+  menuItemId?: string | null;
+  specialInstructions?: string | null;
+}
+
+export interface ConfirmOrderRequest {
+  clerk_user_id: string | null;
+  customer_name: string;
+  customer_email?: string | null;
+  customer_phone?: string | null;
+  restaurant_id: number;
+  branch_number: number;
+  total_amount: number;
+  session_data?: Record<string, any>;
+  prep_metadata?: Record<string, any>;
+  order_notes?: string | null;
+  items: ConfirmOrderItem[];
+  payment_method_id: string | null;
+  base_amount: number;
+  tip_amount: number;
+  iva_tip: number;
+  xquisito_commission_total: number;
+  xquisito_commission_client: number;
+  xquisito_commission_restaurant: number;
+  iva_xquisito_client: number;
+  iva_xquisito_restaurant: number;
+  xquisito_client_charge: number;
+  xquisito_restaurant_charge: number;
+  xquisito_rate_applied: number;
+  total_amount_charged: number;
+  transaction_by: string;
+  currency?: string;
+  is_guest?: boolean;
+  user_id?: string | null;
+}
+
+export interface ConfirmOrderResponse {
+  order: PickAndGoOrder;
+  transaction: any | null;
+}
+
 export interface RecordPaymentTransactionRequest {
   payment_method_id?: string | null;
   restaurant_id: number;
@@ -388,6 +435,16 @@ class PickAndGoService {
         body: JSON.stringify(orderData),
       },
     );
+  }
+
+  // Confirmar orden de forma atómica: crea orden, dish orders y transacción en una sola llamada
+  async confirmOrder(
+    data: ConfirmOrderRequest,
+  ): Promise<ApiResponse<ConfirmOrderResponse>> {
+    return this.request<ConfirmOrderResponse>("/pick-and-go/orders/confirm", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 
   // Registrar una transacción de pago

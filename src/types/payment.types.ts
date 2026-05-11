@@ -30,6 +30,7 @@ export interface ProcessPaymentRequest {
   orderId?: string;
   tableNumber?: string;
   restaurantId?: string;
+  installments?: number;
 }
 
 export interface PaymentHistory {
