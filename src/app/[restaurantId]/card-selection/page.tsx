@@ -731,6 +731,7 @@ export default function CardSelectionPage() {
         ...commonBody,
         payment_method_id: selectedPaymentMethodId,
         payment_source: "saved_card",
+        ecartpay_order_id: (paymentResult as any).payment?.id ?? null,
         session_data: {
           source: "card-selection",
           payment_method_id: selectedPaymentMethodId,
