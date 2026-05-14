@@ -230,7 +230,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const effectiveRestaurantId = restaurantId || guestRestaurantId;
 
       if (!authLoading && user?.id && effectiveRestaurantId) {
-        const storedGuestId = localStorage.getItem("xquisito-guest-id");
+        const storedGuestId = localStorage.getItem("even-guest-id");
 
         if (storedGuestId) {
           try {
@@ -244,7 +244,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
               if (typeof window !== "undefined") {
                 window.dispatchEvent(
-                  new CustomEvent("xquisito:cartMigrationComplete"),
+                  new CustomEvent("even:cartMigrationComplete"),
                 );
               }
             } else {

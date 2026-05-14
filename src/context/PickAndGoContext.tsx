@@ -466,6 +466,7 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
         branch_number: selectedBranchNumber || 1,
         payment_status: "pending",
         order_status: "active",
+        cooking_status: "preparing",
         session_data: {
           ...state.sessionData,
           cartItemCount: state.cartItemCount,
@@ -517,10 +518,10 @@ export function PickAndGoProvider({ children }: PickAndGoProviderProps) {
     try {
       // Save guest info BEFORE getting authInfo if not authenticated
       if (!user && typeof window !== "undefined" && state.customerInfo?.name) {
-        localStorage.setItem("xquisito-guest-name", state.customerInfo.name);
-        if (!localStorage.getItem("xquisito-guest-id")) {
+        localStorage.setItem("even-guest-name", state.customerInfo.name);
+        if (!localStorage.getItem("even-guest-id")) {
           const newGuestId = generateGuestId();
-          localStorage.setItem("xquisito-guest-id", newGuestId);
+          localStorage.setItem("even-guest-id", newGuestId);
         }
       }
 

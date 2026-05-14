@@ -44,7 +44,7 @@ export interface CartItem {
  */
 export const areCustomFieldsEqual = (
   cf1?: CustomField[],
-  cf2?: CustomField[]
+  cf2?: CustomField[],
 ): boolean => {
   if (!cf1 && !cf2) return true;
   if (!cf1 || !cf2) return false;
@@ -71,7 +71,7 @@ export const calculateTotals = (items: CartItem[]) => {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce(
     (sum, item) => sum + (item.price + (item.extraPrice || 0)) * item.quantity,
-    0
+    0,
   );
   return { totalItems, totalPrice };
 };
@@ -82,12 +82,12 @@ export const calculateTotals = (items: CartItem[]) => {
  */
 export const findExistingCartItem = (
   items: CartItem[],
-  targetItem: Partial<CartItem>
+  targetItem: Partial<CartItem>,
 ): CartItem | undefined => {
   return items.find(
     (item) =>
       item.id === targetItem.id &&
-      areCustomFieldsEqual(item.customFields, targetItem.customFields)
+      areCustomFieldsEqual(item.customFields, targetItem.customFields),
   );
 };
 
@@ -97,7 +97,7 @@ export const findExistingCartItem = (
  */
 export const addItemToCart = (
   currentItems: CartItem[],
-  newItem: CartItem
+  newItem: CartItem,
 ): CartItem[] => {
   const existingItem = findExistingCartItem(currentItems, newItem);
 
@@ -107,7 +107,7 @@ export const addItemToCart = (
       item.id === newItem.id &&
       areCustomFieldsEqual(item.customFields, newItem.customFields)
         ? { ...item, quantity: item.quantity + newItem.quantity }
-        : item
+        : item,
     );
   } else {
     // New item or different custom fields - add to cart
@@ -123,14 +123,14 @@ export const updateCartItemQuantity = (
   currentItems: CartItem[],
   itemId: string,
   quantity: number,
-  customFields?: CustomField[]
+  customFields?: CustomField[],
 ): CartItem[] => {
   return currentItems
     .map((item) =>
       item.id === itemId &&
       areCustomFieldsEqual(item.customFields, customFields)
         ? { ...item, quantity: Math.max(0, quantity) }
-        : item
+        : item,
     )
     .filter((item) => item.quantity > 0);
 };
@@ -141,13 +141,16 @@ export const updateCartItemQuantity = (
 export const removeItemFromCart = (
   currentItems: CartItem[],
   itemId: string,
-  customFields?: CustomField[]
+  customFields?: CustomField[],
 ): CartItem[] => {
   if (customFields) {
     // Remove specific variant with custom fields
     return currentItems.filter(
       (item) =>
-        !(item.id === itemId && areCustomFieldsEqual(item.customFields, customFields))
+        !(
+          item.id === itemId &&
+          areCustomFieldsEqual(item.customFields, customFields)
+        ),
     );
   } else {
     // Remove all variants of this item
@@ -170,31 +173,38 @@ export const clearCart = (): CartItem[] => {
  * Determine user authentication status and info
  * Based on TableContext authentication logic [lines 814-826]
  */
-export const getUserAuthInfo = (isLoaded: boolean, user: any, profile?: any) => {
+export const getUserAuthInfo = (
+  isLoaded: boolean,
+  user: any,
+  profile?: any,
+) => {
   const isAuthenticated = isLoaded && user;
 
   if (isAuthenticated) {
     return {
       isAuthenticated: true,
       userId: user.id,
-      displayName: profile?.fullName || profile?.firstName || user.email || 'User',
+      displayName:
+        profile?.fullName || profile?.firstName || user.email || "User",
       email: user.email,
       guestId: null,
     };
   } else {
     // Guest user logic
-    const guestId = typeof window !== 'undefined'
-      ? localStorage.getItem('xquisito-guest-id')
-      : null;
+    const guestId =
+      typeof window !== "undefined"
+        ? localStorage.getItem("even-guest-id")
+        : null;
 
-    const guestName = typeof window !== 'undefined'
-      ? localStorage.getItem('xquisito-guest-name')
-      : null;
+    const guestName =
+      typeof window !== "undefined"
+        ? localStorage.getItem("even-guest-name")
+        : null;
 
     return {
       isAuthenticated: false,
       userId: null,
-      displayName: guestName || 'Guest',
+      displayName: guestName || "Guest",
       email: null,
       guestId,
     };
@@ -205,10 +215,10 @@ export const getUserAuthInfo = (isLoaded: boolean, user: any, profile?: any) => 
  * Save guest information to localStorage
  */
 export const saveGuestInfo = (name: string, guestId?: string) => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('xquisito-guest-name', name);
+  if (typeof window !== "undefined") {
+    localStorage.setItem("even-guest-name", name);
     if (guestId) {
-      localStorage.setItem('xquisito-guest-id', guestId);
+      localStorage.setItem("even-guest-id", guestId);
     }
   }
 };
@@ -231,9 +241,9 @@ export const generateGuestId = (): string => {
 export const validateCartItem = (item: Partial<CartItem>): boolean => {
   return !!(
     item.name &&
-    typeof item.price === 'number' &&
+    typeof item.price === "number" &&
     item.price >= 0 &&
-    typeof item.quantity === 'number' &&
+    typeof item.quantity === "number" &&
     item.quantity > 0
   );
 };
@@ -244,14 +254,16 @@ export const validateCartItem = (item: Partial<CartItem>): boolean => {
 export const validateCustomFields = (customFields?: CustomField[]): boolean => {
   if (!customFields) return true;
 
-  return customFields.every(field =>
-    field.fieldId &&
-    field.fieldName &&
-    Array.isArray(field.selectedOptions) &&
-    field.selectedOptions.every(option =>
-      option.optionId &&
-      option.optionName &&
-      typeof option.price === 'number'
-    )
+  return customFields.every(
+    (field) =>
+      field.fieldId &&
+      field.fieldName &&
+      Array.isArray(field.selectedOptions) &&
+      field.selectedOptions.every(
+        (option) =>
+          option.optionId &&
+          option.optionName &&
+          typeof option.price === "number",
+      ),
   );
 };

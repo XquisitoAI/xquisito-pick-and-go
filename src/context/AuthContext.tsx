@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Verificar si el token está por expirar o ya expiró
-        const expiresAt = localStorage.getItem("xquisito_expires_at");
+        const expiresAt = localStorage.getItem("even_expires_at");
         if (expiresAt) {
           const now = Math.floor(Date.now() / 1000);
           const expiration = parseInt(expiresAt);
@@ -163,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // También refrescar cuando la app vuelve a estar visible
     const handleVisibilityChange = async () => {
       if (document.visibilityState === "visible") {
-        const expiresAt = localStorage.getItem("xquisito_expires_at");
+        const expiresAt = localStorage.getItem("even_expires_at");
         if (expiresAt) {
           const now = Math.floor(Date.now() / 1000);
           const expiration = parseInt(expiresAt);
@@ -300,11 +300,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Error de red o del servidor — conservar la sesión para no desloguear
       // al usuario cuando el móvil acaba de despertar con red inestable.
-      console.warn("⚠️ Could not load profile on startup, keeping session:", response.error);
+      console.warn(
+        "⚠️ Could not load profile on startup, keeping session:",
+        response.error,
+      );
       return true;
     } catch (error) {
       // Error de red — mantener sesión, no desloguear
-      console.error("❌ Network error loading profile, keeping session:", error);
+      console.error(
+        "❌ Network error loading profile, keeping session:",
+        error,
+      );
       return true;
     }
   };

@@ -59,16 +59,16 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
 
       // NO eliminar guest_id aquí - CartContext lo necesita para migrar el carrito
       // El CartContext se encargará de limpiarlo después de la migración exitosa
-      const guestIdBefore = localStorage.getItem("xquisito-guest-id");
+      const guestIdBefore = localStorage.getItem("even-guest-id");
       if (guestIdBefore) {
         /*console.log(
           "  ℹ️ Guest-id found (will be used for cart migration):",
           guestIdBefore,
         );*/
         // Solo limpiar table/restaurant/name, NO el guest_id
-        localStorage.removeItem("xquisito-table-number");
-        localStorage.removeItem("xquisito-restaurant-id");
-        localStorage.removeItem("xquisito-guest-name");
+        localStorage.removeItem("even-table-number");
+        localStorage.removeItem("even-restaurant-id");
+        localStorage.removeItem("even-guest-name");
       }
 
       //console.log("  isGuest state:", isGuest);
@@ -260,7 +260,7 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
   };
 
   const migrateGuestPaymentMethods = async () => {
-    const guestIdInStorage = localStorage.getItem("xquisito-guest-id");
+    const guestIdInStorage = localStorage.getItem("even-guest-id");
 
     if (!user || !guestIdInStorage) {
       //console.log("⚠️ Cannot migrate: missing user or guest-id");
@@ -291,7 +291,7 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
         /*console.log(
           "🗑️ All migrations completed - removing guest ID from localStorage",
         );*/
-        localStorage.removeItem("xquisito-guest-id");
+        localStorage.removeItem("even-guest-id");
         //console.log("✅ Guest ID successfully removed");
       } else {
         console.error("❌ Payment methods migration failed:", response.error);
@@ -328,19 +328,19 @@ export function PaymentProvider({ children }: PaymentProviderProps) {
     if (!user) return;
 
     const handleCartMigrationComplete = async () => {
-      const guestIdInStorage = localStorage.getItem("xquisito-guest-id");
+      const guestIdInStorage = localStorage.getItem("even-guest-id");
       if (guestIdInStorage) {
         await migrateGuestPaymentMethods();
       }
     };
 
     window.addEventListener(
-      "xquisito:cartMigrationComplete",
+      "even:cartMigrationComplete",
       handleCartMigrationComplete,
     );
     return () => {
       window.removeEventListener(
-        "xquisito:cartMigrationComplete",
+        "even:cartMigrationComplete",
         handleCartMigrationComplete,
       );
     };

@@ -91,7 +91,7 @@ const helveticaNeue = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Xquisito Pick & Go",
+  title: "Even Pick & Go",
   description: "Ordena, paga y recoge. Tu comida lista cuando llegues",
   icons: {
     icon: [

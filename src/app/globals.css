@@ -440,7 +440,6 @@ body {
 }
 
 /* ✅ SOLUCIÓN BANNER MÓVIL - Consistente con flexbill y taporderpay */
-/* Implementación exacta de xquisito-fronted/app/globals.css */
 @media (max-width: 768px) {
   .banner-mobile {
     background-size: contain !important;

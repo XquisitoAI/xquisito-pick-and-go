@@ -180,7 +180,7 @@ export default function OrderViewPage() {
                             ) : (
                               <img
                                 src={"/logos/logo-short-green.webp"}
-                                alt="Logo Xquisito"
+                                alt="Logo Even"
                                 className="size-18 object-contain"
                               />
                             )}

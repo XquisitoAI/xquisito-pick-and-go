@@ -167,14 +167,14 @@ export interface ConfirmOrderRequest {
   base_amount: number;
   tip_amount: number;
   iva_tip: number;
-  xquisito_commission_total: number;
-  xquisito_commission_client: number;
-  xquisito_commission_restaurant: number;
-  iva_xquisito_client: number;
-  iva_xquisito_restaurant: number;
-  xquisito_client_charge: number;
-  xquisito_restaurant_charge: number;
-  xquisito_rate_applied: number;
+  even_commission_total: number;
+  even_commission_client: number;
+  even_commission_restaurant: number;
+  iva_even_client: number;
+  iva_even_restaurant: number;
+  even_client_charge: number;
+  even_restaurant_charge: number;
+  even_rate_applied: number;
   total_amount_charged: number;
   transaction_by: string;
   currency?: string;
@@ -182,6 +182,7 @@ export interface ConfirmOrderRequest {
   user_id?: string | null;
   payment_source?: "apple_pay" | "google_pay" | "saved_card" | "dev" | null;
   ecartpay_order_id?: string | null;
+  google_pay_token?: string | null;
 }
 
 export interface ConfirmOrderResponse {
@@ -198,14 +199,14 @@ export interface RecordPaymentTransactionRequest {
   base_amount: number;
   tip_amount: number;
   iva_tip: number;
-  xquisito_commission_total: number;
-  xquisito_commission_client: number;
-  xquisito_commission_restaurant: number;
-  iva_xquisito_client: number;
-  iva_xquisito_restaurant: number;
-  xquisito_client_charge: number;
-  xquisito_restaurant_charge: number;
-  xquisito_rate_applied: number;
+  even_commission_total: number;
+  even_commission_client: number;
+  even_commission_restaurant: number;
+  iva_even_client: number;
+  iva_even_restaurant: number;
+  even_client_charge: number;
+  even_restaurant_charge: number;
+  even_rate_applied: number;
   total_amount_charged: number;
   transaction_by: string;
 }

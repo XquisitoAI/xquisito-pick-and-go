@@ -228,7 +228,7 @@ export default function AuthView({ onClose }: AuthViewProps) {
           <div className="mb-8 text-center">
             <img
               src="/logos/logo-short-green.webp"
-              alt="Xquisito Logo"
+              alt="Even Logo"
               className="size-16 mx-auto mb-4"
             />
             <h1 className="text-2xl font-medium text-black/90">
@@ -260,7 +260,10 @@ export default function AuthView({ onClose }: AuthViewProps) {
               <div className="space-y-2">
                 <div className="flex gap-3">
                   <div className="h-[48px] w-[90px] px-3 text-gray-700 font-medium bg-white/70 border border-gray-300 rounded-lg flex items-center gap-1.5">
-                    <Flag code="MX" style={{ width: 20, height: 15, borderRadius: 2 }} />
+                    <Flag
+                      code="MX"
+                      style={{ width: 20, height: 15, borderRadius: 2 }}
+                    />
                     <span className="text-sm">+52</span>
                   </div>
 

@@ -730,7 +730,7 @@ export default function MenuView() {
                           ) : (
                             <img
                               src="/logos/logo-short-green.webp"
-                              alt="Logo Xquisito"
+                              alt="Logo Even"
                               className="size-12 md:size-14 lg:size-16 object-contain"
                             />
                           )}

@@ -19,6 +19,15 @@ const MenuPage = () => {
     }
   }, [restaurantId, setPickAndGoRestaurantId]);
 
+  useEffect(() => {
+    if (restaurant?.name) {
+      document.title = restaurant.name + " | Pick & Go";
+      return () => {
+        document.title = "Even Pick & Go";
+      };
+    }
+  }, [restaurant?.name]);
+
   // Mostrar error de validación
   if (validationError) {
     return <ValidationError errorType={validationError as any} />;

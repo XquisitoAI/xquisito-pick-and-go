@@ -78,7 +78,7 @@ class CartService {
    */
   private getGuestId(): string {
     if (typeof window === "undefined") return "";
-    return localStorage.getItem("xquisito-guest-id") || "";
+    return localStorage.getItem("even-guest-id") || "";
   }
 
   /**

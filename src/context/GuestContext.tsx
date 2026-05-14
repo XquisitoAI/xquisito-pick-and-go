@@ -60,9 +60,9 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
     } else {
       // No registered user - check if we should be guest
 
-      const storedGuestId = localStorage.getItem("xquisito-guest-id");
-      const storedRestaurantId = localStorage.getItem("xquisito-restaurant-id");
-      const storedBranchNumber = localStorage.getItem("xquisito-branch-number");
+      const storedGuestId = localStorage.getItem("even-guest-id");
+      const storedRestaurantId = localStorage.getItem("even-restaurant-id");
+      const storedBranchNumber = localStorage.getItem("even-branch-number");
 
       // Priority 1: If URL has restaurant/branch parameters, use them
       if (restaurantParam || storedRestaurantId) {
@@ -86,16 +86,16 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
             : null;
 
         // Store to localStorage FIRST to ensure persistence
-        localStorage.setItem("xquisito-guest-id", guestIdToUse);
+        localStorage.setItem("even-guest-id", guestIdToUse);
         if (restaurantIdToUse) {
           localStorage.setItem(
-            "xquisito-restaurant-id",
+            "even-restaurant-id",
             restaurantIdToUse.toString(),
           );
         }
         if (branchNumberToUse) {
           localStorage.setItem(
-            "xquisito-branch-number",
+            "even-branch-number",
             branchNumberToUse.toString(),
           );
         }
@@ -116,7 +116,7 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
 
       // Priority 2: Restore existing guest session
       if (storedGuestId) {
-        const storedGuestName = localStorage.getItem("xquisito-guest-name");
+        const storedGuestName = localStorage.getItem("even-guest-name");
         setIsGuest(true);
         setGuestId(storedGuestId);
         setRestaurantId(
@@ -137,7 +137,7 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
 
       // Priority 3: No params and no valid stored session - create guest session
       const newGuestId = generateGuestId();
-      localStorage.setItem("xquisito-guest-id", newGuestId);
+      localStorage.setItem("even-guest-id", newGuestId);
 
       setIsGuest(true);
       setGuestId(newGuestId);
@@ -158,24 +158,18 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
     const generatedGuestId = generateGuestId();
 
     // Ensure localStorage is updated immediately
-    localStorage.setItem("xquisito-guest-id", generatedGuestId);
+    localStorage.setItem("even-guest-id", generatedGuestId);
 
     setIsGuest(true);
     setGuestId(generatedGuestId);
 
     if (newRestaurantId !== undefined) {
-      localStorage.setItem(
-        "xquisito-restaurant-id",
-        newRestaurantId.toString(),
-      );
+      localStorage.setItem("even-restaurant-id", newRestaurantId.toString());
       setRestaurantId(newRestaurantId);
     }
 
     if (newBranchNumber !== undefined) {
-      localStorage.setItem(
-        "xquisito-branch-number",
-        newBranchNumber.toString(),
-      );
+      localStorage.setItem("even-branch-number", newBranchNumber.toString());
       setBranchNumber(newBranchNumber);
     }
 
@@ -194,10 +188,10 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
     setRestaurantId(null);
     setBranchNumber(null);
     setGuestName(null);
-    localStorage.removeItem("xquisito-guest-name");
-    localStorage.removeItem("xquisito-restaurant-id");
-    localStorage.removeItem("xquisito-branch-number");
-    // NO eliminar xquisito-guest-id aquí - lo necesitamos para migrar el carrito
+    localStorage.removeItem("even-guest-name");
+    localStorage.removeItem("even-restaurant-id");
+    localStorage.removeItem("even-branch-number");
+    // NO eliminar even-guest-id aquí - lo necesitamos para migrar el carrito
     // El CartContext lo eliminará después de la migración exitosa
     /*console.log(
       "🗑️ Guest session cleared (guest_id preserved for cart migration)",
@@ -215,7 +209,7 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
 
   const setGuestNameHandler = (name: string) => {
     setGuestName(name);
-    localStorage.setItem("xquisito-guest-name", name);
+    localStorage.setItem("even-guest-name", name);
     //console.log("👤 Guest name set:", name);
   };
 
@@ -225,8 +219,8 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
   ) => {
     setRestaurantId(newRestaurantId);
     setBranchNumber(newBranchNumber);
-    localStorage.setItem("xquisito-restaurant-id", newRestaurantId.toString());
-    localStorage.setItem("xquisito-branch-number", newBranchNumber.toString());
+    localStorage.setItem("even-restaurant-id", newRestaurantId.toString());
+    localStorage.setItem("even-branch-number", newBranchNumber.toString());
     /*console.log("🏪 Restaurant and branch set:", {
       restaurantId: newRestaurantId,
       branchNumber: newBranchNumber,
@@ -236,11 +230,11 @@ function GuestProviderInternal({ children }: GuestProviderProps) {
   // Helper function to generate guest ID
   const generateGuestId = (): string => {
     if (typeof window !== "undefined") {
-      let guestId = localStorage.getItem("xquisito-guest-id");
+      let guestId = localStorage.getItem("even-guest-id");
 
       if (!guestId) {
         guestId = `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        localStorage.setItem("xquisito-guest-id", guestId);
+        localStorage.setItem("even-guest-id", guestId);
       }
 
       return guestId;
