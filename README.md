@@ -1,4 +1,4 @@
-# Xquisito Pick & Go
+# Even Pick & Go
 
 Una plataforma de pedidos para llevar que permite a los clientes ordenar, pagar y recoger su comida de manera rápida y eficiente.
 
@@ -22,23 +22,27 @@ Una plataforma de pedidos para llevar que permite a los clientes ordenar, pagar 
 ## Instalación y configuración
 
 1. Clona el repositorio:
+
 ```bash
-git clone https://github.com/XquisitoAI/xquisito-pick-and-go.git
-cd xquisito-pick-and-go
+git clone https://github.com/LetsEven/even-pick-and-go.git
+cd even-pick-and-go
 ```
 
 2. Instala las dependencias:
+
 ```bash
 npm install
 ```
 
 3. Configura las variables de entorno:
+
 ```bash
 cp .env.example .env.local
 # Edita .env.local con tus credenciales
 ```
 
 4. Ejecuta el servidor de desarrollo:
+
 ```bash
 npm run dev
 ```
@@ -84,4 +88,4 @@ src/
 
 ## Licencia
 
-Este proyecto es propiedad de Xquisito AI. Todos los derechos reservados.
+Este proyecto es propiedad de Even. Todos los derechos reservados.
