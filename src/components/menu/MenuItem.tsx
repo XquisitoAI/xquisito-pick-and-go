@@ -11,6 +11,7 @@ import { useNavigation } from "../../hooks/useNavigation";
 import { useRestaurant } from "../../context/RestaurantContext";
 import { Plus, Minus } from "lucide-react";
 import { useRef, useState, useEffect, useMemo, memo } from "react";
+import OutOfStockModal from "../OutOfStockModal";
 
 interface MenuItemProps {
   item: MenuItemDB | MenuItemData;
@@ -37,13 +38,20 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
       features: [], // Los custom_fields podrían mapearse aquí si es necesario
     };
   }, [item]);
-  const { state, addItem, removeItem, updateQuantity } = useCart();
+  const { state, addItem, decrementItem } = useCart();
   const { navigateToDish, navigateToCart } = useNavigation();
   const { flyToCart } = useFlyToCart();
   const { isOpen, restaurant } = useRestaurant();
   const plusButtonRef = useRef<HTMLDivElement>(null);
   const [localQuantity, setLocalQuantity] = useState(0);
   const [isPulsing, setIsPulsing] = useState(false);
+  const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
+
+  // Verificar si el item está agotado en la sucursal actual
+  const isOutOfStock = useMemo(() => {
+    if ("images" in item) return false;
+    return (item as MenuItemDB).is_out_of_stock === true;
+  }, [item]);
 
   // Verificar si el item tiene custom fields obligatorios
   const hasRequiredCustomFields = useMemo(() => {
@@ -71,6 +79,11 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    if (isOutOfStock) {
+      setShowOutOfStockModal(true);
+      return;
+    }
 
     // Verificar si el restaurante está abierto
     if (!isOpen) {
@@ -162,12 +175,7 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
     // Update local quantity
     setLocalQuantity((prev) => Math.max(0, prev - 1));
 
-    if (cartItem.quantity > 1) {
-      if (cartItem.cartItemId)
-        updateQuantity(cartItem.cartItemId, cartItem.quantity - 1);
-    } else {
-      removeItem(cartItem.id);
-    }
+    decrementItem(cartItem.id);
   };
 
   // Sumar todas las cantidades de items con el mismo nombre
@@ -180,6 +188,11 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
 
   return (
     <>
+      <OutOfStockModal
+        isOpen={showOutOfStockModal}
+        onClose={() => setShowOutOfStockModal(false)}
+        itemName={adaptedItem.name}
+      />
       <div
         className="border-b border-gray-300 py-4 md:py-6 lg:py-7 relative"
         onClick={handleImageClick}
@@ -187,21 +200,28 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
         <div className="flex items-center gap-4 md:gap-5 lg:gap-6">
           {/* Image */}
           <div className="flex-shrink-0 cursor-pointer">
-            <div className="size-36 md:size-40 lg:size-44 bg-gray-300 rounded-xl md:rounded-2xl flex items-center justify-center hover:scale-105 transition-transform duration-200">
+            <div className="relative size-36 md:size-40 lg:size-44 bg-gray-300 rounded-xl md:rounded-2xl flex items-center justify-center hover:scale-105 transition-transform duration-200">
               {adaptedItem.images[0] ? (
                 <img
                   src={adaptedItem.images[0]}
                   alt="Dish preview"
                   loading="lazy"
-                  className="w-full h-full object-cover rounded-xl md:rounded-2xl"
+                  className={`w-full h-full object-cover rounded-xl md:rounded-2xl`}
                 />
               ) : (
                 <img
                   src={"/logos/logo-short-green.webp"}
                   alt="Logo Even"
                   loading="lazy"
-                  className="size-18 md:size-20 lg:size-22 object-contain"
+                  className={`size-18 md:size-20 lg:size-22 object-contain`}
                 />
+              )}
+              {isOutOfStock && (
+                <div className="absolute bottom-2 left-0">
+                  <span className="bg-red-600 text-white text-[12px] md:text-xs font-bold px-2 py-1 tracking-wide">
+                    AGOTADO
+                  </span>
+                </div>
               )}
             </div>
           </div>
@@ -227,7 +247,7 @@ function MenuItem({ item, onRestaurantClosed }: MenuItemProps) {
                 </p>
                 <div ref={plusButtonRef}>
                   <Plus
-                    className="size-4 md:size-5 lg:size-6 cursor-pointer"
+                    className={`size-4 md:size-5 lg:size-6 ${isOutOfStock ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
                     onClick={handleAddToCart}
                   />
                 </div>
