@@ -6,9 +6,11 @@ import { useCart } from "@/context/CartContext";
 import { usePickAndGoContext } from "@/context/PickAndGoContext";
 import { useNavigation } from "@/hooks/useNavigation";
 import { useRestaurant } from "@/context/RestaurantContext";
+import { useBranch } from "@/context/BranchContext";
 import { ChevronDown, X, Home, CircleAlert } from "lucide-react";
 import MenuHeaderDish from "@/components/headers/MenuHeaderDish";
 import RestaurantClosedModal from "@/components/RestaurantClosedModal";
+import OutOfStockModal from "@/components/OutOfStockModal";
 import {
   MenuItem as MenuItemDB,
   MenuItemData,
@@ -58,6 +60,7 @@ export default function DishDetailPage() {
   const { setRestaurantId: setPickAndGoRestaurantId } = usePickAndGoContext();
   const { navigateWithRestaurantId } = useNavigation();
   const { restaurant, menu, loading, isOpen } = useRestaurant();
+  const { selectedBranchNumber } = useBranch();
   const [localQuantity, setLocalQuantity] = useState(0);
   const [dishQuantity, setDishQuantity] = useState(1);
   const [isPulsing, setIsPulsing] = useState(false);
@@ -93,6 +96,7 @@ export default function DishDetailPage() {
           dish: adaptDish(foundItem),
           section: section.name,
           customFields: parseCustomFields(foundItem),
+          isOutOfStock: (foundItem as MenuItemDB).is_out_of_stock ?? false,
         };
       }
     }
@@ -105,7 +109,9 @@ export default function DishDetailPage() {
     dish: MenuItemData;
     section: string;
     customFields: CustomField[];
+    isOutOfStock?: boolean;
   } | null>(initialDishData);
+  const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
 
   // Fetch desde API (para recargas directas o si no está en caché)
   useEffect(() => {
@@ -114,8 +120,12 @@ export default function DishDetailPage() {
       if (!dishData) setDishLoading(true);
       setDishError(null);
       try {
+        const branchParams =
+          restaurantId && selectedBranchNumber
+            ? `?restaurantId=${restaurantId}&branchNumber=${selectedBranchNumber}`
+            : "";
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/menu/items/${dishId}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/menu/items/${dishId}${branchParams}`,
         );
         if (!response.ok) {
           setDishError(response.status === 404 ? "not_found" : "error");
@@ -142,6 +152,7 @@ export default function DishDetailPage() {
           dish: adaptDish(foundItem),
           section: sectionName,
           customFields: parseCustomFields(foundItem),
+          isOutOfStock: (foundItem as MenuItemDB).is_out_of_stock ?? false,
         });
         setDishLoading(false);
       } catch (error) {
@@ -151,7 +162,7 @@ export default function DishDetailPage() {
       }
     };
     fetchDish();
-  }, [dishId]);
+  }, [dishId, restaurantId, selectedBranchNumber]);
 
   // Abrir todas las secciones por defecto
   useEffect(() => {
@@ -418,6 +429,10 @@ export default function DishDetailPage() {
   const handleAddToCart = async (e?: React.MouseEvent): Promise<boolean> => {
     e?.stopPropagation();
     if (!dishData || !isFormValid) return false;
+    if (dishData.isOutOfStock) {
+      setShowOutOfStockModal(true);
+      return false;
+    }
     if (!isOpen) {
       setShowClosedModal(true);
       return false;
@@ -582,6 +597,11 @@ export default function DishDetailPage() {
         restaurantName={restaurant?.name}
         restaurantLogo={restaurant?.logo_url}
       />
+      <OutOfStockModal
+        isOpen={showOutOfStockModal}
+        onClose={() => setShowOutOfStockModal(false)}
+        itemName={dish.name}
+      />
 
       {/* Slider de imágenes */}
       <div className="absolute top-0 left-0 w-full h-96 md:h-[28rem] lg:h-[32rem] z-0">
@@ -599,7 +619,7 @@ export default function DishDetailPage() {
                 alt=""
                 className={`absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-500 ${
                   index === currentImageIndex ? "opacity-100" : "opacity-0"
-                }`}
+                } ${dishData?.isOutOfStock ? "blur-sm" : ""}`}
               />
             ))
           ) : (
@@ -607,8 +627,15 @@ export default function DishDetailPage() {
               <img
                 src="/logos/logo-short-green.webp"
                 alt="Logo"
-                className="w-32 h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 object-contain"
+                className={`w-32 h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 object-contain`}
               />
+            </div>
+          )}
+          {dishData?.isOutOfStock && (
+            <div className="absolute bottom-22 z-10">
+              <span className="bg-red-600 text-white text-xs md:text-sm font-bold px-3 py-1 tracking-wide">
+                AGOTADO
+              </span>
             </div>
           )}
         </div>
@@ -1067,13 +1094,17 @@ export default function DishDetailPage() {
                 onClick={handleAddToCartAndReturn}
                 disabled={!isFormValid}
                 className={`flex-1 text-white py-3.5 md:py-4 lg:py-5 rounded-2xl flex items-center justify-center ${
-                  isFormValid
-                    ? "bg-gradient-to-r from-[#34808C] to-[#173E44] active:scale-95 transition-transform"
-                    : "bg-gray-400 cursor-not-allowed opacity-60"
+                  dishData?.isOutOfStock
+                    ? "bg-gray-400 cursor-not-allowed opacity-60"
+                    : isFormValid
+                      ? "bg-gradient-to-r from-[#34808C] to-[#173E44] active:scale-95 transition-transform"
+                      : "bg-gray-400 cursor-not-allowed opacity-60"
                 }`}
               >
                 <span className="text-base md:text-lg font-medium">
-                  Agregar • ${(totalPrice * dishQuantity).toFixed(2)}
+                  {dishData?.isOutOfStock
+                    ? "Producto agotado"
+                    : `Agregar • $${(totalPrice * dishQuantity).toFixed(2)}`}
                 </span>
               </button>
             </div>

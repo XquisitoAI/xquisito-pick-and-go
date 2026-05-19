@@ -8,6 +8,8 @@ import { useAuth } from "../context/AuthContext";
 import { usePepper } from "../context/PepperContext";
 import { useCart } from "@/context/CartContext";
 import { cartService } from "@/services/cart.service";
+import RestaurantClosedModal from "./RestaurantClosedModal";
+import OutOfStockModal from "./OutOfStockModal";
 
 interface ChatViewProps {
   onBack: () => void;
@@ -246,11 +248,13 @@ const OrderButton = ({
   restaurantId: number | null;
   userId: string | null;
 }) => {
-  const { menu } = useRestaurant();
+  const { menu, isOpen, restaurant } = useRestaurant();
   const { refreshCart } = useCart();
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">(
     "idle",
   );
+  const [showClosedModal, setShowClosedModal] = useState(false);
+  const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
 
   // Resolver el ID real buscando por nombre en el menú cargado en contexto,
   // en lugar de confiar en el ID que provee el agente.
@@ -329,8 +333,26 @@ const OrderButton = ({
     return bestScore >= 0.5 ? bestId : dishId;
   }, [menu, dishId, dishName]);
 
+  const isOutOfStock = useMemo(() => {
+    if (!menu?.length) return false;
+    for (const section of menu) {
+      for (const item of section.items ?? []) {
+        if (item.id === resolvedDishId) return item.is_out_of_stock === true;
+      }
+    }
+    return false;
+  }, [menu, resolvedDishId]);
+
   const handleAdd = async () => {
     if (status !== "idle") return;
+    if (!isOpen) {
+      setShowClosedModal(true);
+      return;
+    }
+    if (isOutOfStock) {
+      setShowOutOfStockModal(true);
+      return;
+    }
     setStatus("loading");
     cartService.setRestaurantId(restaurantId);
     cartService.setSupabaseUserId(userId);
@@ -378,43 +400,57 @@ const OrderButton = ({
             };
 
   return (
-    <button
-      onClick={handleAdd}
-      disabled={status === "loading" || status === "done"}
-      className="mt-2 relative overflow-hidden flex items-center gap-2 transition-all active:scale-[0.97] font-semibold rounded-2xl px-5 py-3 text-base md:text-lg w-full justify-center text-black"
-      style={glassStyle}
-    >
-      {/* Specular highlight — franja de luz en el borde superior */}
-      <div
-        className="absolute top-0 left-0 right-0 pointer-events-none rounded-t-2xl"
-        style={{
-          height: "42%",
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 100%)",
-        }}
+    <>
+      <RestaurantClosedModal
+        isOpen={showClosedModal}
+        onClose={() => setShowClosedModal(false)}
+        openingHours={restaurant?.opening_hours}
+        restaurantName={restaurant?.name}
+        restaurantLogo={restaurant?.logo_url}
       />
-      {/* Contenido */}
-      <span className="relative z-10 flex items-center gap-2">
-        {status === "done" ? (
-          <>
-            <Check className="size-5" />
-            Agregado al carrito
-          </>
-        ) : status === "loading" ? (
-          <>
-            <Spinner />
-            Agregando...
-          </>
-        ) : (
-          <>
-            <ShoppingBag className="size-5" />
-            {status === "error"
-              ? "Error, intenta de nuevo"
-              : `Agregar ${dishName}`}
-          </>
-        )}
-      </span>
-    </button>
+      <OutOfStockModal
+        isOpen={showOutOfStockModal}
+        onClose={() => setShowOutOfStockModal(false)}
+        itemName={dishName}
+      />
+      <button
+        onClick={handleAdd}
+        disabled={status === "loading" || status === "done"}
+        className="mt-2 relative overflow-hidden flex items-center gap-2 transition-all active:scale-[0.97] font-semibold rounded-2xl px-5 py-3 text-base md:text-lg w-full justify-center text-black"
+        style={glassStyle}
+      >
+        {/* Specular highlight — franja de luz en el borde superior */}
+        <div
+          className="absolute top-0 left-0 right-0 pointer-events-none rounded-t-2xl"
+          style={{
+            height: "42%",
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 100%)",
+          }}
+        />
+        {/* Contenido */}
+        <span className="relative z-10 flex items-center gap-2">
+          {status === "done" ? (
+            <>
+              <Check className="size-5" />
+              Agregado al carrito
+            </>
+          ) : status === "loading" ? (
+            <>
+              <Spinner />
+              Agregando...
+            </>
+          ) : (
+            <>
+              <ShoppingBag className="size-5" />
+              {status === "error"
+                ? "Error, intenta de nuevo"
+                : `Agregar ${dishName}`}
+            </>
+          )}
+        </span>
+      </button>
+    </>
   );
 };
 
