@@ -118,6 +118,7 @@ class PaymentService {
     baseAmount?: number;
     tipAmount?: number;
     items?: CartItemForPayment[];
+    installments?: number;
   }): Promise<ApiResponse<{ orderId: string }>> {
     return this.request("/payments/apple-pay/order", {
       method: "POST",
@@ -134,6 +135,7 @@ class PaymentService {
     baseAmount?: number;
     tipAmount?: number;
     items?: CartItemForPayment[];
+    installments?: number;
   }): Promise<ApiResponse<{ orderId: string }>> {
     return this.request("/payments/google-pay/order", {
       method: "POST",
