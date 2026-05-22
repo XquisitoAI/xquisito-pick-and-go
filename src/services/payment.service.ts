@@ -4,6 +4,7 @@ import {
   AddPaymentMethodRequest,
   ProcessPaymentRequest,
   PaymentHistory,
+  CartItemForPayment,
 } from "@/types/payment.types";
 
 class PaymentService {
@@ -113,6 +114,9 @@ class PaymentService {
     currency: string;
     tableNumber?: string;
     restaurantId?: string;
+    baseAmount?: number;
+    tipAmount?: number;
+    items?: CartItemForPayment[];
   }): Promise<ApiResponse<{ orderId: string }>> {
     return this.request("/payments/apple-pay/order", {
       method: "POST",
@@ -126,6 +130,9 @@ class PaymentService {
     currency: string;
     tableNumber?: string;
     restaurantId?: string;
+    baseAmount?: number;
+    tipAmount?: number;
+    items?: CartItemForPayment[];
   }): Promise<ApiResponse<{ orderId: string }>> {
     return this.request("/payments/google-pay/order", {
       method: "POST",
