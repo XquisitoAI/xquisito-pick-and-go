@@ -100,8 +100,6 @@ export default function CardSelectionPage() {
   const [googlePayToken, setGooglePayToken] = useState<string | null>(null);
   const applePayListenersRef = useRef(false);
   const googlePayListenersRef = useRef(false);
-  const applePayMsiRef = useRef<number | null | undefined>(undefined);
-  const googlePayMsiRef = useRef<number | null | undefined>(undefined);
 
   // Refs para valores frescos en los success handlers sin ser dependencias del useCallback
   const cartItemsRef = useRef(cartState.items);
@@ -277,15 +275,6 @@ export default function CardSelectionPage() {
       typeof window === "undefined"
     )
       return;
-
-    if (applePayMsiRef.current !== selectedMSI) {
-      applePayListenersRef.current = false;
-      applePayMsiRef.current = selectedMSI;
-      setApplePayReady(false);
-      const container = document.getElementById("apple-pay-container");
-      if (container) container.innerHTML = "";
-    }
-
     if (applePayListenersRef.current) return;
     applePayListenersRef.current = true;
 
@@ -303,7 +292,6 @@ export default function CardSelectionPage() {
             quantity: i.quantity || 1,
             extraPrice: (i.extraPrice || 0) * (i.quantity || 1),
           })),
-          installments: selectedMSI || undefined,
         });
 
         const appleOrderId =
@@ -376,7 +364,7 @@ export default function CardSelectionPage() {
         console.error("❌ Error inicializando Apple Pay:", err);
       }
     })();
-  }, [isLoadingInitial, baseAmount, totalAmount, selectedMSI]);
+  }, [isLoadingInitial, baseAmount, totalAmount]);
 
   useEffect(() => {
     if (
@@ -386,15 +374,6 @@ export default function CardSelectionPage() {
       typeof window === "undefined"
     )
       return;
-
-    if (googlePayMsiRef.current !== selectedMSI) {
-      googlePayListenersRef.current = false;
-      googlePayMsiRef.current = selectedMSI;
-      setGooglePayReady(false);
-      const container = document.getElementById("google-pay-container");
-      if (container) container.innerHTML = "";
-    }
-
     if (googlePayListenersRef.current) return;
     googlePayListenersRef.current = true;
 
@@ -412,7 +391,6 @@ export default function CardSelectionPage() {
             quantity: i.quantity || 1,
             extraPrice: (i.extraPrice || 0) * (i.quantity || 1),
           })),
-          installments: selectedMSI || undefined,
         });
 
         const googleOrderId =
@@ -490,7 +468,7 @@ export default function CardSelectionPage() {
         console.error("❌ Error inicializando Google Pay:", err);
       }
     })();
-  }, [isLoadingInitial, baseAmount, totalAmount, restaurantId, selectedMSI]);
+  }, [isLoadingInitial, baseAmount, totalAmount, restaurantId]);
 
   const handleConfirmPayment = async (): Promise<void> => {
     const items =
@@ -1096,9 +1074,8 @@ export default function CardSelectionPage() {
                     const selectedMethod = paymentMethods.find(
                       (pm) => pm.id === selectedPaymentMethodId,
                     );
-                    return msiConfig.isActive &&
-                      (selectedMethod?.cardType === "credit" ||
-                        !selectedMethod) ? (
+                    return selectedMethod?.cardType === "credit" &&
+                      msiConfig.isActive ? (
                       <div
                         className="py-2 cursor-pointer"
                         onClick={() => setShowPaymentOptionsModal(true)}
