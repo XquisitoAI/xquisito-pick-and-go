@@ -342,6 +342,7 @@ function AddCardContent() {
                     value={fullName}
                     onChange={handleFullNameChange}
                     onKeyDown={handleKeyDown}
+                    autoComplete="cc-name"
                     placeholder="John Doe"
                     className={`w-full px-3 py-3 border text-black rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent ${errors.fullName ? "border-red-500 bg-red-50" : "border-gray-300"}`}
                   />
@@ -361,6 +362,8 @@ function AddCardContent() {
                     value={cardNumber}
                     onChange={handleCardNumberChange}
                     onKeyDown={handleKeyDown}
+                    autoComplete="cc-number"
+                    inputMode="numeric"
                     placeholder="**** 2098"
                     maxLength={19}
                     className={`w-full px-3 py-3 text-black rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent ${errors.cardNumber ? "border border-red-500 bg-red-50" : "bg-gray-100 border border-gray-200"}`}
@@ -383,6 +386,7 @@ function AddCardContent() {
                       onChange={(e) =>
                         setExpMonthIdx(MONTHS.indexOf(e.target.value))
                       }
+                      autoComplete="cc-exp-month"
                       className={`flex-1 px-3 py-3 rounded-lg text-black focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent ${errors.expDate ? "border border-red-500 bg-red-50" : "bg-gray-100 border border-gray-200"}`}
                     >
                       {MONTHS.map((m) => (
@@ -396,6 +400,7 @@ function AddCardContent() {
                       onChange={(e) =>
                         setExpYearIdx(YEARS.indexOf(e.target.value))
                       }
+                      autoComplete="cc-exp-year"
                       className={`flex-1 px-3 py-3 rounded-lg text-black focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent ${errors.expDate ? "border border-red-500 bg-red-50" : "bg-gray-100 border border-gray-200"}`}
                     >
                       {YEARS.map((y) => (
@@ -422,6 +427,8 @@ function AddCardContent() {
                     value={cvv}
                     onChange={handleCvvChange}
                     onKeyDown={handleKeyDown}
+                    autoComplete="cc-csc"
+                    inputMode="numeric"
                     placeholder="123"
                     maxLength={4}
                     className={`w-full px-3 py-3 text-black rounded-lg focus:outline-none focus:ring focus:ring-teal-500 focus:border-transparent ${errors.cvv ? "border border-red-500 bg-red-50" : "border border-gray-300"}`}
