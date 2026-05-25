@@ -139,17 +139,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return;
 
-    // Refrescar cada 50 minutos (el token expira en 1 hora por defecto)
     const REFRESH_INTERVAL = 50 * 60 * 1000; // 50 minutos en ms
 
     const refreshTokenPeriodically = async () => {
-      //console.log("🔄 Periodic token refresh...");
       try {
         const refreshResponse = await authService.refreshToken();
         if (refreshResponse.success && refreshResponse.data?.session) {
           const newToken = refreshResponse.data.session.access_token;
           authService.setAuthToken(newToken);
-          //console.log("✅ Token refreshed periodically");
         } else {
           console.warn("⚠️ Periodic refresh failed:", refreshResponse.error);
         }
@@ -158,7 +155,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const intervalId = setInterval(refreshTokenPeriodically, REFRESH_INTERVAL);
+    // Primer refresh: al 80% del tiempo restante del token (min 30s, max 50min)
+    const expiresAt = parseInt(localStorage.getItem("even_expires_at") || "0");
+    const now = Math.floor(Date.now() / 1000);
+    const msUntilExpiry = Math.max((expiresAt - now) * 1000, 0);
+    const firstRefreshDelay = Math.min(
+      Math.max(msUntilExpiry * 0.8, 30_000),
+      REFRESH_INTERVAL,
+    );
+
+    let intervalId: ReturnType<typeof setInterval>;
+    const firstRefreshTimeout = setTimeout(async () => {
+      await refreshTokenPeriodically();
+      intervalId = setInterval(refreshTokenPeriodically, REFRESH_INTERVAL);
+    }, firstRefreshDelay);
 
     // También refrescar cuando la app vuelve a estar visible
     const handleVisibilityChange = async () => {
@@ -221,13 +231,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Sincronizar token entre tabs: si otro tab refrescó, tomar su token
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "even_access_token" && e.newValue) {
+        authService.setAuthToken(e.newValue);
+      }
+      if (e.key === "even_refresh_token" && e.newValue) {
+        localStorage.setItem("even_refresh_token", e.newValue);
+      }
+      if (e.key === "even_expires_at" && e.newValue) {
+        localStorage.setItem("even_expires_at", e.newValue);
+      }
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("online", handleNetworkOnline);
+    window.addEventListener("storage", handleStorageChange);
 
     return () => {
+      clearTimeout(firstRefreshTimeout);
       clearInterval(intervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("online", handleNetworkOnline);
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, [user]);
 
