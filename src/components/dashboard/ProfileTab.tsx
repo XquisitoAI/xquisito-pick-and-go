@@ -55,13 +55,11 @@ export default function ProfileTab({ onLogout }: ProfileTabProps = {}) {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
     }
 
-    // Código de país (ej: +52)
     if (cleaned.length > 10) {
-      const countryCode = cleaned.slice(0, cleaned.length - 10);
       const areaCode = cleaned.slice(-10, -7);
       const firstPart = cleaned.slice(-7, -4);
       const lastPart = cleaned.slice(-4);
-      return `+${countryCode} ${areaCode} ${firstPart} ${lastPart}`;
+      return `${areaCode} ${firstPart} ${lastPart}`;
     }
 
     return phoneNumber;
