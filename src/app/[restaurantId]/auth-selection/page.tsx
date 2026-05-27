@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Phone, ChevronDown } from "lucide-react";
+import { Phone, User, ChevronDown } from "lucide-react";
 import Flag from "react-world-flags";
 import { useNavigation } from "@/hooks/useNavigation";
 import MenuHeaderBack from "@/components/headers/MenuHeaderBack";
@@ -10,7 +10,7 @@ import ValidationError from "@/components/ValidationError";
 import { authService } from "@/services/auth.service";
 import { useAuth } from "@/context/AuthContext";
 
-type Step = "phone" | "verify";
+type Step = "phone" | "verify" | "profile";
 
 interface Country {
   code: string;
@@ -30,7 +30,7 @@ interface Country {
 export default function AuthSelectionPage() {
   const { navigateWithRestaurantId } = useNavigation();
   const { validationError } = useValidateAccess();
-  const { verifyOTP, refreshProfile } = useAuth();
+  const { verifyOTP, refreshProfile, updateProfile } = useAuth();
 
   const [step, setStep] = useState<Step>("phone");
   // const [countryCode, setCountryCode] = useState("+52");
@@ -42,6 +42,9 @@ export default function AuthSelectionPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
+  const [newFirstName, setNewFirstName] = useState("");
+  const [newLastName, setNewLastName] = useState("");
+  const [newAge, setNewAge] = useState<number | "">("");
   // const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const formatPhoneNumber = (num: string) => {
@@ -150,10 +153,10 @@ export default function AuthSelectionPage() {
             await refreshProfile();
             navigateWithRestaurantId("/order-confirm");
           } else {
-            navigateWithRestaurantId("/user");
+            setStep("profile");
           }
         } else {
-          navigateWithRestaurantId("/user");
+          setStep("profile");
         }
       } else {
         setError(response.error || "Código inválido");
@@ -180,6 +183,31 @@ export default function AuthSelectionPage() {
     }
   };
 
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newAge === "") return;
+    setLoading(true);
+    setError("");
+    try {
+      const birthYear = new Date().getUTCFullYear() - Number(newAge);
+      const response = await updateProfile({
+        firstName: newFirstName,
+        lastName: newLastName,
+        birthDate: `${birthYear}-01-01`,
+      });
+      if (response.success) {
+        await refreshProfile();
+        navigateWithRestaurantId("/order-confirm");
+      } else {
+        setError(response.error || "Error al guardar el perfil");
+      }
+    } catch {
+      setError("Error al guardar el perfil");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (validationError) {
     return <ValidationError errorType={validationError as any} />;
   }
@@ -195,12 +223,16 @@ export default function AuthSelectionPage() {
             <h1 className="text-white text-xl md:text-2xl lg:text-3xl font-medium mb-2">
               {step === "phone"
                 ? "Ingresa tu número de celular"
-                : "Verifica tu código"}
+                : step === "verify"
+                  ? "Verifica tu código"
+                  : "Cuéntanos sobre ti"}
             </h1>
             <p className="text-white/80 text-sm md:text-base">
               {step === "phone"
                 ? "Te avisaremos cuando tu pedido esté listo"
-                : `Enviamos un código al ${formatPhoneNumber(phone)}`}
+                : step === "verify"
+                  ? `Enviamos un código al ${formatPhoneNumber(phone)}`
+                  : "Solo necesitamos unos datos para continuar"}
             </p>
           </div>
 
@@ -218,7 +250,10 @@ export default function AuthSelectionPage() {
                 <div className="space-y-2">
                   <div className="flex gap-3">
                     <div className="h-[52px] w-[90px] px-3 text-gray-700 font-medium bg-white border border-gray-300 rounded-xl flex items-center gap-1.5">
-                      <Flag code="MX" style={{ width: 20, height: 15, borderRadius: 2 }} />
+                      <Flag
+                        code="MX"
+                        style={{ width: 20, height: 15, borderRadius: 2 }}
+                      />
                       <span className="text-sm">+52</span>
                     </div>
 
@@ -252,6 +287,66 @@ export default function AuthSelectionPage() {
                 </button>
               </form>
             </div>
+          )}
+
+          {/* Profile Step */}
+          {step === "profile" && (
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    required
+                    value={newFirstName}
+                    onChange={(e) => setNewFirstName(e.target.value)}
+                    placeholder="Nombre"
+                    className="h-[48px] w-full pl-10 pr-3 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a8b9b] appearance-none"
+                    disabled={loading}
+                  />
+                </div>
+                <input
+                  type="text"
+                  value={newLastName}
+                  onChange={(e) => setNewLastName(e.target.value)}
+                  placeholder="Apellido"
+                  className="h-[48px] w-full px-3 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a8b9b] appearance-none"
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white mb-1">
+                  Edad
+                </label>
+                <select
+                  required
+                  value={newAge}
+                  onChange={(e) =>
+                    setNewAge(
+                      e.target.value === "" ? "" : Number(e.target.value),
+                    )
+                  }
+                  className="h-[48px] w-full px-3 text-gray-600 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0a8b9b] cursor-pointer appearance-none"
+                  disabled={loading}
+                >
+                  <option value="" disabled>
+                    Selecciona tu edad
+                  </option>
+                  {Array.from({ length: 59 }, (_, i) => i + 12).map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="submit"
+                disabled={loading || !newFirstName || newAge === ""}
+                className="w-full bg-black hover:bg-stone-950 text-white py-3 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+              >
+                {loading ? "Guardando..." : "Continuar"}
+              </button>
+            </form>
           )}
 
           {/* OTP Step */}
