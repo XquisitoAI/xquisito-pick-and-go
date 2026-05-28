@@ -87,32 +87,27 @@ export function calculateCommissions(
   baseAmount: number,
   tipAmount: number,
 ): CommissionBreakdown {
-  const r2 = (n: number) => Math.round(n * 100) / 100;
-
   // IVA de propina (NO pagado por cliente)
-  const ivaTip = r2(tipAmount * 0.16);
+  const ivaTip = tipAmount * 0.16;
 
   // Subtotal para cálculo de comisión Even
-  const subtotalForCommission = r2(baseAmount + tipAmount);
+  const subtotalForCommission = baseAmount + tipAmount;
 
   // Obtener tasas según el monto
   const rates = getCommissionRates(subtotalForCommission);
 
   // Comisiones Even (sin IVA)
-  const evenCommissionTotal = r2(
-    subtotalForCommission * (rates.evenTotal / 100),
-  );
-  const evenCommissionClient = r2(
-    subtotalForCommission * (rates.clientPays / 100),
-  );
-  const evenCommissionRestaurant = r2(
-    subtotalForCommission * (rates.restaurantPays / 100),
-  );
+  const evenCommissionTotal = subtotalForCommission * (rates.evenTotal / 100);
+  const evenCommissionClient = subtotalForCommission * (rates.clientPays / 100);
+  const evenCommissionRestaurant =
+    subtotalForCommission * (rates.restaurantPays / 100);
 
   // IVA sobre comisiones Even (16%)
-  const ivaEvenTotal = r2(evenCommissionTotal * 0.16);
-  const ivaEvenClient = r2(evenCommissionClient * 0.16);
-  const ivaEvenRestaurant = r2(evenCommissionRestaurant * 0.16);
+  const ivaEvenTotal = evenCommissionTotal * 0.16;
+  const ivaEvenClient = evenCommissionClient * 0.16;
+  const ivaEvenRestaurant = evenCommissionRestaurant * 0.16;
+
+  const r2 = (n: number) => Math.round(n * 100) / 100;
 
   // Comisión Even con IVA incluido
   const evenClientCharge = r2(evenCommissionClient + ivaEvenClient);
