@@ -141,13 +141,14 @@ export default function CardSelectionPage() {
     rates,
   } = commissions;
 
-  const isDev = process.env.NODE_ENV === "development";
+  //const isDev = process.env.NODE_ENV === "development";
 
   // Set default payment method when payment methods are loaded
   useEffect(() => {
-    const visibleMethods = paymentMethods.filter(
+    const visibleMethods = paymentMethods;
+    /*.filter(
       (pm) => isDev || pm.id !== "system-default-card",
-    );
+    );*/
     if (!selectedPaymentMethodId && visibleMethods.length > 0) {
       const defaultMethod =
         visibleMethods.find((pm) => pm.isDefault) || visibleMethods[0];
@@ -1128,10 +1129,10 @@ export default function CardSelectionPage() {
                   </h3>
                   <div className="space-y-2.5">
                     {paymentMethods
-                      .filter(
-                        (method) =>
-                          isDev || method.id !== "system-default-card",
-                      )
+                      //.filter(
+                      //  (method) =>
+                      //    isDev || method.id !== "system-default-card",
+                      //)
                       .map((method) => (
                         <div
                           key={method.id}
