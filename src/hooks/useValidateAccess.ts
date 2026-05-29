@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useRestaurant } from "../context/RestaurantContext";
 import { restaurantService } from "../services/restaurant.service";
+import {
+  getValidationFromCache,
+  setValidationCache,
+} from "../utils/validationCache";
 
 /**
  * Hook para validar acceso a restaurante y sucursal en Pick & Go
@@ -33,17 +37,35 @@ export function useValidateAccess() {
         // Establecer restaurantId en el contexto
         setRestaurantId(parseInt(restaurantId));
 
+        const restId = parseInt(restaurantId);
+        const branchNum = branchNumber ? parseInt(branchNumber) : 0;
+        const service = "pick-n-go";
+
+        const cachedResult = getValidationFromCache(restId, branchNum, service);
+        if (cachedResult !== null) {
+          if (!cachedResult.valid) {
+            setValidationError(cachedResult.error || "VALIDATION_ERROR");
+          } else {
+            setValidationError(null);
+          }
+          setIsValidating(false);
+          return;
+        }
+
         const validation = await restaurantService.validateRestaurantAndBranch(
-          parseInt(restaurantId),
-          branchNumber ? parseInt(branchNumber) : null,
-          "pick-n-go",
+          restId,
+          branchNumber ? branchNum : null,
+          service,
         );
+
+        if (validation.valid) {
+          setValidationCache(restId, branchNum, { valid: true }, service);
+        }
 
         if (!validation.valid) {
           console.error("❌ Validation failed:", validation.error);
           setValidationError(validation.error || "VALIDATION_ERROR");
         } else {
-          //console.log("✅ Validation successful");
           setValidationError(null);
         }
       } catch (err) {
