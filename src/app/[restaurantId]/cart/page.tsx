@@ -14,6 +14,13 @@ export default function CartPage() {
   const restaurantId = params?.restaurantId as string;
 
   useEffect(() => {
+    document.title = "Mi Carrito | Pick & Go";
+    return () => {
+      document.title = "Even Pick & Go";
+    };
+  }, []);
+
+  useEffect(() => {
     if (!restaurantId || isNaN(parseInt(restaurantId))) {
       router.push("/");
       return;
